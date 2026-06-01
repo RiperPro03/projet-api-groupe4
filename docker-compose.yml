@@ -1,16 +1,133 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: pg17
+    container_name: breezy-postgres
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
-      POSTGRES_DB: testdb
+      POSTGRES_DB: breezy
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
+  frontend:
+    build:
+      context: .
+      dockerfile: infra/docker/node.Dockerfile
+      args:
+        SERVICE_PATH: apps/frontend
+    container_name: breezy-frontend
+    ports:
+      - "5173:5173"
+    command: pnpm dev --host 0.0.0.0
+    depends_on:
+      - api-gateway
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: infra/docker/node.Dockerfile
+      args:
+        SERVICE_PATH: apps/api-gateway
+    container_name: breezy-api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      AUTH_SERVICE_URL: http://auth-service:3001
+      USER_SERVICE_URL: http://user-service:3002
+      POST_SERVICE_URL: http://post-service:3003
+      FOLLOW_SERVICE_URL: http://follow-service:3004
+      FEED_SERVICE_URL: http://feed-service:3005
+    depends_on:
+      - auth-service
+      - user-service
+      - post-service
+      - follow-service
+      - feed-service
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: infra/docker/node.Dockerfile
+      args:
+        SERVICE_PATH: services/auth-service
+    container_name: breezy-auth-service
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      SERVICE_NAME: auth-service
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/breezy
+    depends_on:
+      - postgres
+
+  user-service:
+    build:
+      context: .
+      dockerfile: infra/docker/node.Dockerfile
+      args:
+        SERVICE_PATH: services/user-service
+    container_name: breezy-user-service
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: 3002
+      SERVICE_NAME: user-service
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/breezy
+    depends_on:
+      - postgres
+
+  post-service:
+    build:
+      context: .
+      dockerfile: infra/docker/node.Dockerfile
+      args:
+        SERVICE_PATH: services/post-service
+    container_name: breezy-post-service
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      SERVICE_NAME: post-service
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/breezy
+    depends_on:
+      - postgres
+
+  follow-service:
+    build:
+      context: .
+      dockerfile: infra/docker/node.Dockerfile
+      args:
+        SERVICE_PATH: services/follow-service
+    container_name: breezy-follow-service
+    ports:
+      - "3004:3004"
+    environment:
+      PORT: 3004
+      SERVICE_NAME: follow-service
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/breezy
+    depends_on:
+      - postgres
+
+  feed-service:
+    build:
+      context: .
+      dockerfile: infra/docker/node.Dockerfile
+      args:
+        SERVICE_PATH: services/feed-service
+    container_name: breezy-feed-service
+    ports:
+      - "3005:3005"
+    environment:
+      PORT: 3005
+      SERVICE_NAME: feed-service
+      FOLLOW_SERVICE_URL: http://follow-service:3004
+      POST_SERVICE_URL: http://post-service:3003
+    depends_on:
+      - follow-service
+      - post-service
 
 volumes:
   pgdata:

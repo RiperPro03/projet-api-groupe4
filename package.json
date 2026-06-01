@@ -1,0 +1,34 @@
+{
+  "name": "projet-api-groupe4",
+  "version": "1.0.0",
+  "description": "Breezy",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:gateway": "pnpm --filter api-gateway dev",
+    "dev:auth": "pnpm --filter auth-service dev",
+    "dev:user": "pnpm --filter user-service dev",
+    "dev:post": "pnpm --filter post-service dev",
+    "dev:follow": "pnpm --filter follow-service dev",
+    "dev:feed": "pnpm --filter feed-service dev"
+  },
+  "keywords": [
+    "microservices",
+    "api-gateway",
+    "react",
+    "express",
+    "docker"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.5.0",
+      "onFail": "download"
+    }
+  }
+}

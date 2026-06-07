@@ -319,4 +319,84 @@ describe("auth.service", () => {
             refreshToken: "rotated-refresh-token",
         });
     });
+
+    it("logoutUser rejects an empty refresh token", async () => {
+        await expect(
+            authService.logoutUser("user-1", ""),
+        ).rejects.toThrow("REFRESH_TOKEN_REQUIRED");
+    });
+
+    it("logoutUser rejects an unknown refresh token", async () => {
+        mockedPrisma.refreshToken.findUnique.mockResolvedValue(null);
+
+        await expect(
+            authService.logoutUser("user-1", "missing-refresh-token"),
+        ).rejects.toThrow("INVALID_REFRESH_TOKEN");
+    });
+
+    it("logoutUser rejects a refresh token that belongs to another user", async () => {
+        mockedPrisma.refreshToken.findUnique.mockResolvedValue({
+            id: "token-1",
+            tokenHash: "hashed-refresh-token",
+            userId: "user-2",
+            expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+            revokedAt: null,
+            createdAt: new Date("2025-01-01T00:00:00.000Z"),
+        } as never);
+
+        await expect(
+            authService.logoutUser("user-1", "refresh-token"),
+        ).rejects.toThrow("REFRESH_TOKEN_USER_MISMATCH");
+    });
+
+    it("logoutUser rejects a refresh token that is already revoked", async () => {
+        mockedPrisma.refreshToken.findUnique.mockResolvedValue({
+            id: "token-1",
+            tokenHash: "hashed-refresh-token",
+            userId: "user-1",
+            expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+            revokedAt: new Date("2025-01-03T00:00:00.000Z"),
+            createdAt: new Date("2025-01-01T00:00:00.000Z"),
+        } as never);
+
+        await expect(
+            authService.logoutUser("user-1", "refresh-token"),
+        ).rejects.toThrow("REFRESH_TOKEN_ALREADY_REVOKED");
+    });
+
+    it("logoutUser hashes the refresh token and revokes it logically", async () => {
+        mockedPrisma.refreshToken.findUnique.mockResolvedValue({
+            id: "token-1",
+            tokenHash: "hashed-refresh-token",
+            userId: "user-1",
+            expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+            revokedAt: null,
+            createdAt: new Date("2025-01-01T00:00:00.000Z"),
+        } as never);
+        mockedPrisma.refreshToken.update.mockResolvedValue({
+            id: "token-1",
+            tokenHash: "hashed-refresh-token",
+            userId: "user-1",
+            expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+            revokedAt: new Date("2025-01-03T00:00:00.000Z"),
+            createdAt: new Date("2025-01-01T00:00:00.000Z"),
+        } as never);
+
+        await authService.logoutUser("user-1", "refresh-token");
+
+        expect(mockedHashToken).toHaveBeenCalledWith("refresh-token");
+        expect(mockedPrisma.refreshToken.findUnique).toHaveBeenCalledWith({
+            where: {
+                tokenHash: "hashed-refresh-token",
+            },
+        });
+        expect(mockedPrisma.refreshToken.update).toHaveBeenCalledWith({
+            where: {
+                id: "token-1",
+            },
+            data: {
+                revokedAt: expect.any(Date),
+            },
+        });
+    });
 });

@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import authService from "../services/auth.service";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware";
+import type * as AuthModel from "../models/auth.model";
 
 async function register(req: Request, res: Response) {
     try {
@@ -83,10 +84,81 @@ async function verify(req: AuthenticatedRequest, res: Response) {
     });
 }
 
+async function refreshToken(req: Request, res: Response) {
+    try {
+        const payload = req.body as AuthModel.RefreshTokenInput;
+        const tokens = await authService.refreshAccessToken(payload);
+
+        return res.status(200).json({
+            status: "success",
+            message: "Token refreshed",
+            data: {
+                accessToken: tokens.accessToken,
+                refreshToken: tokens.refreshToken,
+            },
+        });
+    } catch (error) {
+        console.log(error);
+
+        if (
+            error instanceof Error &&
+            error.message === "REFRESH_TOKEN_REQUIRED"
+        ) {
+            return res.status(400).json({
+                status: "error",
+                message: "Refresh token is required",
+            });
+        }
+
+        if (
+            error instanceof Error &&
+            error.message === "INVALID_REFRESH_TOKEN"
+        ) {
+            return res.status(401).json({
+                status: "error",
+                message: "Invalid refresh token",
+            });
+        }
+
+        if (
+            error instanceof Error &&
+            error.message === "REFRESH_TOKEN_EXPIRED"
+        ) {
+            return res.status(401).json({
+                status: "error",
+                message: "Refresh token expired",
+            });
+        }
+
+        if (
+            error instanceof Error &&
+            error.message === "REFRESH_TOKEN_REVOKED"
+        ) {
+            return res.status(401).json({
+                status: "error",
+                message: "Refresh token revoked",
+            });
+        }
+
+        if (error instanceof Error && error.message === "USER_NOT_FOUND") {
+            return res.status(404).json({
+                status: "error",
+                message: "User not found",
+            });
+        }
+
+        return res.status(500).json({
+            status: "error",
+            message: "Internal server error",
+        });
+    }
+}
+
 const authController = {
     register,
     login,
     verify,
+    refreshToken,
 };
 
 export default authController;

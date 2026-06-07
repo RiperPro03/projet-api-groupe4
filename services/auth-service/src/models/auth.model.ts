@@ -30,6 +30,11 @@ export type RefreshTokenResponse = {
     refreshToken: string;
 };
 
+export type PasswordUpdateInput = {
+    currentPassword: string;
+    newPassword: string;
+};
+
 export type AuthResponse = {
     user: SafeUser;
     tokens: AuthTokens;

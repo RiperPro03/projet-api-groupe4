@@ -12,11 +12,13 @@ vi.mock("../../src/config/prisma", () => ({
         user: {
             findUnique: vi.fn(),
             create: vi.fn(),
+            update: vi.fn(),
         },
         refreshToken: {
             findUnique: vi.fn(),
             create: vi.fn(),
             update: vi.fn(),
+            updateMany: vi.fn(),
         },
         $transaction: vi.fn(),
     },
@@ -393,6 +395,91 @@ describe("auth.service", () => {
         expect(mockedPrisma.refreshToken.update).toHaveBeenCalledWith({
             where: {
                 id: "token-1",
+            },
+            data: {
+                revokedAt: expect.any(Date),
+            },
+        });
+    });
+
+    it("updatePassword rejects when the user does not exist", async () => {
+        mockedPrisma.user.findUnique.mockResolvedValue(null);
+
+        await expect(
+            authService.updatePassword(
+                "missing-user",
+                "current-password",
+                "new-password-123",
+            ),
+        ).rejects.toThrow("USER_NOT_FOUND");
+    });
+
+    it("updatePassword rejects an invalid current password", async () => {
+        mockedPrisma.user.findUnique.mockResolvedValue({
+            id: "user-1",
+            email: "user@example.com",
+            password: "hashed-password",
+            role: "USER",
+            createdAt: new Date("2025-01-01T00:00:00.000Z"),
+            updatedAt: new Date("2025-01-02T00:00:00.000Z"),
+        } as never);
+        mockedBcrypt.compare.mockResolvedValue(false as never);
+
+        await expect(
+            authService.updatePassword(
+                "user-1",
+                "wrong-password",
+                "new-password-123",
+            ),
+        ).rejects.toThrow("INVALID_CURRENT_PASSWORD");
+    });
+
+    it("updatePassword hashes the new password and revokes active refresh tokens", async () => {
+        mockedPrisma.user.findUnique.mockResolvedValue({
+            id: "user-1",
+            email: "user@example.com",
+            password: "hashed-password",
+            role: "USER",
+            createdAt: new Date("2025-01-01T00:00:00.000Z"),
+            updatedAt: new Date("2025-01-02T00:00:00.000Z"),
+        } as never);
+        mockedBcrypt.compare.mockResolvedValue(true as never);
+        mockedBcrypt.hash.mockResolvedValue("hashed-new-password" as never);
+        mockedPrisma.user.update.mockResolvedValue({
+            id: "user-1",
+            email: "user@example.com",
+            password: "hashed-new-password",
+            role: "USER",
+            createdAt: new Date("2025-01-01T00:00:00.000Z"),
+            updatedAt: new Date("2025-01-03T00:00:00.000Z"),
+        } as never);
+        mockedPrisma.refreshToken.updateMany.mockResolvedValue({
+            count: 2,
+        } as never);
+
+        await authService.updatePassword(
+            "user-1",
+            "current-password",
+            "new-password-123",
+        );
+
+        expect(mockedBcrypt.compare).toHaveBeenCalledWith(
+            "current-password",
+            "hashed-password",
+        );
+        expect(mockedBcrypt.hash).toHaveBeenCalledWith("new-password-123", 10);
+        expect(mockedPrisma.user.update).toHaveBeenCalledWith({
+            where: {
+                id: "user-1",
+            },
+            data: {
+                password: "hashed-new-password",
+            },
+        });
+        expect(mockedPrisma.refreshToken.updateMany).toHaveBeenCalledWith({
+            where: {
+                userId: "user-1",
+                revokedAt: null,
             },
             data: {
                 revokedAt: expect.any(Date),

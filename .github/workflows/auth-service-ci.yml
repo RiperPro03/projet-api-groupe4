@@ -1,5 +1,8 @@
 name: Auth Service CI
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   push:
     paths:
@@ -24,6 +27,7 @@ jobs:
       run:
         working-directory: services/auth-service
     env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/auth_service_test
       JWT_ACCESS_SECRET: test_access_secret
       JWT_REFRESH_SECRET: test_refresh_secret
       JWT_ACCESS_EXPIRES_IN: 15m

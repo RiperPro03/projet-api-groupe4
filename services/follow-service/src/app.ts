@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import followRoutes from "./routes/follow.routes.js";
 
 const app = express();
 
@@ -15,8 +16,10 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   res.json({
     service: serviceName,
-    status: "OK"
+    status: "OK",
   });
 });
+
+app.use("/", followRoutes);
 
 export default app;

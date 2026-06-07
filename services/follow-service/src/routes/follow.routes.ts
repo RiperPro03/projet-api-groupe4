@@ -1,21 +1,16 @@
-//import express
-const express = require('express');
+import { Router } from "express";
+import {
+  addFollowHandler,
+  unfollowHandler,
+  getFollowingHandler,
+  getFollowersHandler,
+} from "../controllers/follow.controller.js";
 
-//create a router
-const router = express.Router();
+const router = Router();
 
-const followController = require('../controllers/follow.controller');
+router.post("/:followerId/:followingId", addFollowHandler);
+router.delete("/:followerId/:followingId", unfollowHandler);
+router.get("/:id/following", getFollowingHandler);
+router.get("/:id/followers", getFollowersHandler);
 
-router.post("/:followerId/:followingId", followController.addFollow);
-router.delete("/:followerId/:followingId", followController.unfollow);
-
-router.get("/:id/following", followController.getFollowing);
-router.get("/:id/followers", followController.getFollowers);
-
-// TODO: faut il faire une route GET /me/following qui récupère 
-// les abonnement de la personne connectée avec auth ?
-
-// Exportation du router pour pouvoir l'utiliser dans l'application
-module.exports = router;
-
-
+export default router;

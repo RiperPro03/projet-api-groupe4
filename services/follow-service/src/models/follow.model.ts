@@ -1,29 +1,62 @@
-const mongoose = require('mongoose');
+import { DataTypes, Model, Optional } from "sequelize";
+import sequelize from "../config/database.js";
 
-const followSchema = new mongoose.Schema(
-    {
-      followerId: {
-        type: String,
-        required: true
-      },
-      followingId: {
-        type: String,
-        required: true
-      }
+export interface FollowAttributes {
+  id: string;
+  follower_id: string;
+  following_id: string;
+  created_at: Date;
+}
+
+export type FollowCreationAttributes = Optional<
+  FollowAttributes,
+  "id" | "created_at"
+>;
+
+export class Follow
+  extends Model<FollowAttributes, FollowCreationAttributes>
+  implements FollowAttributes
+{
+  declare id: string;
+  declare follower_id: string;
+  declare following_id: string;
+  declare created_at: Date;
+}
+
+Follow.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
     },
-    {
-      timestamps: true // createdAt et updatedAt
-    }
-  );
+    follower_id: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    following_id: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    created_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  {
+    sequelize,
+    tableName: "follows",
+    timestamps: true,
+    updatedAt: false,
+    createdAt: "created_at",
+    indexes: [
+      {
+        unique: true,
+        fields: ["follower_id", "following_id"],
+      },
+    ],
+  }
+);
 
-  followSchema.index(
-    { followerId: 1, followingId: 1 },
-    { unique: true }
-  );
-  
-
-  const Follow = mongoose.model('Follow', followSchema);
-  export default Follow;
-
-  //module.exports = Follow; ne fonctionne pas avec TypeScript
-  //
+export default Follow;

@@ -32,6 +32,14 @@ router.post(
     authController.logout,
 );
 
+router.put(
+    "/password",
+    authValidator.authenticate,
+    authValidator.requiredFields(["currentPassword", "newPassword"]),
+    authValidator.validatePasswordUpdateInput,
+    authController.updatePassword,
+);
+
 router.get("/verify", authValidator.authenticate, authController.verify);
 
 export default router;

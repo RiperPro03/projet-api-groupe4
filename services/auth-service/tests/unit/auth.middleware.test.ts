@@ -116,6 +116,88 @@ describe("auth.middleware", () => {
         expect(res.status).not.toHaveBeenCalled();
     });
 
+    it("validatePasswordUpdateInput rejects non-string passwords with 400", () => {
+        const req = {
+            body: {
+                currentPassword: 1234,
+                newPassword: true,
+            },
+        } as unknown as Request;
+        const res = createResponse();
+        const next = vi.fn() as NextFunction;
+
+        authValidator.validatePasswordUpdateInput(req, res, next);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                status: "error",
+                message: "Current password and new password must be strings",
+            }),
+        );
+        expect(next).not.toHaveBeenCalled();
+    });
+
+    it("validatePasswordUpdateInput rejects a short new password with 400", () => {
+        const req = {
+            body: {
+                currentPassword: "current-password",
+                newPassword: "short",
+            },
+        } as Request;
+        const res = createResponse();
+        const next = vi.fn() as NextFunction;
+
+        authValidator.validatePasswordUpdateInput(req, res, next);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                status: "error",
+                message: "The new password must be at least 8 characters long",
+            }),
+        );
+        expect(next).not.toHaveBeenCalled();
+    });
+
+    it("validatePasswordUpdateInput rejects a reused password with 400", () => {
+        const req = {
+            body: {
+                currentPassword: "same-password",
+                newPassword: "same-password",
+            },
+        } as Request;
+        const res = createResponse();
+        const next = vi.fn() as NextFunction;
+
+        authValidator.validatePasswordUpdateInput(req, res, next);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                status: "error",
+                message: "The new password must be different from the current password",
+            }),
+        );
+        expect(next).not.toHaveBeenCalled();
+    });
+
+    it("validatePasswordUpdateInput accepts valid passwords", () => {
+        const req = {
+            body: {
+                currentPassword: "current-password",
+                newPassword: "new-password-123",
+            },
+        } as Request;
+        const res = createResponse();
+        const next = vi.fn() as NextFunction;
+
+        authValidator.validatePasswordUpdateInput(req, res, next);
+
+        expect(next).toHaveBeenCalledOnce();
+        expect(res.status).not.toHaveBeenCalled();
+    });
+
     it("authenticate rejects requests without an Authorization header with 401", () => {
         const req = {
             headers: {},

@@ -10,6 +10,7 @@ vi.mock("../../src/services/auth.service", () => ({
         loginUser: vi.fn(),
         refreshAccessToken: vi.fn(),
         logoutUser: vi.fn(),
+        updatePassword: vi.fn(),
     },
 }));
 
@@ -211,6 +212,138 @@ describe("auth.controller", () => {
             );
 
             await authController.logout(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(500);
+            expect(res.json).toHaveBeenCalledWith({
+                status: "error",
+                message: "Internal server error",
+            });
+        });
+    });
+
+    describe("updatePassword", () => {
+        it("returns 401 when req.user is missing", async () => {
+            const req = {
+                body: {
+                    currentPassword: "current-password",
+                    newPassword: "new-password-123",
+                },
+            } as AuthenticatedRequest;
+            const res = createResponse();
+
+            await authController.updatePassword(req, res);
+
+            expect(mockedAuthService.updatePassword).not.toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(401);
+            expect(res.json).toHaveBeenCalledWith({
+                status: "error",
+                message: "Unauthorized",
+            });
+        });
+
+        it("returns 200 and delegates password update to the service", async () => {
+            const req = {
+                user: {
+                    id: "user-1",
+                    email: "user@example.com",
+                    role: "USER",
+                },
+                body: {
+                    currentPassword: "current-password",
+                    newPassword: "new-password-123",
+                },
+            } as AuthenticatedRequest;
+            const res = createResponse();
+
+            mockedAuthService.updatePassword.mockResolvedValue(undefined);
+
+            await authController.updatePassword(req, res);
+
+            expect(mockedAuthService.updatePassword).toHaveBeenCalledWith(
+                "user-1",
+                "current-password",
+                "new-password-123",
+            );
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                status: "success",
+                message: "Password updated successfully",
+            });
+        });
+
+        it("returns 401 when the current password is invalid", async () => {
+            const req = {
+                user: {
+                    id: "user-1",
+                    email: "user@example.com",
+                    role: "USER",
+                },
+                body: {
+                    currentPassword: "wrong-password",
+                    newPassword: "new-password-123",
+                },
+            } as AuthenticatedRequest;
+            const res = createResponse();
+
+            mockedAuthService.updatePassword.mockRejectedValue(
+                new Error("INVALID_CURRENT_PASSWORD"),
+            );
+
+            await authController.updatePassword(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(401);
+            expect(res.json).toHaveBeenCalledWith({
+                status: "error",
+                message: "Invalid current password",
+            });
+        });
+
+        it("returns 404 when the user no longer exists", async () => {
+            const req = {
+                user: {
+                    id: "user-1",
+                    email: "user@example.com",
+                    role: "USER",
+                },
+                body: {
+                    currentPassword: "current-password",
+                    newPassword: "new-password-123",
+                },
+            } as AuthenticatedRequest;
+            const res = createResponse();
+
+            mockedAuthService.updatePassword.mockRejectedValue(
+                new Error("USER_NOT_FOUND"),
+            );
+
+            await authController.updatePassword(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(404);
+            expect(res.json).toHaveBeenCalledWith({
+                status: "error",
+                message: "User not found",
+            });
+        });
+
+        it("returns 500 on unexpected errors", async () => {
+            const req = {
+                user: {
+                    id: "user-1",
+                    email: "user@example.com",
+                    role: "USER",
+                },
+                body: {
+                    currentPassword: "current-password",
+                    newPassword: "new-password-123",
+                },
+            } as AuthenticatedRequest;
+            const res = createResponse();
+
+            mockedAuthService.updatePassword.mockRejectedValue(
+                new Error("DATABASE_DOWN"),
+            );
+
+            await authController.updatePassword(req, res);
 
             expect(res.status).toHaveBeenCalledWith(500);
             expect(res.json).toHaveBeenCalledWith({

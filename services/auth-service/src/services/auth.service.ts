@@ -206,11 +206,58 @@ async function logoutUser(userId: string, refreshToken: string): Promise<void> {
     });
 }
 
+async function updatePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+): Promise<void> {
+    const user = await prisma.user.findUnique({
+        where: {
+            id: userId,
+        },
+    });
+
+    if (!user) {
+        throw new Error("USER_NOT_FOUND");
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(
+        currentPassword,
+        user.password,
+    );
+
+    if (!isCurrentPasswordValid) {
+        throw new Error("INVALID_CURRENT_PASSWORD");
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+    await prisma.user.update({
+        where: {
+            id: userId,
+        },
+        data: {
+            password: hashedNewPassword,
+        },
+    });
+
+    await prisma.refreshToken.updateMany({
+        where: {
+            userId,
+            revokedAt: null,
+        },
+        data: {
+            revokedAt: new Date(),
+        },
+    });
+}
+
 const authService = {
     registerUser,
     loginUser,
     refreshAccessToken,
     logoutUser,
+    updatePassword,
 };
 
 export default authService;

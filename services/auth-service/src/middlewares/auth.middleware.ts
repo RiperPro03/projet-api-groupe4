@@ -9,6 +9,23 @@ export type AuthenticatedRequest = Request & {
     };
 };
 
+const MIN_PASSWORD_LENGTH = 8;
+
+function validatePasswordMinLength(
+    password: string,
+    res: Response,
+    fieldLabel: string,
+): Response | undefined {
+    if (password.length >= MIN_PASSWORD_LENGTH) {
+        return;
+    }
+
+    return res.status(400).json({
+        status: "error",
+        message: `The ${fieldLabel} must be at least ${MIN_PASSWORD_LENGTH} characters long`,
+    });
+}
+
 function requiredFields(fieldsRequired: string[]) {
     return (req: Request, res: Response, next: NextFunction) => {
         const missingFields: string[] = [];
@@ -57,11 +74,14 @@ function validateRegisterInput(
         });
     }
 
-    if (password.length < 8) {
-        return res.status(400).json({
-            status: "error",
-            message: "The password must be at least 8 characters long",
-        });
+    const passwordLengthError = validatePasswordMinLength(
+        password,
+        res,
+        "password",
+    );
+
+    if (passwordLengthError) {
+        return passwordLengthError;
     }
 
     next();
@@ -78,6 +98,43 @@ function validateLoginInput(
         return res.status(400).json({
             status: "error",
             message: "Email and password must be strings",
+        });
+    }
+
+    next();
+}
+
+function validatePasswordUpdateInput(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) {
+    const { currentPassword, newPassword } = req.body;
+
+    if (
+        typeof currentPassword !== "string" ||
+        typeof newPassword !== "string"
+    ) {
+        return res.status(400).json({
+            status: "error",
+            message: "Current password and new password must be strings",
+        });
+    }
+
+    const newPasswordLengthError = validatePasswordMinLength(
+        newPassword,
+        res,
+        "new password",
+    );
+
+    if (newPasswordLengthError) {
+        return newPasswordLengthError;
+    }
+
+    if (newPassword === currentPassword) {
+        return res.status(400).json({
+            status: "error",
+            message: "The new password must be different from the current password",
         });
     }
 
@@ -129,6 +186,7 @@ const authValidator = {
     requiredFields,
     validateRegisterInput,
     validateLoginInput,
+    validatePasswordUpdateInput,
     authenticate,
 };
 

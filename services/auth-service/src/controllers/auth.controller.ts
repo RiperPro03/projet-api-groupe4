@@ -219,12 +219,59 @@ async function logout(req: AuthenticatedRequest, res: Response) {
     }
 }
 
+async function updatePassword(req: AuthenticatedRequest, res: Response) {
+    if (!req.user) {
+        return res.status(401).json({
+            status: "error",
+            message: "Unauthorized",
+        });
+    }
+
+    try {
+        await authService.updatePassword(
+            req.user.id,
+            req.body.currentPassword,
+            req.body.newPassword,
+        );
+
+        return res.status(200).json({
+            status: "success",
+            message: "Password updated successfully",
+        });
+    } catch (error) {
+        console.log(error);
+
+        if (
+            error instanceof Error &&
+            error.message === "INVALID_CURRENT_PASSWORD"
+        ) {
+            return res.status(401).json({
+                status: "error",
+                message: "Invalid current password",
+            });
+        }
+
+        if (error instanceof Error && error.message === "USER_NOT_FOUND") {
+            return res.status(404).json({
+                status: "error",
+                message: "User not found",
+            });
+        }
+
+        return res.status(500).json({
+            status: "error",
+            message: "Internal server error",
+        });
+    }
+}
+
 const authController = {
     register,
     login,
     verify,
     refreshToken,
     logout,
+    updatePassword,
 };
 
 export default authController;

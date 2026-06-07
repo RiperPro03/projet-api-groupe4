@@ -13,11 +13,13 @@ type MockResponse = Response & {
 function createResponse(): MockResponse {
     const response = {} as MockResponse;
 
+    // On reproduit le chainage Express classique : res.status(...).json(...)
     response.status = vi.fn((statusCode: number) => {
         response.statusCode = statusCode;
         return response;
     }) as MockResponse["status"];
 
+    // On garde le JSON envoye pour pouvoir l'asserter facilement dans les tests.
     response.json = vi.fn((body: unknown) => {
         response.locals.body = body;
         return response;
@@ -43,6 +45,7 @@ describe("auth.middleware", () => {
 
         middleware(req, res, next);
 
+        // Le middleware doit bloquer avant d'arriver au handler suivant.
         expect(res.status).toHaveBeenCalledWith(400);
         expect(res.json).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -170,6 +173,7 @@ describe("auth.middleware", () => {
 
         authValidator.authenticate(req, res, next);
 
+        // Le middleware reconstruit req.user a partir du payload JWT verifie.
         expect(req.user).toEqual({
             id: "user-123",
             email: "user@example.com",

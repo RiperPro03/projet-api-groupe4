@@ -555,7 +555,7 @@ Les fichiers TypeScript peuvent suivre cette convention :
 auth.controller.ts
 auth.service.ts
 auth.routes.ts
-user.model.ts
+auth.model.ts
 error.middleware.ts
 ```
 

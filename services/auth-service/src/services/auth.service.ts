@@ -1,11 +1,6 @@
 import bcrypt from "bcrypt";
 import { prisma } from "../config/prisma";
-import type {
-    AuthResponse,
-    LoginInput,
-    RegisterInput,
-    SafeUser,
-} from "../models/user.model";
+import type * as AuthModel from "../models/auth.model";
 
 import {
     generateAccessToken,
@@ -16,7 +11,7 @@ import {
 
 const SALT_ROUNDS = 10;
 
-function sanitizeUser(user: SafeUser): SafeUser {
+function sanitizeUser(user: AuthModel.SafeUser): AuthModel.SafeUser {
     return {
         id: user.id,
         email: user.email,
@@ -26,7 +21,25 @@ function sanitizeUser(user: SafeUser): SafeUser {
     };
 }
 
-async function registerUser(data: RegisterInput): Promise<SafeUser> {
+function buildAccessToken(user: { id: string; email: string; role: string }): string {
+    return generateAccessToken({
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+    });
+}
+
+async function storeRefreshToken(userId: string, refreshToken: string): Promise<void> {
+    await prisma.refreshToken.create({
+        data: {
+            tokenHash: hashToken(refreshToken),
+            userId,
+            expiresAt: getRefreshTokenExpirationDate(),
+        },
+    });
+}
+
+async function registerUser(data: AuthModel.RegisterInput): Promise<AuthModel.SafeUser> {
     const email = data.email.trim().toLowerCase();
 
     const existingUser = await prisma.user.findUnique({
@@ -56,7 +69,7 @@ async function registerUser(data: RegisterInput): Promise<SafeUser> {
     return sanitizeUser(user);
 }
 
-async function loginUser(data: LoginInput): Promise<AuthResponse> {
+async function loginUser(data: AuthModel.LoginInput): Promise<AuthModel.AuthResponse> {
     const email = data.email.trim().toLowerCase();
 
     const user = await prisma.user.findUnique({
@@ -73,22 +86,9 @@ async function loginUser(data: LoginInput): Promise<AuthResponse> {
         throw new Error("INVALID_CREDENTIALS");
     }
 
-    const accessToken = generateAccessToken({
-        sub: user.id,
-        email: user.email,
-        role: user.role,
-    });
-
+    const accessToken = buildAccessToken(user);
     const refreshToken = generateRefreshToken();
-    const refreshTokenHash = hashToken(refreshToken);
-
-    await prisma.refreshToken.create({
-        data: {
-            tokenHash: refreshTokenHash,
-            userId: user.id,
-            expiresAt: getRefreshTokenExpirationDate(),
-        },
-    });
+    await storeRefreshToken(user.id, refreshToken);
 
     return {
         user: sanitizeUser({
@@ -105,9 +105,77 @@ async function loginUser(data: LoginInput): Promise<AuthResponse> {
     };
 }
 
+async function refreshAccessToken(
+    data: AuthModel.RefreshTokenInput,
+): Promise<AuthModel.RefreshTokenResponse> {
+    const { refreshToken } = data;
+
+    if (typeof refreshToken !== "string" || refreshToken.trim() === "") {
+        throw new Error("REFRESH_TOKEN_REQUIRED");
+    }
+
+    const currentTokenHash = hashToken(refreshToken);
+    const storedRefreshToken = await prisma.refreshToken.findUnique({
+        where: {
+            tokenHash: currentTokenHash,
+        },
+    });
+
+    if (!storedRefreshToken) {
+        throw new Error("INVALID_REFRESH_TOKEN");
+    }
+
+    if (storedRefreshToken.revokedAt) {
+        throw new Error("REFRESH_TOKEN_REVOKED");
+    }
+
+    if (storedRefreshToken.expiresAt.getTime() <= Date.now()) {
+        throw new Error("REFRESH_TOKEN_EXPIRED");
+    }
+
+    const user = await prisma.user.findUnique({
+        where: {
+            id: storedRefreshToken.userId,
+        },
+    });
+
+    if (!user) {
+        throw new Error("USER_NOT_FOUND");
+    }
+
+    const nextAccessToken = buildAccessToken(user);
+    const nextRefreshToken = generateRefreshToken();
+    const nextRefreshTokenHash = hashToken(nextRefreshToken);
+    const revokedAt = new Date();
+
+    await prisma.$transaction([
+        prisma.refreshToken.update({
+            where: {
+                id: storedRefreshToken.id,
+            },
+            data: {
+                revokedAt,
+            },
+        }),
+        prisma.refreshToken.create({
+            data: {
+                tokenHash: nextRefreshTokenHash,
+                userId: user.id,
+                expiresAt: getRefreshTokenExpirationDate(),
+            },
+        }),
+    ]);
+
+    return {
+        accessToken: nextAccessToken,
+        refreshToken: nextRefreshToken,
+    };
+}
+
 const authService = {
     registerUser,
     loginUser,
+    refreshAccessToken,
 };
 
 export default authService;

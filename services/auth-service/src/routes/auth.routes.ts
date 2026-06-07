@@ -19,6 +19,12 @@ router.post(
     authController.login,
 );
 
+router.post(
+    "/refresh-token",
+    authValidator.requiredFields(["refreshToken"]),
+    authController.refreshToken,
+);
+
 router.get("/verify", authValidator.authenticate, authController.verify);
 
 export default router;

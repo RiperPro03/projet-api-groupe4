@@ -172,10 +172,45 @@ async function refreshAccessToken(
     };
 }
 
+async function logoutUser(userId: string, refreshToken: string): Promise<void> {
+    if (typeof refreshToken !== "string" || refreshToken.trim() === "") {
+        throw new Error("REFRESH_TOKEN_REQUIRED");
+    }
+
+    const currentTokenHash = hashToken(refreshToken);
+    const storedRefreshToken = await prisma.refreshToken.findUnique({
+        where: {
+            tokenHash: currentTokenHash,
+        },
+    });
+
+    if (!storedRefreshToken) {
+        throw new Error("INVALID_REFRESH_TOKEN");
+    }
+
+    if (storedRefreshToken.userId !== userId) {
+        throw new Error("REFRESH_TOKEN_USER_MISMATCH");
+    }
+
+    if (storedRefreshToken.revokedAt) {
+        throw new Error("REFRESH_TOKEN_ALREADY_REVOKED");
+    }
+
+    await prisma.refreshToken.update({
+        where: {
+            id: storedRefreshToken.id,
+        },
+        data: {
+            revokedAt: new Date(),
+        },
+    });
+}
+
 const authService = {
     registerUser,
     loginUser,
     refreshAccessToken,
+    logoutUser,
 };
 
 export default authService;

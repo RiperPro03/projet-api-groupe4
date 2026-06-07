@@ -154,11 +154,77 @@ async function refreshToken(req: Request, res: Response) {
     }
 }
 
+async function logout(req: AuthenticatedRequest, res: Response) {
+    if (!req.user) {
+        return res.status(401).json({
+            status: "error",
+            message: "Unauthorized",
+        });
+    }
+
+    try {
+        await authService.logoutUser(req.user.id, req.body.refreshToken);
+
+        return res.status(200).json({
+            status: "success",
+            message: "User logged out",
+        });
+    } catch (error) {
+        console.log(error);
+
+        if (
+            error instanceof Error &&
+            error.message === "REFRESH_TOKEN_REQUIRED"
+        ) {
+            return res.status(400).json({
+                status: "error",
+                message: "Refresh token is required",
+            });
+        }
+
+        if (
+            error instanceof Error &&
+            error.message === "INVALID_REFRESH_TOKEN"
+        ) {
+            return res.status(401).json({
+                status: "error",
+                message: "Invalid refresh token",
+            });
+        }
+
+        if (
+            error instanceof Error &&
+            error.message === "REFRESH_TOKEN_ALREADY_REVOKED"
+        ) {
+            return res.status(401).json({
+                status: "error",
+                message: "Refresh token already revoked",
+            });
+        }
+
+        if (
+            error instanceof Error &&
+            error.message === "REFRESH_TOKEN_USER_MISMATCH"
+        ) {
+            return res.status(403).json({
+                status: "error",
+                message: "Refresh token does not belong to the authenticated user",
+            });
+        }
+
+        return res.status(500).json({
+            status: "error",
+            message: "Internal server error",
+        });
+    }
+}
+
 const authController = {
     register,
     login,
     verify,
     refreshToken,
+    logout,
 };
 
 export default authController;

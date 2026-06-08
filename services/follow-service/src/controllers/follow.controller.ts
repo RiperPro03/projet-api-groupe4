@@ -7,10 +7,12 @@ import {
   FollowError,
 } from "../services/follow.service.js";
 
+// Express 5 peut typer req.params en string | string[].
 function param(value: string | string[]): string {
   return Array.isArray(value) ? value[0] : value;
 }
 
+/** Couche HTTP : lit la requête, appelle le service, renvoie le JSON. */
 export async function addFollowHandler(req: Request, res: Response) {
   try {
     const followerId = param(req.params.followerId);
@@ -53,6 +55,7 @@ export async function getFollowersHandler(req: Request, res: Response) {
   }
 }
 
+/** Traduit les erreurs métier (FollowError) en réponses HTTP. */
 function handleError(error: unknown, res: Response) {
   if (error instanceof FollowError) {
     res.status(error.statusCode).json({ error: error.message });

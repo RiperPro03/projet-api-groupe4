@@ -6,6 +6,7 @@ const PORT = process.env.PORT || 3004;
 
 async function start() {
   try {
+    // Les migrations sont appliquées par le script npm (dev/start), pas ici.
     await initDatabase();
     app.listen(PORT, () => {
       console.log(`follow-service running on http://localhost:${PORT}`);

@@ -1,3 +1,4 @@
+// Config Prisma 7 : l'URL de la BDD est ici (plus dans schema.prisma).
 import "dotenv/config";
 import { defineConfig, env } from "prisma/config";
 

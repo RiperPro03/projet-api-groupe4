@@ -13,6 +13,7 @@ app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json());
 
+// Endpoint de supervision (utilisé par Docker / monitoring).
 app.get("/health", (_req, res) => {
   res.json({
     service: serviceName,
@@ -20,6 +21,8 @@ app.get("/health", (_req, res) => {
   });
 });
 
+// Routes métier montées à la racine.
+// Via l'API Gateway : /api/follows/* → /* sur ce service.
 app.use("/", followRoutes);
 
 export default app;

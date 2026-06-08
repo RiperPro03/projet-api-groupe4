@@ -1,6 +1,7 @@
 import prisma from "../config/database.js";
 import { Prisma } from "../generated/prisma/client.js";
 
+/** Erreur métier avec un code HTTP associé (utilisée par le controller). */
 export class FollowError extends Error {
   constructor(
     message: string,
@@ -11,6 +12,7 @@ export class FollowError extends Error {
   }
 }
 
+/** Crée la relation followerId → followingId (Fx9). */
 export async function addFollow(followerId: string, followingId: string) {
   if (followerId === followingId) {
     throw new FollowError(
@@ -27,6 +29,7 @@ export async function addFollow(followerId: string, followingId: string) {
       },
     });
   } catch (error) {
+    // P2002 = violation de contrainte unique (déjà suivi).
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
@@ -37,6 +40,11 @@ export async function addFollow(followerId: string, followingId: string) {
   }
 }
 
+/**
+ * Supprime une seule relation, identifiée par la paire (follower, following).
+ * La clé composée @@unique([follower_id, following_id]) dans Prisma
+ * garantit qu'on ne supprime pas tous les follows d'un utilisateur.
+ */
 export async function unfollow(
   followerId: string,
   followingId: string
@@ -51,6 +59,7 @@ export async function unfollow(
       },
     });
   } catch (error) {
+    // P2025 = enregistrement introuvable.
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2025"
@@ -61,6 +70,7 @@ export async function unfollow(
   }
 }
 
+/** Liste des utilisateurs suivis par userId (feed-service s'en sert). */
 export async function getFollowing(userId: string) {
   return prisma.follow.findMany({
     where: { follower_id: userId },
@@ -68,6 +78,7 @@ export async function getFollowing(userId: string) {
   });
 }
 
+/** Liste des abonnés de userId. */
 export async function getFollowers(userId: string) {
   return prisma.follow.findMany({
     where: { following_id: userId },

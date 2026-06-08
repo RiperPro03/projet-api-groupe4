@@ -1,3 +1,4 @@
+// Client Prisma généré dans src/generated/prisma (Prisma 7).
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -7,12 +8,14 @@ datasource db {
   provider = "postgresql"
 }
 
+// Table "follows" : une ligne = un abonnement (follower → following).
 model Follow {
   id           String   @id @default(uuid()) @db.Uuid
-  follower_id  String   @db.VarChar(255)
-  following_id String   @db.VarChar(255)
+  follower_id  String   @db.VarChar(255) // utilisateur qui suit
+  following_id String   @db.VarChar(255) // utilisateur suivi
   created_at   DateTime @default(now())
 
+  // Empêche les doublons et permet le delete ciblé via follower_id_following_id.
   @@unique([follower_id, following_id])
   @@map("follows")
 }

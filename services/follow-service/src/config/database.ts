@@ -1,18 +1,16 @@
-import { Sequelize } from "sequelize";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../generated/prisma/client.js";
 
-const sequelize = new Sequelize(
+const connectionString =
   process.env.DATABASE_URL ||
-    "postgres://postgres:postgres@localhost:5432/breezy",
-  {
-    dialect: "postgres",
-    logging: process.env.NODE_ENV === "development" ? console.log : false,
-  }
-);
+  "postgres://postgres:postgres@localhost:5432/breezy";
+
+const adapter = new PrismaPg({ connectionString });
+
+const prisma = new PrismaClient({ adapter });
 
 export async function initDatabase(): Promise<void> {
-  await sequelize.authenticate();
-  await import("../models/follow.model.js");
-  await sequelize.sync();
+  await prisma.$connect();
 }
 
-export default sequelize;
+export default prisma;

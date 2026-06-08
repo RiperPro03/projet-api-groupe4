@@ -70,7 +70,6 @@ describe("auth.service", () => {
             id: "user-1",
             email: "user@example.com",
             password: "hashed-password",
-            role: "USER",
             createdAt: new Date(),
             updatedAt: new Date(),
         } as never);
@@ -78,7 +77,7 @@ describe("auth.service", () => {
         await expect(
             authService.registerUser({
                 email: "user@example.com",
-                password: "password123",
+                passwordHash: "password123",
             }),
         ).rejects.toThrow("EMAIL_ALREADY_USED");
     });
@@ -92,14 +91,13 @@ describe("auth.service", () => {
         mockedPrisma.user.create.mockResolvedValue({
             id: "user-1",
             email: "user@example.com",
-            role: "USER",
             createdAt,
             updatedAt,
         } as never);
 
         const result = await authService.registerUser({
             email: " User@Example.com ",
-            password: "password123",
+            passwordHash: "password123",
         });
 
         expect(mockedBcrypt.hash).toHaveBeenCalledWith("password123", 10);
@@ -111,7 +109,6 @@ describe("auth.service", () => {
             select: {
                 id: true,
                 email: true,
-                role: true,
                 createdAt: true,
                 updatedAt: true,
             },
@@ -119,7 +116,6 @@ describe("auth.service", () => {
         expect(result).toEqual({
             id: "user-1",
             email: "user@example.com",
-            role: "USER",
             createdAt,
             updatedAt,
         });
@@ -131,7 +127,7 @@ describe("auth.service", () => {
         await expect(
             authService.loginUser({
                 email: "user@example.com",
-                password: "password123",
+                passwordHash: "password123",
             }),
         ).rejects.toThrow("INVALID_CREDENTIALS");
     });
@@ -141,7 +137,6 @@ describe("auth.service", () => {
             id: "user-1",
             email: "user@example.com",
             password: "hashed-password",
-            role: "USER",
             createdAt: new Date("2025-01-01T00:00:00.000Z"),
             updatedAt: new Date("2025-01-02T00:00:00.000Z"),
         };
@@ -153,7 +148,7 @@ describe("auth.service", () => {
 
         const result = await authService.loginUser({
             email: "USER@example.com",
-            password: "password123",
+            passwordHash: "password123",
         });
 
         // Le service ne doit jamais stocker le refresh token en clair en base.
@@ -173,7 +168,6 @@ describe("auth.service", () => {
             user: {
                 id: "user-1",
                 email: "user@example.com",
-                role: "USER",
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,
             },
@@ -260,8 +254,7 @@ describe("auth.service", () => {
         mockedPrisma.user.findUnique.mockResolvedValue({
             id: "user-1",
             email: "user@example.com",
-            password: "hashed-password",
-            role: "USER",
+            passwordHash: "hashed-password",
             createdAt: new Date("2025-01-01T00:00:00.000Z"),
             updatedAt: new Date("2025-01-02T00:00:00.000Z"),
         } as never);
@@ -298,7 +291,6 @@ describe("auth.service", () => {
         expect(mockedGenerateAccessToken).toHaveBeenCalledWith({
             sub: "user-1",
             email: "user@example.com",
-            role: "USER",
         });
         expect(mockedPrisma.refreshToken.update).toHaveBeenCalledWith({
             where: {
@@ -418,8 +410,7 @@ describe("auth.service", () => {
         mockedPrisma.user.findUnique.mockResolvedValue({
             id: "user-1",
             email: "user@example.com",
-            password: "hashed-password",
-            role: "USER",
+            passwordHash: "hashed-password",
             createdAt: new Date("2025-01-01T00:00:00.000Z"),
             updatedAt: new Date("2025-01-02T00:00:00.000Z"),
         } as never);
@@ -438,8 +429,7 @@ describe("auth.service", () => {
         mockedPrisma.user.findUnique.mockResolvedValue({
             id: "user-1",
             email: "user@example.com",
-            password: "hashed-password",
-            role: "USER",
+            passwordHash: "hashed-password",
             createdAt: new Date("2025-01-01T00:00:00.000Z"),
             updatedAt: new Date("2025-01-02T00:00:00.000Z"),
         } as never);
@@ -448,8 +438,7 @@ describe("auth.service", () => {
         mockedPrisma.user.update.mockResolvedValue({
             id: "user-1",
             email: "user@example.com",
-            password: "hashed-new-password",
-            role: "USER",
+            passwordHash: "hashed-new-password",
             createdAt: new Date("2025-01-01T00:00:00.000Z"),
             updatedAt: new Date("2025-01-03T00:00:00.000Z"),
         } as never);

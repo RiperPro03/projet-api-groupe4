@@ -15,17 +15,15 @@ function sanitizeUser(user: AuthModel.SafeUser): AuthModel.SafeUser {
     return {
         id: user.id,
         email: user.email,
-        role: user.role,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
     };
 }
 
-function buildAccessToken(user: { id: string; email: string; role: string }): string {
+function buildAccessToken(user: { id: string; email: string }): string {
     return generateAccessToken({
         sub: user.id,
         email: user.email,
-        role: user.role,
     });
 }
 
@@ -50,17 +48,16 @@ async function registerUser(data: AuthModel.RegisterInput): Promise<AuthModel.Sa
         throw new Error("EMAIL_ALREADY_USED");
     }
 
-    const hashedPassword = await bcrypt.hash(data.password, SALT_ROUNDS);
+    const hashedPassword = await bcrypt.hash(data.passwordHash, SALT_ROUNDS);
 
     const user = await prisma.user.create({
         data: {
             email,
-            password: hashedPassword,
+            passwordHash: hashedPassword,
         },
         select: {
             id: true,
             email: true,
-            role: true,
             createdAt: true,
             updatedAt: true,
         },
@@ -80,7 +77,7 @@ async function loginUser(data: AuthModel.LoginInput): Promise<AuthModel.AuthResp
         throw new Error("INVALID_CREDENTIALS");
     }
 
-    const isPasswordValid = await bcrypt.compare(data.password, user.password);
+    const isPasswordValid = await bcrypt.compare(data.passwordHash, user.passwordHash);
 
     if (!isPasswordValid) {
         throw new Error("INVALID_CREDENTIALS");
@@ -94,7 +91,6 @@ async function loginUser(data: AuthModel.LoginInput): Promise<AuthModel.AuthResp
         user: sanitizeUser({
             id: user.id,
             email: user.email,
-            role: user.role,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
         }),
@@ -223,7 +219,7 @@ async function updatePassword(
 
     const isCurrentPasswordValid = await bcrypt.compare(
         currentPassword,
-        user.password,
+        user.passwordHash,
     );
 
     if (!isCurrentPasswordValid) {

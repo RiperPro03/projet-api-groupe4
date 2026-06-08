@@ -242,7 +242,6 @@ describe("auth.middleware", () => {
         const token = generateAccessToken({
             sub: "user-123",
             email: "user@example.com",
-            role: "user",
         });
 
         const req = {
@@ -259,7 +258,6 @@ describe("auth.middleware", () => {
         expect(req.user).toEqual({
             id: "user-123",
             email: "user@example.com",
-            role: "user",
         });
         expect(next).toHaveBeenCalledOnce();
         expect(res.status).not.toHaveBeenCalled();

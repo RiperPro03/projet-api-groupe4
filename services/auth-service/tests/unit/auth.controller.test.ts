@@ -69,7 +69,6 @@ describe("auth.controller", () => {
                 user: {
                     id: "user-1",
                     email: "user@example.com",
-                    role: "USER",
                 },
                 body: {
                     refreshToken: "refresh-token",
@@ -97,7 +96,6 @@ describe("auth.controller", () => {
                 user: {
                     id: "user-1",
                     email: "user@example.com",
-                    role: "USER",
                 },
                 body: {},
             } as AuthenticatedRequest;
@@ -121,7 +119,6 @@ describe("auth.controller", () => {
                 user: {
                     id: "user-1",
                     email: "user@example.com",
-                    role: "USER",
                 },
                 body: {
                     refreshToken: "invalid-refresh-token",
@@ -147,7 +144,6 @@ describe("auth.controller", () => {
                 user: {
                     id: "user-1",
                     email: "user@example.com",
-                    role: "USER",
                 },
                 body: {
                     refreshToken: "revoked-refresh-token",
@@ -173,7 +169,6 @@ describe("auth.controller", () => {
                 user: {
                     id: "user-1",
                     email: "user@example.com",
-                    role: "USER",
                 },
                 body: {
                     refreshToken: "other-user-refresh-token",
@@ -199,7 +194,6 @@ describe("auth.controller", () => {
                 user: {
                     id: "user-1",
                     email: "user@example.com",
-                    role: "USER",
                 },
                 body: {
                     refreshToken: "refresh-token",
@@ -246,7 +240,6 @@ describe("auth.controller", () => {
                 user: {
                     id: "user-1",
                     email: "user@example.com",
-                    role: "USER",
                 },
                 body: {
                     currentPassword: "current-password",
@@ -276,7 +269,6 @@ describe("auth.controller", () => {
                 user: {
                     id: "user-1",
                     email: "user@example.com",
-                    role: "USER",
                 },
                 body: {
                     currentPassword: "wrong-password",
@@ -303,7 +295,6 @@ describe("auth.controller", () => {
                 user: {
                     id: "user-1",
                     email: "user@example.com",
-                    role: "USER",
                 },
                 body: {
                     currentPassword: "current-password",
@@ -330,7 +321,6 @@ describe("auth.controller", () => {
                 user: {
                     id: "user-1",
                     email: "user@example.com",
-                    role: "USER",
                 },
                 body: {
                     currentPassword: "current-password",

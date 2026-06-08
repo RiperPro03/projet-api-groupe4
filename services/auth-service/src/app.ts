@@ -7,8 +7,6 @@ import authRoutes from "./routes/auth.routes";
 
 const app = express();
 
-const serviceName = process.env.SERVICE_NAME || "auth-service";
-
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));

@@ -1,25 +1,15 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import type { Secret, SignOptions } from "jsonwebtoken";
+import { env } from "../config/env";
 
 type JwtUserPayload = {
     sub: string;
     email: string;
-    role: string;
 };
 
-function getEnv(name: string): string {
-    const value = process.env[name];
-
-    if (!value) {
-        throw new Error(`${name} is not defined`);
-    }
-
-    return value;
-}
-
-const ACCESS_SECRET: Secret = getEnv("JWT_ACCESS_SECRET");
-const REFRESH_SECRET: Secret = getEnv("JWT_REFRESH_SECRET");
+const ACCESS_SECRET: Secret = env.jwt.accessSecret;
+const REFRESH_SECRET: Secret = env.jwt.refreshSecret;
 
 const ACCESS_EXPIRES_IN = (
     process.env.JWT_ACCESS_EXPIRES_IN || "15m"

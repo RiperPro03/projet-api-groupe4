@@ -7,7 +7,7 @@ async function register(req: Request, res: Response) {
     try {
         const user = await authService.registerUser({
             email: req.body.email,
-            password: req.body.password,
+            passwordHash: req.body.password,
         });
 
         return res.status(201).json({
@@ -38,7 +38,7 @@ async function login(req: Request, res: Response) {
     try {
         const result = await authService.loginUser({
             email: req.body.email,
-            password: req.body.password,
+            passwordHash: req.body.password,
         });
 
         return res.status(200).json({

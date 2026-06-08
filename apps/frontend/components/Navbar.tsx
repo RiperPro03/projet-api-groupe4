@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -26,12 +27,20 @@ export default function Navbar() {
             <div className="mx-auto flex h-16 max-w-md items-center justify-center px-2 md:mx-0 md:h-full md:max-w-none md:flex-col md:items-stretch md:justify-start md:gap-2 md:p-4">
                 <Link
                     href="/"
-                    className="mb-4 hidden h-12 items-center justify-center overflow-hidden whitespace-nowrap rounded-full px-3 text-2xl font-bold text-breezy-green opacity-0 transition-opacity duration-300 hover:bg-white/10 md:flex group-hover:opacity-100"
+                    className="mb-4 hidden h-12 items-center overflow-hidden whitespace-nowrap rounded-xl px-1 text-2xl font-bold text-breezy-green hover:bg-white/10 md:flex"
                     aria-label="Breezyl - Accueil"
                 >
+                    <Image
+                        src="/breezy-logo.ico"
+                        alt=""
+                        width={40}
+                        height={40}
+                        unoptimized
+                        className="size-10 shrink-0 rounded-lg object-cover"
+                    />
                     <DiaTextReveal
                         key={logoAnimationKey}
-                        className="text-3xl font-bold tracking-tight"
+                        className="ml-4 text-2xl font-bold tracking-tight opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                         colors={[
                             "var(--color-breezy-green)",
                             "var(--color-breezy-yellow)",

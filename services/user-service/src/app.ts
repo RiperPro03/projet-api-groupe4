@@ -3,20 +3,15 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 
-const app = express();
+import userRoute from "./routes/user.routes";
 
-const serviceName = process.env.SERVICE_NAME || "user-service";
+const app = express();
 
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json());
 
-app.get("/health", (_req, res) => {
-  res.json({
-    service: serviceName,
-    status: "OK"
-  });
-});
+app.use("/users-state", userRoute);
 
 export default app;

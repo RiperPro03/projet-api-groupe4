@@ -44,6 +44,26 @@ services:
       timeout: 5s
       retries: 10
 
+  user-postgres:
+    image: postgres:17-alpine
+    container_name: user-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user_user
+      POSTGRES_PASSWORD: user_password
+      POSTGRES_DB: user_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - user_postgres_data:/var/lib/postgresql/data
+    networks:
+      - breezy-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user_user -d user_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   api-gateway:
     build:
       context: ./apps/api-gateway
@@ -78,9 +98,26 @@ services:
         condition: service_healthy
     networks:
       - breezy-network
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3001"
+    env_file:
+      - ./services/user-service/.env
+    environment:
+      DATABASE_URL: postgresql://user_user:user_password@user-postgres:5432/user_db?schema=public
+    depends_on:
+      user-postgres:
+        condition: service_healthy
+    networks:
+      - breezy-network
 
 volumes:
   auth_postgres_data:
+  user_postgres_data:
 
 networks:
   breezy-network:

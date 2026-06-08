@@ -38,7 +38,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <MantineProvider>
           <Navbar />
-          {children}
+          <main className="flex-1 pb-16 md:pb-0 md:pl-20">
+            {children}
+          </main>
         </MantineProvider>
       </body>
     </html>

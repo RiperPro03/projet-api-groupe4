@@ -10,7 +10,9 @@
                     "build":  "prisma generate && tsc",
                     "db:migrate":  "prisma migrate dev",
                     "db:deploy":  "prisma migrate deploy",
-                    "db:generate":  "prisma generate"
+                    "db:generate":  "prisma generate",
+                    "test":  "vitest run",
+                    "test:watch":  "vitest"
                 },
     "keywords":  [
 
@@ -33,9 +35,12 @@
                             "@types/express":  "^5.0.6",
                             "@types/morgan":  "^1.9.10",
                             "@types/node":  "^25.9.1",
+                            "@types/supertest":  "^6.0.3",
                             "nodemon":  "^3.1.14",
                             "prisma":  "^7.0.0",
+                            "supertest":  "^7.1.4",
                             "tsx":  "^4.22.3",
-                            "typescript":  "^6.0.3"
+                            "typescript":  "^6.0.3",
+                            "vitest":  "^3.2.4"
                         }
 }

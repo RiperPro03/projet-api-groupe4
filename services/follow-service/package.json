@@ -4,16 +4,13 @@
     "description":  "",
     "main":  "index.js",
     "scripts":  {
-                    "postinstall":  "prisma generate",
-                    "dev":  "prisma generate && prisma migrate deploy && tsx watch src/server.ts",
-                    "start":  "prisma migrate deploy && node dist/server.js",
-                    "build":  "prisma generate && tsc",
-                    "db:migrate":  "prisma migrate dev",
-                    "db:deploy":  "prisma migrate deploy",
-                    "db:generate":  "prisma generate",
-                    "test":  "vitest run",
-                    "test:watch":  "vitest"
-                },
+      "dev":  "tsx watch src/server.ts",
+      "start":  "tsx src/server.ts",
+      "build":  "tsc --noEmit",
+      "test":  "vitest run",
+      "test:watch":  "vitest",
+      "test:coverage":  "vitest run --coverage"
+    },
     "keywords":  [
 
                  ],
@@ -36,7 +33,6 @@
                             "@types/morgan":  "^1.9.10",
                             "@types/node":  "^25.9.1",
                             "@types/supertest":  "^6.0.3",
-                            "nodemon":  "^3.1.14",
                             "prisma":  "^7.0.0",
                             "supertest":  "^7.1.4",
                             "tsx":  "^4.22.3",

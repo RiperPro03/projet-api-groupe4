@@ -7,3 +7,5 @@ allowBuilds:
   esbuild: false
   msw: false
   prisma: true
+
+dangerouslyAllowAllBuilds: true

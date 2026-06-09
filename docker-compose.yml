@@ -1,133 +1,87 @@
 services:
-  postgres:
-    image: postgres:17-alpine
-    container_name: breezy-postgres
-    environment:
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_DB: breezy
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-public
+    restart: unless-stopped
+    ports:
+      - "8080:80"
     volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-  frontend:
-    build:
-      context: .
-      dockerfile: infra/docker/node.Dockerfile
-      args:
-        SERVICE_PATH: apps/frontend
-    container_name: breezy-frontend
-    ports:
-      - "5173:5173"
-    command: pnpm dev --host 0.0.0.0
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - api-gateway
+    networks:
+      - breezy-network
+
+  nginx-internal:
+    image: nginx:alpine
+    restart: unless-stopped
+    expose:
+      - "80"
+    volumes:
+      - ./infra/nginx-internal/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth-service
+    networks:
+      - breezy-network
+
+  auth-postgres:
+    image: postgres:17-alpine
+    container_name: auth-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+      POSTGRES_DB: auth_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+    networks:
+      - breezy-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   api-gateway:
     build:
-      context: .
-      dockerfile: infra/docker/node.Dockerfile
-      args:
-        SERVICE_PATH: apps/api-gateway
-    container_name: breezy-api-gateway
-    ports:
-      - "3000:3000"
+      context: ./apps/api-gateway
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3000"
+    env_file:
+      - ./apps/api-gateway/.env
     environment:
       PORT: 3000
-      AUTH_SERVICE_URL: http://auth-service:3001
-      USER_SERVICE_URL: http://user-service:3002
-      POST_SERVICE_URL: http://post-service:3003
-      FOLLOW_SERVICE_URL: http://follow-service:3004
-      FEED_SERVICE_URL: http://feed-service:3005
+      AUTH_SERVICE_URL: http://nginx-internal
     depends_on:
+      - nginx-internal
       - auth-service
-      - user-service
-      - post-service
-      - follow-service
-      - feed-service
+    networks:
+      - breezy-network
 
   auth-service:
     build:
-      context: .
-      dockerfile: infra/docker/node.Dockerfile
-      args:
-        SERVICE_PATH: services/auth-service
-    container_name: breezy-auth-service
-    ports:
-      - "3001:3001"
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3001"
+    env_file:
+      - ./services/auth-service/.env
     environment:
-      PORT: 3001
-      SERVICE_NAME: auth-service
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/breezy
+      DATABASE_URL: postgresql://auth_user:auth_password@auth-postgres:5432/auth_db?schema=public
     depends_on:
-      - postgres
-
-  user-service:
-    build:
-      context: .
-      dockerfile: infra/docker/node.Dockerfile
-      args:
-        SERVICE_PATH: services/user-service
-    container_name: breezy-user-service
-    ports:
-      - "3002:3002"
-    environment:
-      PORT: 3002
-      SERVICE_NAME: user-service
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/breezy
-    depends_on:
-      - postgres
-
-  post-service:
-    build:
-      context: .
-      dockerfile: infra/docker/node.Dockerfile
-      args:
-        SERVICE_PATH: services/post-service
-    container_name: breezy-post-service
-    ports:
-      - "3003:3003"
-    environment:
-      PORT: 3003
-      SERVICE_NAME: post-service
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/breezy
-    depends_on:
-      - postgres
-
-  follow-service:
-    build:
-      context: .
-      dockerfile: infra/docker/node.Dockerfile
-      args:
-        SERVICE_PATH: services/follow-service
-    container_name: breezy-follow-service
-    ports:
-      - "3004:3004"
-    environment:
-      PORT: 3004
-      SERVICE_NAME: follow-service
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/breezy
-    depends_on:
-      - postgres
-
-  feed-service:
-    build:
-      context: .
-      dockerfile: infra/docker/node.Dockerfile
-      args:
-        SERVICE_PATH: services/feed-service
-    container_name: breezy-feed-service
-    ports:
-      - "3005:3005"
-    environment:
-      PORT: 3005
-      SERVICE_NAME: feed-service
-      FOLLOW_SERVICE_URL: http://follow-service:3004
-      POST_SERVICE_URL: http://post-service:3003
-    depends_on:
-      - follow-service
-      - post-service
+      auth-postgres:
+        condition: service_healthy
+    networks:
+      - breezy-network
 
 volumes:
-  pgdata:
+  auth_postgres_data:
+
+networks:
+  breezy-network:
+    driver: bridge

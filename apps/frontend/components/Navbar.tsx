@@ -27,7 +27,7 @@ export default function Navbar() {
             <div className="mx-auto flex h-16 max-w-md items-center justify-center px-2 md:mx-0 md:h-full md:max-w-none md:flex-col md:items-stretch md:justify-start md:gap-2 md:p-4">
                 <Link
                     href="/"
-                    className="mb-4 hidden h-12 items-center overflow-hidden whitespace-nowrap rounded-xl px-1 text-2xl font-bold text-breezy-green hover:bg-white/10 md:flex"
+                    className="mb-4 hidden h-fit items-center whitespace-nowrap rounded-xl px-1 py-1 text-2xl font-bold text-breezy-green hover:bg-white/10 md:flex"
                     aria-label="Breezyl - Accueil"
                 >
                     <Image
@@ -40,7 +40,7 @@ export default function Navbar() {
                     />
                     <DiaTextReveal
                         key={logoAnimationKey}
-                        className="ml-4 text-2xl font-bold tracking-tight opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                        className="ml-4 inline-block py-1 text-3xl font-bold leading-normal tracking-tight opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                         colors={[
                             "var(--color-breezy-green)",
                             "var(--color-breezy-yellow)",

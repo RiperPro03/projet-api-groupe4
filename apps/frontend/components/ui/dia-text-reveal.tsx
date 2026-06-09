@@ -243,7 +243,6 @@ export function DiaTextReveal({
       ref={spanRef}
       className={cn("align-bottom leading-[100%] text-inherit", className)}
       style={{
-        transform: "translateY(-2px)",
         color: "transparent",
         backgroundClip: "text",
         WebkitBackgroundClip: "text",

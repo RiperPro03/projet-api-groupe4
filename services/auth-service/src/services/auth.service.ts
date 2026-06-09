@@ -233,7 +233,7 @@ async function updatePassword(
             id: userId,
         },
         data: {
-            password: hashedNewPassword,
+            passwordHash: hashedNewPassword,
         },
     });
 

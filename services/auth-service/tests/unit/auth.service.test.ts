@@ -69,7 +69,7 @@ describe("auth.service", () => {
         mockedPrisma.user.findUnique.mockResolvedValue({
             id: "user-1",
             email: "user@example.com",
-            password: "hashed-password",
+            passwordHash: "hashed-password",
             createdAt: new Date(),
             updatedAt: new Date(),
         } as never);
@@ -104,7 +104,7 @@ describe("auth.service", () => {
         expect(mockedPrisma.user.create).toHaveBeenCalledWith({
             data: {
                 email: "user@example.com",
-                password: "hashed-password",
+                passwordHash: "hashed-password",
             },
             select: {
                 id: true,
@@ -136,7 +136,7 @@ describe("auth.service", () => {
         const user = {
             id: "user-1",
             email: "user@example.com",
-            password: "hashed-password",
+            passwordHash: "hashed-password",
             createdAt: new Date("2025-01-01T00:00:00.000Z"),
             updatedAt: new Date("2025-01-02T00:00:00.000Z"),
         };
@@ -462,7 +462,7 @@ describe("auth.service", () => {
                 id: "user-1",
             },
             data: {
-                password: "hashed-new-password",
+                passwordHash: "hashed-new-password",
             },
         });
         expect(mockedPrisma.refreshToken.updateMany).toHaveBeenCalledWith({

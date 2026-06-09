@@ -72,23 +72,23 @@ Contrainte : `UNIQUE (follower_id, following_id)` — un utilisateur ne peut sui
 
 ### Service direct (`http://localhost:3004`)
 
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| `GET` | `/health` | Santé du service |
-| `POST` | `/:followerId/:followingId` | Créer un abonnement |
-| `DELETE` | `/:followerId/:followingId` | Supprimer un abonnement |
-| `GET` | `/:id/following` | Utilisateurs suivis par `:id` |
-| `GET` | `/:id/followers` | Abonnés de `:id` |
+| Méthode | Route | Body | Description |
+|---------|-------|------|-------------|
+| `GET` | `/health` | — | Santé du service |
+| `POST` | `/` | `{ followerId, followingId }` | Créer un abonnement |
+| `DELETE` | `/` | `{ followerId, followingId }` | Supprimer un abonnement |
+| `GET` | `/following` | `{ followerId }` | Utilisateurs suivis par `followerId` |
+| `GET` | `/followers` | `{ followingId }` | Abonnés de `followingId` |
 
 ### Via API Gateway (`http://localhost:3000`)
 
 Préfixe `/api/follows` :
 
 ```txt
-POST   /api/follows/alice/bob
-DELETE /api/follows/alice/bob
-GET    /api/follows/alice/following
-GET    /api/follows/bob/followers
+POST   /api/follows/     body: { followerId, followingId }
+DELETE /api/follows/     body: { followerId, followingId }
+GET    /api/follows/following   body: { followerId }
+GET    /api/follows/followers   body: { followingId }
 ```
 
 ### Exemples de réponses

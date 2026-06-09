@@ -36,20 +36,35 @@ describe("follow API", () => {
     });
   });
 
-  describe("POST /:followerId/:followingId", () => {
+  describe("POST /", () => {
     it("crée un abonnement", async () => {
       const record = createFollowRecord("alice", "bob");
       mockPrisma.follow.create.mockResolvedValue(record);
 
-      const response = await request(app).post("/alice/bob");
+      const response = await request(app)
+        .post("/")
+        .send({ followerId: "alice", followingId: "bob" });
 
       expect(response.status).toBe(201);
       expect(response.body.follower_id).toBe("alice");
       expect(response.body.following_id).toBe("bob");
     });
 
+    it("refuse un body incomplet", async () => {
+      const response = await request(app)
+        .post("/")
+        .send({ followerId: "alice" });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe(
+        "followerId et followingId sont requis"
+      );
+    });
+
     it("refuse un auto-follow", async () => {
-      const response = await request(app).post("/alice/alice");
+      const response = await request(app)
+        .post("/")
+        .send({ followerId: "alice", followingId: "alice" });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe(
@@ -65,20 +80,24 @@ describe("follow API", () => {
         })
       );
 
-      const response = await request(app).post("/alice/bob");
+      const response = await request(app)
+        .post("/")
+        .send({ followerId: "alice", followingId: "bob" });
 
       expect(response.status).toBe(409);
       expect(response.body.error).toBe("Cet abonnement existe déjà");
     });
   });
 
-  describe("DELETE /:followerId/:followingId", () => {
+  describe("DELETE /", () => {
     it("supprime uniquement la relation demandée", async () => {
       mockPrisma.follow.delete.mockResolvedValue(
         createFollowRecord("alice", "bob")
       );
 
-      const response = await request(app).delete("/alice/bob");
+      const response = await request(app)
+        .delete("/")
+        .send({ followerId: "alice", followingId: "bob" });
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe("Abonnement supprimé");
@@ -98,7 +117,9 @@ describe("follow API", () => {
         createFollowRecord("alice", "bob")
       );
 
-      await request(app).delete("/alice/bob");
+      await request(app)
+        .delete("/")
+        .send({ followerId: "alice", followingId: "bob" });
 
       const deleteArgs = mockPrisma.follow.delete.mock.calls[0][0];
       expect(deleteArgs.where).toEqual({
@@ -119,21 +140,25 @@ describe("follow API", () => {
         })
       );
 
-      const response = await request(app).delete("/alice/bob");
+      const response = await request(app)
+        .delete("/")
+        .send({ followerId: "alice", followingId: "bob" });
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe("Abonnement introuvable");
     });
   });
 
-  describe("GET /:id/following", () => {
+  describe("GET /following", () => {
     it("retourne la liste des abonnements", async () => {
       mockPrisma.follow.findMany.mockResolvedValue([
         createFollowRecord("alice", "bob", "1"),
         createFollowRecord("alice", "charlie", "2"),
       ]);
 
-      const response = await request(app).get("/alice/following");
+      const response = await request(app)
+        .get("/following")
+        .send({ followerId: "alice", followingId: "bob" });
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveLength(2);
@@ -142,13 +167,15 @@ describe("follow API", () => {
     });
   });
 
-  describe("GET /:id/followers", () => {
+  describe("GET /followers", () => {
     it("retourne la liste des abonnés", async () => {
       mockPrisma.follow.findMany.mockResolvedValue([
         createFollowRecord("alice", "bob", "1"),
       ]);
 
-      const response = await request(app).get("/bob/followers");
+      const response = await request(app)
+        .get("/followers")
+        .send({ followerId: "alice", followingId: "bob" });
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveLength(1);

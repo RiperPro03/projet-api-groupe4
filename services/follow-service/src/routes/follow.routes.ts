@@ -8,14 +8,9 @@ import {
 
 const router = Router();
 
-// Sans auth pour l'instant : les IDs sont passés dans l'URL.
-// Plus tard : POST /:followingId avec followerId extrait du JWT.
-router.post("/:followerId/:followingId", addFollowHandler);
-router.delete("/:followerId/:followingId", unfollowHandler);
-
-// /:id/following et /:id/followers doivent rester distincts
-// (on ne peut pas avoir deux GET /:id sur la même route).
-router.get("/:id/following", getFollowingHandler);
-router.get("/:id/followers", getFollowersHandler);
+router.post("/", addFollowHandler);
+router.delete("/", unfollowHandler);
+router.get("/following", getFollowingHandler);
+router.get("/followers", getFollowersHandler);
 
 export default router;

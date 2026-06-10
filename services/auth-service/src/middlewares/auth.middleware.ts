@@ -5,7 +5,6 @@ export type AuthenticatedRequest = Request & {
     user?: {
         id: string;
         email: string;
-        role: string;
     };
 };
 
@@ -170,7 +169,6 @@ function authenticate(
         req.user = {
             id: payload.sub,
             email: payload.email,
-            role: payload.role,
         };
 
         next();

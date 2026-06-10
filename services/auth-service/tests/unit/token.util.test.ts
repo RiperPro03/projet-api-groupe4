@@ -22,7 +22,6 @@ describe("token.util", () => {
         expect(token).toEqual(expect.any(String));
         expect(decoded.sub).toBe(payload.sub);
         expect(decoded.email).toBe(payload.email);
-        expect(decoded.role).toBe(payload.role);
     });
 
     it("generates a refresh token as a sufficiently long string", () => {

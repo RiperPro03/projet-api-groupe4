@@ -14,6 +14,7 @@ on:
       - "services/auth-service/**"
       - "services/user-service/**"
       - "services/profile-service/**"
+      - "services/follow-service/**"
       - ".github/workflows/github-CICD.yml"
       - "pnpm-lock.yaml"
       - "package.json"
@@ -23,6 +24,7 @@ on:
       - "services/auth-service/**"
       - "services/user-service/**"
       - "services/profile-service/**"
+      - "services/follow-service/**"
       - ".github/workflows/github-CICD.yml"
       - "pnpm-lock.yaml"
       - "package.json"
@@ -37,6 +39,7 @@ jobs:
       auth: ${{ steps.filter.outputs.auth }}
       user: ${{ steps.filter.outputs.user }}
       profile: ${{ steps.filter.outputs.profile }}
+      follow: ${{ steps.filter.outputs.follow }}
 
     steps:
       - name: Checkout repository
@@ -58,6 +61,8 @@ jobs:
               - "services/user-service/**"
             profile:
               - "services/profile-service/**"
+            follow:
+              - "services/follow-service/**"
 
   auth-service:
     name: Stage 1 - Auth Service
@@ -175,6 +180,47 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: TypeScript build
+        run: pnpm build
+
+      - name: Run Vitest with coverage
+        run: pnpm test:coverage
+
+  follow-service:
+    name: Stage 4 - Follow Service
+    needs: changes
+    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.follow == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/follow-service
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/follow_service_test
+      SERVICE_NAME: follow-service-test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm exec prisma generate
 
       - name: TypeScript build
         run: pnpm build

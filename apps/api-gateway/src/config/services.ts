@@ -16,6 +16,11 @@ export const servicesConfig = {
     gatewayPrefix: "/profiles",
     internalBasePath: "/profiles",
   },
+  follows: {
+    serviceName: "follow-service",
+    gatewayPrefix: "/follows",
+    internalBasePath: "/follows",
+  },
 } as const;
 
 export type ServiceKey = keyof typeof servicesConfig;

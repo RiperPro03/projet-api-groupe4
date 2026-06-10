@@ -23,6 +23,7 @@ services:
       - auth-service
       - user-service
       - profile-service
+      - follow-service
     networks:
       - breezy-network
 
@@ -62,6 +63,26 @@ services:
       - breezy-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user_user -d user_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  follow-postgres:
+    image: postgres:17-alpine
+    container_name: follow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: follow_user
+      POSTGRES_PASSWORD: follow_password
+      POSTGRES_DB: follow_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - follow_postgres_data:/var/lib/postgresql/data
+    networks:
+      - breezy-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U follow_user -d follow_db"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -133,6 +154,23 @@ services:
     networks:
       - breezy-network
 
+  follow-service:
+    build:
+      context: ./services/follow-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3004"
+    environment:
+      PORT: 3004
+      SERVICE_NAME: follow-service
+      DATABASE_URL: postgresql://follow_user:follow_password@follow-postgres:5432/follow_db?schema=public
+    depends_on:
+      follow-postgres:
+        condition: service_healthy
+    networks:
+      - breezy-network
+
   profile-service:
     build:
       context: ./services/profile-service
@@ -153,6 +191,7 @@ services:
 volumes:
   auth_postgres_data:
   user_postgres_data:
+  follow_postgres_data:
   profile_mongodb_data:
 
 networks:

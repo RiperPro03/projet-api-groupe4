@@ -66,6 +66,38 @@ async function registerUser(data: AuthModel.RegisterInput): Promise<AuthModel.Sa
     return sanitizeUser(user);
 }
 
+async function listUsers(): Promise<AuthModel.SafeUser[]> {
+    const users = await prisma.user.findMany({
+        orderBy: {
+            createdAt: "desc",
+        },
+        select: {
+            id: true,
+            email: true,
+            createdAt: true,
+            updatedAt: true,
+        },
+    });
+
+    return users.map(sanitizeUser);
+}
+
+async function getUserById(userId: string): Promise<AuthModel.SafeUser | null> {
+    const user = await prisma.user.findUnique({
+        where: {
+            id: userId,
+        },
+        select: {
+            id: true,
+            email: true,
+            createdAt: true,
+            updatedAt: true,
+        },
+    });
+
+    return user ? sanitizeUser(user) : null;
+}
+
 async function loginUser(data: AuthModel.LoginInput): Promise<AuthModel.AuthResponse> {
     const email = data.email.trim().toLowerCase();
 
@@ -250,6 +282,8 @@ async function updatePassword(
 
 const authService = {
     registerUser,
+    listUsers,
+    getUserById,
     loginUser,
     refreshAccessToken,
     logoutUser,

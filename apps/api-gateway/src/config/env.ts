@@ -2,17 +2,24 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const port = Number.parseInt(process.env.PORT ?? "3000", 10);
+const parseNumber = (value: string | undefined, fallback: number, name: string) => {
+  if (value === undefined || value.trim() === "") {
+    return fallback;
+  }
 
-if (Number.isNaN(port)) {
-  throw new Error("PORT must be a valid number");
-}
+  const parsedValue = Number.parseInt(value, 10);
+
+  if (Number.isNaN(parsedValue)) {
+    throw new Error(`${name} must be a valid number`);
+  }
+
+  return parsedValue;
+};
 
 export const env = {
-  NODE_ENV: process.env.NODE_ENV ?? "development",
-  PORT: port,
-  CORS_ORIGIN: process.env.CORS_ORIGIN ?? "http://localhost:3000",
-  AUTH_SERVICE_URL: process.env.AUTH_SERVICE_URL ?? "http://auth-service:3001",
+  nodeEnv: process.env.NODE_ENV ?? "development",
+  port: parseNumber(process.env.PORT, 3000, "PORT"),
+  corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
+  internalNginxUrl: (process.env.INTERNAL_NGINX_URL ?? "http://nginx-internal:80").replace(/\/+$/, ""),
+  requestTimeoutMs: parseNumber(process.env.REQUEST_TIMEOUT_MS, 10000, "REQUEST_TIMEOUT_MS"),
 } as const;
-
-export default env;

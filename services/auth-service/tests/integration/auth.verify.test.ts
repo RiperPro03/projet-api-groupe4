@@ -51,7 +51,6 @@ describe("GET /auth/verify", () => {
         const token = generateAccessToken({
             sub: "user-123",
             email: "user@example.com",
-            role: "user",
         });
 
         const response = await request(app)

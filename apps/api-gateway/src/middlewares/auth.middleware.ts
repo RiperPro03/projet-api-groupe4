@@ -1,47 +1,25 @@
-import axios, { type AxiosError } from "axios";
 import type { NextFunction, Request, Response } from "express";
 
-import { env } from "../config/env";
-
-type AuthenticatedUser = {
-  id: string;
-  email: string;
-  role: string;
-};
+import { verifyAccessToken, type AuthenticatedUser } from "../services/auth.service";
+import { ServiceError } from "../utils/http-client";
 
 export type AuthenticatedRequest = Request & {
-  user?: AuthenticatedUser;
+  authUser?: AuthenticatedUser;
 };
 
-type VerifyResponse = {
-  status?: string;
-  message?: string;
-  data?: {
-    user?: AuthenticatedUser;
-  };
-};
+export const unauthorizedPayload = {
+  status: "error",
+  message: "Unauthorized",
+} as const;
 
-const VERIFY_URL = `${env.AUTH_SERVICE_URL}/auth/verify`;
-const AUTH_TIMEOUT_MS = 5000;
-
-const isObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const getBearerToken = (authorization: string | undefined) => {
+const extractBearerToken = (authorization: string | undefined) => {
   if (!authorization || !authorization.startsWith("Bearer ")) {
     return null;
   }
 
   const token = authorization.slice("Bearer ".length).trim();
-
   return token.length > 0 ? token : null;
 };
-
-const buildErrorPayload = (statusCode: number, fallbackMessage: string) => ({
-  status: "error",
-  message: fallbackMessage,
-  statusCode,
-});
 
 export const authMiddleware = async (
   req: AuthenticatedRequest,
@@ -49,57 +27,28 @@ export const authMiddleware = async (
   next: NextFunction,
 ) => {
   if (req.method === "OPTIONS") {
-    next();
-    return;
+    return next();
   }
 
   const authorization = req.header("authorization");
-  const token = getBearerToken(authorization);
+  const token = extractBearerToken(authorization);
 
-  if (!token || !authorization) {
-    res.status(401).json({
-      status: "error",
-      message: "Missing or invalid authorization header",
-    });
-    return;
+  if (!authorization || !token) {
+    return res.status(401).json(unauthorizedPayload);
   }
 
   try {
-    const { data } = await axios.get<VerifyResponse>(VERIFY_URL, {
-      headers: {
-        authorization,
-        "x-request-id": req.header("x-request-id") ?? "",
-      },
-      timeout: AUTH_TIMEOUT_MS,
-    });
-
-    if (data.data?.user) {
-      req.user = data.data.user;
-    }
-
-    next();
+    const authUser = await verifyAccessToken(authorization, req.header("x-request-id"));
+    req.authUser = authUser;
+    return next();
   } catch (error) {
-    const axiosError = error as AxiosError<VerifyResponse>;
-
-    if (axiosError.response) {
-      const { status, data } = axiosError.response;
-
-      if (isObject(data)) {
-        res.status(status).json(data);
-        return;
-      }
-
-      res
-        .status(status)
-        .json(buildErrorPayload(status, "Authentication failed"));
-      return;
+    if (
+      error instanceof ServiceError &&
+      (error.statusCode === 401 || error.statusCode === 403)
+    ) {
+      return res.status(401).json(unauthorizedPayload);
     }
 
-    res.status(503).json({
-      status: "error",
-      message: "Auth service unavailable",
-    });
+    return next(error);
   }
 };
-
-export default authMiddleware;

@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MODERATOR
+  USER
+}
+
+enum Statuts {
+  ACTIVE
+  INACTIVE
+}
+
+model User_state {
+  id_user String  @id
+  role    Role    @default(USER)
+  statuts Statuts @default(ACTIVE)
+
+  @@map("users_state")
+}

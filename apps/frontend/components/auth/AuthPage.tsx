@@ -31,7 +31,7 @@ const logoColors = [
 ];
 
 const fieldClassName =
-  "h-full w-full rounded-[inherit] bg-black px-4 text-base text-white outline-none placeholder:text-[#71767b]";
+  "h-full w-full rounded-[inherit] bg-black px-4 text-base text-white outline-none placeholder:text-[#71767b] lg:px-5 lg:text-lg";
 
 // Shared animated input used by both authentication modes.
 function Field({
@@ -48,7 +48,7 @@ function Field({
   return (
     <div>
       <div
-        className={`group relative h-14 rounded-xl border transition-shadow focus-within:border-transparent lg:h-12 ${
+        className={`group relative h-14 rounded-xl border transition-shadow focus-within:border-transparent lg:h-14 2xl:h-16 ${
           error
             ? "border-red-500 focus-within:shadow-[0_0_20px_rgba(239,68,68,0.35)]"
             : "border-[#536471] focus-within:shadow-[0_0_20px_rgba(0,146,62,0.28)]"
@@ -192,9 +192,8 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
 
   // Mobile uses a black background; desktop adds the illustrated backdrop.
   return (
-    <main className="min-h-svh bg-breezy-black px-6 py-5 text-white lg:flex lg:h-svh lg:items-center lg:justify-end lg:bg-[url('/auth-background.png')] lg:bg-cover lg:bg-center lg:px-16 lg:py-6">
-      <div className="relative mx-auto flex min-h-[calc(100svh-2.5rem)] w-full max-w-sm flex-col justify-center overflow-hidden lg:mx-0 lg:min-h-0 lg:max-w-md lg:justify-start lg:rounded-3xl lg:bg-breezy-black lg:p-8 lg:shadow-2xl">
-        {/* Decorative background layer. */}
+    <main className="min-h-svh bg-breezy-black px-6 py-5 text-white lg:flex lg:h-svh lg:items-center lg:justify-center lg:bg-[url('/auth-background.png')] lg:bg-cover lg:bg-center lg:px-10 lg:py-8 xl:px-16 2xl:px-24">
+      <div className="relative mx-auto flex min-h-[calc(100svh-2.5rem)] w-full max-w-sm flex-col justify-center overflow-hidden lg:min-h-0 lg:max-w-lg lg:rounded-3xl lg:border lg:border-white/10 lg:bg-breezy-black/90 lg:p-10 lg:shadow-2xl xl:max-w-xl xl:p-12 2xl:max-w-2xl 2xl:p-14">
         <div aria-hidden="true" className="absolute inset-0">
           <Meteors
             number={25}
@@ -227,9 +226,9 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
           </Link>
 
           {/* Authentication form. */}
-          <section className="flex flex-col justify-center py-8 lg:py-6">
+          <section className="flex flex-col justify-center py-8 lg:py-8 xl:py-10">
             <form
-              className="space-y-5 lg:space-y-4"
+              className="space-y-5 2xl:space-y-6"
               onSubmit={handleSubmit}
               noValidate
             >
@@ -240,7 +239,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
               <RippleButton
                 type="submit"
                 rippleColor="#000000"
-                className="h-12 w-full rounded-full border-0 bg-white px-5 text-base font-bold text-black shadow-sm transition hover:bg-[#d7dbdc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:bg-breezy-green lg:text-white lg:shadow-lg lg:shadow-breezy-green/20 lg:hover:bg-[#007f36] lg:focus-visible:outline-breezy-green"
+                className="h-12 w-full rounded-full border-0 bg-white px-5 text-base font-bold text-black shadow-sm transition hover:bg-[#d7dbdc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:h-14 lg:bg-breezy-green lg:text-lg lg:text-white lg:shadow-lg lg:shadow-breezy-green/20 lg:hover:bg-[#007f36] lg:focus-visible:outline-breezy-green 2xl:h-16"
               >
                 {isLogin ? "Se connecter" : "Créer le compte"}
               </RippleButton>

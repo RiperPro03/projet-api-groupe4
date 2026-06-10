@@ -1,5 +1,9 @@
 name: GitHub CI/CD Pipeline
 
+permissions:
+  contents: read
+  pull-requests: read
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 

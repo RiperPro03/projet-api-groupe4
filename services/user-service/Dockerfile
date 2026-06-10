@@ -16,7 +16,7 @@ COPY . .
 
 EXPOSE 3001
 
-RUN pnpm exec prisma generate
+RUN rm -rf /app/src/generated/prisma && pnpm exec prisma generate
 RUN pnpm run build
 
 CMD ["pnpm", "run", "start"]

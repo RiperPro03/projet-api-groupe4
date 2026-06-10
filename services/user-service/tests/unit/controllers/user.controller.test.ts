@@ -1,6 +1,11 @@
 import type { Request } from "express";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type {
+  CreateUserStateInput,
+  UpdateUserStateInput,
+  UserStateParams,
+} from "../../../src/models/user.model";
 import { createMockResponse } from "../../utils/mock-response";
 
 const serviceMocks = vi.hoisted(() => {
@@ -32,6 +37,18 @@ import {
   updateUserStateController,
 } from "../../../src/controllers/user.controller";
 
+type CreateUserStateRequest = Request<
+  Record<string, never>,
+  unknown,
+  CreateUserStateInput
+>;
+type GetUserStateRequest = Request<UserStateParams>;
+type UpdateUserStateRequest = Request<
+  UserStateParams,
+  unknown,
+  UpdateUserStateInput
+>;
+
 describe("user.controller", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -44,7 +61,7 @@ describe("user.controller", () => {
         role: "ADMIN",
         statuts: "ACTIVE",
       },
-    } as Request;
+    } as CreateUserStateRequest;
     const res = createMockResponse();
 
     serviceMocks.createUserState.mockResolvedValue({
@@ -73,7 +90,7 @@ describe("user.controller", () => {
       params: {
         id_user: "user-42",
       },
-    } as unknown as Request;
+    } as GetUserStateRequest;
     const res = createMockResponse();
 
     serviceMocks.getUserStateById.mockResolvedValue({
@@ -105,7 +122,7 @@ describe("user.controller", () => {
       body: {
         statuts: "INACTIVE",
       },
-    } as unknown as Request;
+    } as UpdateUserStateRequest;
     const res = createMockResponse();
 
     serviceMocks.updateUserState.mockResolvedValue({
@@ -136,7 +153,7 @@ describe("user.controller", () => {
       params: {
         id_user: "user-42",
       },
-    } as unknown as Request;
+    } as GetUserStateRequest;
     const res = createMockResponse();
 
     serviceMocks.deleteUserState.mockResolvedValue(undefined);
@@ -156,7 +173,7 @@ describe("user.controller", () => {
       params: {
         id_user: "missing",
       },
-    } as unknown as Request;
+    } as GetUserStateRequest;
     const res = createMockResponse();
 
     serviceMocks.getUserStateById.mockRejectedValue(
@@ -177,7 +194,7 @@ describe("user.controller", () => {
       body: {
         id_user: "user-1",
       },
-    } as Request;
+    } as CreateUserStateRequest;
     const res = createMockResponse();
     const error = new Error("unexpected");
 

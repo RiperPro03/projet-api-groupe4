@@ -64,6 +64,22 @@ services:
       timeout: 5s
       retries: 10
 
+  profile-mongodb:
+    image: mongo:8
+    container_name: profile-mongodb
+    restart: unless-stopped
+    ports:
+      - "27019:27017"
+    volumes:
+      - profile_mongodb_data:/data/db
+    networks:
+      - breezy-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   api-gateway:
     build:
       context: ./apps/api-gateway
@@ -98,13 +114,14 @@ services:
         condition: service_healthy
     networks:
       - breezy-network
+
   user-service:
     build:
       context: ./services/user-service
       dockerfile: Dockerfile
     restart: unless-stopped
     expose:
-      - "3001"
+      - "3002"
     env_file:
       - ./services/user-service/.env
     environment:
@@ -115,9 +132,27 @@ services:
     networks:
       - breezy-network
 
+  profile-service:
+    build:
+      context: ./services/profile-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3006"
+    env_file:
+      - ./services/profile-service/.env
+    environment:
+      MONGO_URI: mongodb://profile-mongodb:27017/profile_db
+    depends_on:
+      profile-mongodb:
+        condition: service_healthy
+    networks:
+      - breezy-network
+
 volumes:
   auth_postgres_data:
   user_postgres_data:
+  profile_mongodb_data:
 
 networks:
   breezy-network:

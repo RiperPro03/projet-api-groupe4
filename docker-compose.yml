@@ -61,7 +61,7 @@ services:
     networks:
       - breezy-network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U user_user -d user_db" ]
+      test: ["CMD-SHELL", "pg_isready -U user_user -d user_db"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -93,7 +93,7 @@ services:
       - ./apps/api-gateway/.env
     environment:
       PORT: 3000
-      AUTH_SERVICE_URL: http://nginx-internal
+      INTERNAL_NGINX_URL: http://nginx-internal
     depends_on:
       - nginx-internal
     networks:

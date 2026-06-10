@@ -1,0 +1,106 @@
+import { buildServiceUrl } from "../config/services";
+import { requestService, ServiceError } from "../utils/http-client";
+
+export type AuthenticatedUser = {
+  id: string;
+  email?: string;
+  role?: string;
+  [key: string]: unknown;
+};
+
+type VerifyResponse = {
+  data?: {
+    user?: AuthenticatedUser;
+  };
+};
+
+type MeResponse = {
+  data?: {
+    user?: AuthenticatedUser;
+  };
+};
+
+type RegisterGatewayInput = {
+  email?: string;
+  password?: string;
+};
+
+type RegisterGatewayResponse = {
+  status: string;
+  message?: string;
+  data: {
+    user: AuthenticatedUser;
+  };
+};
+
+const buildAuthHeaders = (authorization: string, requestId?: string | undefined) => ({
+  Authorization: authorization,
+  ...(requestId ? { "x-request-id": requestId } : {}),
+});
+
+export const verifyAccessToken = async (authorization: string, requestId?: string) => {
+  const response = await requestService<VerifyResponse>("auth", {
+    method: "GET",
+    url: buildServiceUrl("auth", "/verify"),
+    headers: buildAuthHeaders(authorization, requestId),
+  });
+
+  const user = response.data.data?.user;
+
+  if (!user?.id) {
+    throw new ServiceError("auth", 502, "Invalid response from auth-service", {
+      status: "error",
+      message: "Invalid response from auth-service",
+    });
+  }
+
+  return user;
+};
+
+export const getAuthenticatedUserDetails = async (
+  authorization: string,
+  requestId?: string,
+) => {
+  const response = await requestService<MeResponse>("auth", {
+    method: "GET",
+    url: buildServiceUrl("auth", "/me"),
+    headers: buildAuthHeaders(authorization, requestId),
+  });
+
+  const user = response.data.data?.user;
+
+  if (!user?.id) {
+    throw new ServiceError("auth", 502, "Invalid response from auth-service", {
+      status: "error",
+      message: "Invalid response from auth-service",
+    });
+  }
+
+  return user;
+};
+
+export const registerAuthUser = async (
+  payload: RegisterGatewayInput,
+  requestId?: string,
+) => {
+  const response = await requestService<RegisterGatewayResponse>("auth", {
+    method: "POST",
+    url: buildServiceUrl("auth", "/register"),
+    headers: {
+      "Content-Type": "application/json",
+      ...(requestId ? { "x-request-id": requestId } : {}),
+    },
+    data: payload,
+  });
+
+  const user = response.data.data?.user;
+
+  if (!user?.id) {
+    throw new ServiceError("auth", 502, "Invalid response from auth-service", {
+      status: "error",
+      message: "Invalid response from auth-service",
+    });
+  }
+
+  return response.data;
+};

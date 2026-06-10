@@ -11,6 +11,7 @@ vi.mock("../../src/config/prisma", () => ({
     prisma: {
         user: {
             findUnique: vi.fn(),
+            findMany: vi.fn(),
             create: vi.fn(),
             update: vi.fn(),
         },
@@ -69,7 +70,7 @@ describe("auth.service", () => {
         mockedPrisma.user.findUnique.mockResolvedValue({
             id: "user-1",
             email: "user@example.com",
-            password: "hashed-password",
+            passwordHash: "hashed-password",
             createdAt: new Date(),
             updatedAt: new Date(),
         } as never);
@@ -104,7 +105,7 @@ describe("auth.service", () => {
         expect(mockedPrisma.user.create).toHaveBeenCalledWith({
             data: {
                 email: "user@example.com",
-                password: "hashed-password",
+                passwordHash: "hashed-password",
             },
             select: {
                 id: true,
@@ -119,6 +120,53 @@ describe("auth.service", () => {
             createdAt,
             updatedAt,
         });
+    });
+
+    it("listUsers returns only sanitized users ordered by most recent", async () => {
+        const users = [
+            {
+                id: "user-2",
+                email: "user2@example.com",
+                createdAt: new Date("2025-01-03T00:00:00.000Z"),
+                updatedAt: new Date("2025-01-04T00:00:00.000Z"),
+            },
+        ];
+
+        mockedPrisma.user.findMany.mockResolvedValue(users as never);
+
+        const result = await authService.listUsers();
+
+        expect(mockedPrisma.user.findMany).toHaveBeenCalledWith({
+            orderBy: {
+                createdAt: "desc",
+            },
+            select: {
+                id: true,
+                email: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        });
+        expect(result).toEqual(users);
+    });
+
+    it("getUserById returns null when the user does not exist", async () => {
+        mockedPrisma.user.findUnique.mockResolvedValue(null);
+
+        const result = await authService.getUserById("missing-user");
+
+        expect(mockedPrisma.user.findUnique).toHaveBeenCalledWith({
+            where: {
+                id: "missing-user",
+            },
+            select: {
+                id: true,
+                email: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        });
+        expect(result).toBeNull();
     });
 
     it("loginUser rejects invalid credentials when the user does not exist", async () => {
@@ -136,7 +184,7 @@ describe("auth.service", () => {
         const user = {
             id: "user-1",
             email: "user@example.com",
-            password: "hashed-password",
+            passwordHash: "hashed-password",
             createdAt: new Date("2025-01-01T00:00:00.000Z"),
             updatedAt: new Date("2025-01-02T00:00:00.000Z"),
         };
@@ -462,7 +510,7 @@ describe("auth.service", () => {
                 id: "user-1",
             },
             data: {
-                password: "hashed-new-password",
+                passwordHash: "hashed-new-password",
             },
         });
         expect(mockedPrisma.refreshToken.updateMany).toHaveBeenCalledWith({

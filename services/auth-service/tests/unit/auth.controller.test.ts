@@ -7,6 +7,8 @@ import authService from "../../src/services/auth.service";
 vi.mock("../../src/services/auth.service", () => ({
     default: {
         registerUser: vi.fn(),
+        listUsers: vi.fn(),
+        getUserById: vi.fn(),
         loginUser: vi.fn(),
         refreshAccessToken: vi.fn(),
         logoutUser: vi.fn(),
@@ -43,6 +45,182 @@ describe("auth.controller", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(console, "log").mockImplementation(() => undefined);
+    });
+
+    describe("getUsers", () => {
+        it("returns 200 with the sanitized user list", async () => {
+            const users = [
+                {
+                    id: "user-1",
+                    email: "user1@example.com",
+                    createdAt: new Date("2025-01-01T00:00:00.000Z"),
+                    updatedAt: new Date("2025-01-02T00:00:00.000Z"),
+                },
+            ];
+            const res = createResponse();
+
+            mockedAuthService.listUsers.mockResolvedValue(users);
+
+            await authController.getUsers({} as never, res);
+
+            expect(mockedAuthService.listUsers).toHaveBeenCalledOnce();
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                status: "success",
+                message: "Users retrieved",
+                data: {
+                    users,
+                },
+            });
+        });
+
+        it("returns 500 on unexpected errors", async () => {
+            const res = createResponse();
+
+            mockedAuthService.listUsers.mockRejectedValue(new Error("DATABASE_DOWN"));
+
+            await authController.getUsers({} as never, res);
+
+            expect(res.status).toHaveBeenCalledWith(500);
+            expect(res.json).toHaveBeenCalledWith({
+                status: "error",
+                message: "Internal server error",
+            });
+        });
+    });
+
+    describe("getUserById", () => {
+        it("returns 200 when the user exists", async () => {
+            const user = {
+                id: "user-1",
+                email: "user@example.com",
+                createdAt: new Date("2025-01-01T00:00:00.000Z"),
+                updatedAt: new Date("2025-01-02T00:00:00.000Z"),
+            };
+            const req = {
+                params: {
+                    id: "user-1",
+                },
+            } as never;
+            const res = createResponse();
+
+            mockedAuthService.getUserById.mockResolvedValue(user);
+
+            await authController.getUserById(req, res);
+
+            expect(mockedAuthService.getUserById).toHaveBeenCalledWith("user-1");
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                status: "success",
+                message: "User retrieved",
+                data: {
+                    user,
+                },
+            });
+        });
+
+        it("returns 404 when the user does not exist", async () => {
+            const req = {
+                params: {
+                    id: "missing-user",
+                },
+            } as never;
+            const res = createResponse();
+
+            mockedAuthService.getUserById.mockResolvedValue(null);
+
+            await authController.getUserById(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(404);
+            expect(res.json).toHaveBeenCalledWith({
+                status: "error",
+                message: "User not found",
+            });
+        });
+
+        it("returns 500 on unexpected errors", async () => {
+            const req = {
+                params: {
+                    id: "user-1",
+                },
+            } as never;
+            const res = createResponse();
+
+            mockedAuthService.getUserById.mockRejectedValue(new Error("DATABASE_DOWN"));
+
+            await authController.getUserById(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(500);
+            expect(res.json).toHaveBeenCalledWith({
+                status: "error",
+                message: "Internal server error",
+            });
+        });
+    });
+
+    describe("me", () => {
+        it("returns 401 when req.user is missing", async () => {
+            const res = createResponse();
+
+            await authController.me({} as AuthenticatedRequest, res);
+
+            expect(mockedAuthService.getUserById).not.toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(401);
+            expect(res.json).toHaveBeenCalledWith({
+                status: "error",
+                message: "Unauthorized",
+            });
+        });
+
+        it("returns 200 with the authenticated user", async () => {
+            const user = {
+                id: "user-1",
+                email: "user@example.com",
+                createdAt: new Date("2025-01-01T00:00:00.000Z"),
+                updatedAt: new Date("2025-01-02T00:00:00.000Z"),
+            };
+            const req = {
+                user: {
+                    id: "user-1",
+                    email: "user@example.com",
+                },
+            } as AuthenticatedRequest;
+            const res = createResponse();
+
+            mockedAuthService.getUserById.mockResolvedValue(user);
+
+            await authController.me(req, res);
+
+            expect(mockedAuthService.getUserById).toHaveBeenCalledWith("user-1");
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                status: "success",
+                message: "Authenticated user retrieved",
+                data: {
+                    user,
+                },
+            });
+        });
+
+        it("returns 404 when the authenticated user no longer exists", async () => {
+            const req = {
+                user: {
+                    id: "user-1",
+                    email: "user@example.com",
+                },
+            } as AuthenticatedRequest;
+            const res = createResponse();
+
+            mockedAuthService.getUserById.mockResolvedValue(null);
+
+            await authController.me(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(404);
+            expect(res.json).toHaveBeenCalledWith({
+                status: "error",
+                message: "User not found",
+            });
+        });
     });
 
     describe("logout", () => {

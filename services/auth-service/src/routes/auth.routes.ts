@@ -44,6 +44,11 @@ router.post(
     authController.register,
 );
 
+router.get("/", authValidator.authenticate, authController.getUsers);
+router.get("/me", authValidator.authenticate, authController.me);
+router.get("/verify", authValidator.authenticate, authController.verify);
+router.get("/:id", authValidator.authenticate, authController.getUserById);
+
 router.post(
     "/login",
     authValidator.requiredFields(["email", "password"]),
@@ -71,7 +76,5 @@ router.put(
     authValidator.validatePasswordUpdateInput,
     authController.updatePassword,
 );
-
-router.get("/verify", authValidator.authenticate, authController.verify);
 
 export default router;

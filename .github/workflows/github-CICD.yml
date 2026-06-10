@@ -4,12 +4,13 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - "services/auth-service/**"
       - "services/user-service/**"
       - "services/profile-service/**"
-      - "github-CICD.yml"
+      - ".github/workflows/github-CICD.yml"
       - "pnpm-lock.yaml"
       - "package.json"
       - "pnpm-workspace.yaml"
@@ -18,7 +19,7 @@ on:
       - "services/auth-service/**"
       - "services/user-service/**"
       - "services/profile-service/**"
-      - "github-CICD.yml"
+      - ".github/workflows/github-CICD.yml"
       - "pnpm-lock.yaml"
       - "package.json"
       - "pnpm-workspace.yaml"
@@ -43,7 +44,7 @@ jobs:
         with:
           filters: |
             shared:
-              - ".github/workflows/services-ci.yml"
+              - ".github/workflows/github-CICD.yml"
               - "pnpm-lock.yaml"
               - "package.json"
               - "pnpm-workspace.yaml"

@@ -108,6 +108,7 @@ services:
     environment:
       PORT: 4000
       HOSTNAME: 0.0.0.0
+      INTERNAL_API_URL: http://nginx/api
     expose:
       - "4000"
     networks:

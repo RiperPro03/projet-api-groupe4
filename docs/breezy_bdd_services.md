@@ -452,19 +452,32 @@ Les likes, commentaires et réponses peuvent être très nombreux. MongoDB est a
 
 ## Collection `likes`
 
+Modèle polymorphe (option A) : un like cible un post, un commentaire ou une réponse via `targetType` + `targetId`.
+
 ```json
 {
   "_id": "ObjectId",
   "userId": "uuid",
+  "targetType": "post",
+  "targetId": "ObjectId",
   "postId": "ObjectId",
   "createdAt": "2026-06-04T10:00:00.000Z"
 }
 ```
 
+| Champ | Description |
+|-------|-------------|
+| `targetType` | `"post"` \| `"comment"` \| `"reply"` |
+| `targetId` | ID de la cible likée |
+| `postId` | Contexte du post parent (obligatoire pour `post`, recommandé pour `comment` / `reply`) |
+
+> Un utilisateur peut liker un post **et** un commentaire **et** une réponse. L'unicité porte sur le triplet `(userId, targetType, targetId)`.
+
 ## Index recommandés
 
 ```js
-db.likes.createIndex({ userId: 1, postId: 1 }, { unique: true })
+db.likes.createIndex({ userId: 1, targetType: 1, targetId: 1 }, { unique: true })
+db.likes.createIndex({ targetType: 1, targetId: 1 })
 db.likes.createIndex({ postId: 1 })
 db.likes.createIndex({ userId: 1 })
 ```

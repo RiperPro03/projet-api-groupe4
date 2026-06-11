@@ -37,7 +37,7 @@ async function getPostsByAuthor(authorId: string): Promise<PostResponse[]> {
     const posts = await Post.find({ authorId })
         .sort({ createdAt: -1 }) // Plus récents en premier
         .lean();                 // .lean() = objet JS simple, plus rapide
-
+ 
     return posts.map((post) => ({
         id: String(post._id),
         authorId: post.authorId,
@@ -47,10 +47,41 @@ async function getPostsByAuthor(authorId: string): Promise<PostResponse[]> {
         updatedAt: post.updatedAt as Date,
     }));
 }
+ 
+// Récupérer un post par son id
+async function getPostById(postId: string): Promise<PostResponse> {
+    const post = await Post.findById(postId);
+ 
+    if (!post) {
+        throw new Error("POST_NOT_FOUND");
+    }
+ 
+    return sanitizePost(post);
+}
+ 
+// Modifier un post par son id
+async function updatePost(
+    postId: string,
+    data: Partial<CreatePostInput>
+): Promise<PostResponse> {
+    const post = await Post.findByIdAndUpdate(
+        postId,
+        { content: data.content, tags: data.tags },
+        { new: true, runValidators: true } // new: true retourne le doc mis à jour
+    );
+ 
+    if (!post) {
+        throw new Error("POST_NOT_FOUND");
+    }
+ 
+    return sanitizePost(post);
+}
 
 const postService = {
     createPost,
     getPostsByAuthor,
+    getPostById,
+    updatePost,
 };
 
 export default postService;

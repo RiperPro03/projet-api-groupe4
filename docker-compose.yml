@@ -23,6 +23,7 @@ services:
       - auth-service
       - user-service
       - profile-service
+      - post-service
       - follow-service
     networks:
       - breezy-network
@@ -95,6 +96,22 @@ services:
       - "27019:27017"
     volumes:
       - profile_mongodb_data:/data/db
+    networks:
+      - breezy-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  post-mongodb:
+    image: mongo:8
+    container_name: post-mongodb
+    restart: unless-stopped
+    ports:
+      - "27020:27017"
+    volumes:
+      - post_mongodb_data:/data/db
     networks:
       - breezy-network
     healthcheck:
@@ -188,11 +205,31 @@ services:
     networks:
       - breezy-network
 
+  post-service:
+    build:
+      context: ./services/post-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3003"
+    env_file:
+      - ./services/post-service/.env
+    environment:
+      PORT: 3003
+      MONGO_URI: mongodb://post-mongodb:27017/post_db
+      SERVICE_NAME: post-service
+    depends_on:
+      post-mongodb:
+        condition: service_healthy
+    networks:
+      - breezy-network
+
 volumes:
   auth_postgres_data:
   user_postgres_data:
   follow_postgres_data:
   profile_mongodb_data:
+  post_mongodb_data:
 
 networks:
   breezy-network:

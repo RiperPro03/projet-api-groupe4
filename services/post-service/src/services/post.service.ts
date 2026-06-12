@@ -1,5 +1,5 @@
 import { Post } from "../models/post.model";
-import type { CreatePostInput, PostResponse } from "../models/post.types";
+import type { CreatePostInput, PostResponse } from "../types/post.types";
 
 // Couche service : contient la logique métier
 // Le controller appelle le service, le service parle à Mongoose

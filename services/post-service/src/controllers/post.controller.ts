@@ -1,6 +1,9 @@
 import type { Request, Response } from "express";
 import postService from "../services/post.service";
 
+const getRouteParam = (value: string | string[] | undefined): string | undefined =>
+    Array.isArray(value) ? value[0] : value;
+
 // POST /posts — Fx3 : Créer un post
 async function createPost(req: Request, res: Response) {
     try {
@@ -54,7 +57,16 @@ async function getPostsByAuthor(req: Request, res: Response) {
 // GET /posts/:id — Récupérer un post par son id
 async function getPostById(req: Request, res: Response) {
     try {
-        const post = await postService.getPostById(req.params.id);
+        const postId = getRouteParam(req.params.id);
+
+        if (!postId) {
+            return res.status(400).json({
+                status: "error",
+                message: "Post id is required",
+            });
+        }
+
+        const post = await postService.getPostById(postId);
  
         return res.status(200).json({
             status: "success",
@@ -79,7 +91,16 @@ async function getPostById(req: Request, res: Response) {
 // PATCH /posts/:id — Modifier un post
 async function updatePost(req: Request, res: Response) {
     try {
-        const post = await postService.updatePost(req.params.id, {
+        const postId = getRouteParam(req.params.id);
+
+        if (!postId) {
+            return res.status(400).json({
+                status: "error",
+                message: "Post id is required",
+            });
+        }
+
+        const post = await postService.updatePost(postId, {
             content: req.body.content,
             tags: req.body.tags,
         });

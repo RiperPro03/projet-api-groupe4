@@ -2,7 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type ChangeEventHandler, type FormEvent } from "react";
+import { loginAction, registerAction } from "@/app/auth/actions";
+import { persistAuthTokens } from "@/lib/auth-token-storage";
+import { useNotifications } from "@/components/notifications/NotificationProvider";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { Meteors } from "@/components/ui/meteors";
 import { RippleButton } from "@/components/ui/ripple-button";
@@ -93,6 +97,8 @@ function Field({
 }
 
 export default function AuthPage({ mode }: { mode: AuthMode }) {
+  const router = useRouter();
+  const { notify } = useNotifications();
   const isLogin = mode === "login";
 
   // Client-side form state and validation.
@@ -101,6 +107,8 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string>();
   const usernameError =
     !isLogin && hasSubmitted && username.trim().length === 0
       ? "Le nom d’utilisateur est obligatoire."
@@ -120,9 +128,93 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
       ? "Les mots de passe ne correspondent pas."
       : undefined;
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
+
     setHasSubmitted(true);
+    setSubmitError(undefined);
+
+    const hasInvalidLoginForm = !EMAIL_REGEX.test(email) || password.length < 8;
+    const hasInvalidRegisterForm =
+      username.trim().length === 0 ||
+      hasInvalidLoginForm ||
+      password !== passwordConfirmation;
+
+    if (isLogin ? hasInvalidLoginForm : hasInvalidRegisterForm) {
+      notify({
+        tone: "error",
+        title: "Formulaire incomplet",
+        description: "Corrige les champs indiques avant de continuer.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    notify(
+      {
+        tone: "loading",
+        title: isLogin ? "Connexion en cours" : "Creation du compte",
+        description: "La requete est envoyee au service d'authentification.",
+      },
+      { duration: null },
+    );
+
+    try {
+      const result = isLogin
+        ? await loginAction({
+            email,
+            password,
+          })
+        : await registerAction({
+            username: username.trim(),
+            email,
+            password,
+          });
+
+      if (result.status === "error") {
+        setSubmitError(result.message);
+        notify({
+          tone: "error",
+          title: "Authentification impossible",
+          description: result.message,
+        });
+        return;
+      }
+
+      persistAuthTokens({
+        accessToken: result.data.accessToken,
+        refreshToken: result.data.refreshToken,
+      });
+
+      notify({
+        tone: "success",
+        title: isLogin ? "Connexion reussie" : "Compte cree",
+        description: "Redirection vers Breezyl.",
+      });
+
+      window.setTimeout(() => {
+        router.push("/");
+        router.refresh();
+      }, 650);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Une erreur inattendue est survenue.";
+
+      setSubmitError(message);
+      notify({
+        tone: "error",
+        title: "Authentification impossible",
+        description: message,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   // Fields vary by mode while sharing the same rendering and validation.
@@ -236,10 +328,17 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
                 <Field key={field.id} {...field} />
               ))}
 
+              {submitError && (
+                <p className="text-sm text-red-400" role="alert">
+                  {submitError}
+                </p>
+              )}
+
               <RippleButton
                 type="submit"
+                disabled={isSubmitting}
                 rippleColor="#000000"
-                className="h-12 w-full rounded-full border-0 bg-white px-5 text-base font-bold text-black shadow-sm transition hover:bg-[#d7dbdc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:h-14 lg:bg-breezy-green lg:text-lg lg:text-white lg:shadow-lg lg:shadow-breezy-green/20 lg:hover:bg-[#007f36] lg:focus-visible:outline-breezy-green 2xl:h-16"
+                className="h-12 w-full rounded-full border-0 bg-white px-5 text-base font-bold text-black shadow-sm transition hover:bg-[#d7dbdc] disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:h-14 lg:bg-breezy-green lg:text-lg lg:text-white lg:shadow-lg lg:shadow-breezy-green/20 lg:hover:bg-[#007f36] lg:focus-visible:outline-breezy-green 2xl:h-16"
               >
                 {isLogin ? "Se connecter" : "Créer le compte"}
               </RippleButton>

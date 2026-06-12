@@ -18,8 +18,4 @@ export const env = {
     // Connexion MongoDB (Mongoose)
     mongoUri: requiredEnv("MONGO_URI"),
  
-    // Secret JWT partagé avec l'auth-service pour vérifier les tokens
-    jwt: {
-        accessSecret: requiredEnv("JWT_ACCESS_SECRET"),
-    },
 };

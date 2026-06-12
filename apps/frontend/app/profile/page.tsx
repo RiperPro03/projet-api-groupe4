@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { FiCalendar } from "react-icons/fi";
-import { Meteors } from "@/components/ui/meteors";
 import ProfileSettingsMenu from "@/components/profile/ProfileSettingsMenu";
+import { Particles } from "@/components/ui/particles";
 import { getCurrentUser } from "@/lib/current-user";
 
 export const metadata: Metadata = {
@@ -20,7 +20,6 @@ export default async function ProfilePage() {
   const { auth, profile } = currentUser;
   const username = profile?.username || auth.email.split("@")[0];
   const displayName = profile?.nickname || username;
-  const initial = displayName.charAt(0).toUpperCase();
   const joinedAtSource = profile?.createdAt || auth.createdAt;
   const joinedAt = new Intl.DateTimeFormat("fr-FR", {
     month: "long",
@@ -29,11 +28,11 @@ export default async function ProfilePage() {
 
   return (
     <section className="relative min-h-[calc(100svh-64px)] overflow-hidden bg-breezy-black px-5 py-8 text-white md:min-h-svh">
-      <Meteors
-        number={25}
-        minDuration={4}
-        maxDuration={9}
+      <Particles
         className="z-0"
+        quantity={120}
+        size={1.2}
+        speed={0.35}
       />
 
       <div className="relative z-10 mx-auto w-full max-w-2xl">
@@ -46,11 +45,16 @@ export default async function ProfilePage() {
                 : undefined
             }
             aria-label={`Photo de profil de ${displayName}`}
-          >
-            {initial}
-          </div>
+          />
 
-          <ProfileSettingsMenu />
+          <ProfileSettingsMenu
+            profile={{
+              username,
+              nickname: profile?.nickname ?? "",
+              bio: profile?.bio ?? "",
+              url_photo: profile?.url_photo ?? "",
+            }}
+          />
         </div>
 
         <div className="mt-4">

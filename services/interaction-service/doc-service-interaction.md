@@ -13,13 +13,11 @@ Microservice **Breezy** responsable des likes et interactions autour des posts (
 
 ## Rôle du service
 
-Gérer les **likes polymorphes** sur :
+Gérer les **likes** sur :
 
 - un **post** ;
 - un **commentaire** ;
 - une **réponse** à un commentaire.
-
-Ce service ne gère **pas** l'authentification, les notifications ni la création de commentaires/réponses (Fx7/Fx8).
 
 ---
 
@@ -53,7 +51,7 @@ models/like.model.ts (Mongoose) → MongoDB
 
 ## Modèle de données
 
-Collection MongoDB `likes` (modèle polymorphe — option A) :
+Collection MongoDB `likes` :
 
 | Champ | Type | Description |
 |-------|------|-------------|

@@ -3,6 +3,10 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 
+import {
+  errorHandler,
+  notFoundHandler,
+} from "./middlewares/error.middleware.js";
 import likeRoutes from "./routes/like.routes.js";
 
 const app = express();
@@ -22,5 +26,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/", likeRoutes);
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 export default app;

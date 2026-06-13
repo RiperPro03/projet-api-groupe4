@@ -3,6 +3,8 @@ import { Router } from "express";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { getMeController } from "../controllers/me.controller";
 import authGatewayRoutes from "./auth.gateway.routes";
+import followGatewayRoutes from "./follow.gateway.routes";
+import postGatewayRoutes from "./post.gateway.routes";
 import profileGatewayRoutes from "./profile.gateway.routes";
 import userGatewayRoutes from "./user.gateway.routes";
 
@@ -19,6 +21,8 @@ router.get("/health", (_req, res) => {
 
 router.get("/me", authMiddleware, getMeController);
 router.use("/auth", authGatewayRoutes);
+router.use("/follows", followGatewayRoutes);
+router.use("/posts", postGatewayRoutes);
 router.use("/users", userGatewayRoutes);
 router.use("/profiles", profileGatewayRoutes);
 

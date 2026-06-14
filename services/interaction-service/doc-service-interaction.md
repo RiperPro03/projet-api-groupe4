@@ -1,12 +1,12 @@
 # Interaction Service — Documentation
 
-Microservice **Breezy** responsable des likes et interactions autour des posts (**Fx6**).
+Microservice **Breezy** responsable des likes sur les posts et commentaires (**Fx6**).
 
 | Propriété | Valeur |
 |-----------|--------|
 | Port | `3007` |
 | Base de données | MongoDB (`interaction_db`) |
-| Collection | `likes` |
+| Collections | `post_likes`, `comment_likes` |
 | Proxy API Gateway (futur) | `/api/interactions` → ce service |
 
 ---
@@ -16,8 +16,9 @@ Microservice **Breezy** responsable des likes et interactions autour des posts (
 Gérer les **likes** sur :
 
 - un **post** ;
-- un **commentaire** ;
-- une **réponse** à un commentaire.
+- un **commentaire** (y compris une **réponse**, modélisée comme commentaire enfant).
+
+Une réponse n'a pas de table ou de route dédiée : on la like via `/comments/:commentId/likes` en passant l'ID de la réponse dans `commentId`.
 
 ---
 
@@ -26,13 +27,13 @@ Gérer les **likes** sur :
 ```txt
 Requête HTTP
     ↓
-routes/like.routes.ts         → définit les endpoints
+routes/like.routes.ts          → définit les endpoints
     ↓
 controllers/like.controller.ts → lit req.params / body, codes HTTP
     ↓
-services/like.service.ts      → règles métier
+services/like.service.ts       → règles métier
     ↓
-models/like.model.ts (Mongoose) → MongoDB
+models/*.model.ts (Mongoose)   → MongoDB
 ```
 
 ### Fichiers principaux
@@ -45,25 +46,35 @@ models/like.model.ts (Mongoose) → MongoDB
 | `src/controllers/like.controller.ts` | Couche HTTP |
 | `src/services/like.service.ts` | Logique métier |
 | `src/config/database.ts` | Connexion Mongoose |
-| `src/models/like.model.ts` | Schéma et index MongoDB |
+| `src/models/post-like.model.ts` | Schéma likes de posts |
+| `src/models/comment-like.model.ts` | Schéma likes de commentaires (et réponses) |
 
 ---
 
 ## Modèle de données
 
-Collection MongoDB `likes` :
+### Collection `post_likes`
 
 | Champ | Type | Description |
 |-------|------|-------------|
-| `userId` | string | Utilisateur qui like |
-| `targetType` | `"post"` \| `"comment"` \| `"reply"` | Type de cible |
-| `targetId` | string | ID de la cible likée |
-| `postId` | string | Contexte du post parent (auto pour `post`) |
+| `userId` | string | Utilisateur qui like (FK logique → user-service) |
+| `postId` | string | Post liké (FK logique → post-service) |
 | `createdAt` | Date | Date de création |
 
-Contrainte : index unique `(userId, targetType, targetId)` — un utilisateur ne peut liker deux fois la même cible.
+**Contrainte d'unicité :** `(userId, postId)`
 
-> Un utilisateur peut liker un post **et** un commentaire **et** une réponse. L'unicité porte sur le triplet `(userId, targetType, targetId)`.
+### Collection `comment_likes`
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `userId` | string | Utilisateur qui like (FK logique → user-service) |
+| `commentId` | string | Commentaire liké — racine ou réponse (FK logique → post-service) |
+| `postId` | string | Contexte du post parent (FK logique → post-service) |
+| `createdAt` | Date | Date de création |
+
+**Contrainte d'unicité :** `(userId, commentId)`
+
+> Un utilisateur peut liker un post **et** plusieurs commentaires. L'unicité porte sur `(userId, commentId)` quel que soit le niveau du commentaire (racine ou réponse).
 
 ---
 
@@ -77,12 +88,11 @@ Contrainte : index unique `(userId, targetType, targetId)` — un utilisateur ne
 | `POST` | `/posts/:targetId/likes` | `{ userId }` | Like un post |
 | `DELETE` | `/posts/:targetId/likes` | `{ userId }` | Unlike post |
 | `GET` | `/posts/:targetId/likes/count` | — | Compteur post |
-| `POST` | `/comments/:targetId/likes` | `{ userId, postId? }` | Like un commentaire |
-| `DELETE` | `/comments/:targetId/likes` | `{ userId }` | Unlike commentaire |
-| `GET` | `/comments/:targetId/likes/count` | — | Compteur commentaire |
-| `POST` | `/replies/:targetId/likes` | `{ userId, postId? }` | Like une réponse |
-| `DELETE` | `/replies/:targetId/likes` | `{ userId }` | Unlike réponse |
-| `GET` | `/replies/:targetId/likes/count` | — | Compteur réponse |
+| `POST` | `/comments/:targetId/likes` | `{ userId, postId }` | Like un commentaire ou une réponse |
+| `DELETE` | `/comments/:targetId/likes` | `{ userId }` | Unlike commentaire ou réponse |
+| `GET` | `/comments/:targetId/likes/count` | — | Compteur commentaire ou réponse |
+
+`:targetId` dans l'URL correspond à `postId` (posts) ou `commentId` (commentaires et réponses).
 
 ### Exemples de réponses
 
@@ -92,11 +102,32 @@ Contrainte : index unique `(userId, targetType, targetId)` — un utilisateur ne
 {
   "_id": "...",
   "userId": "alice",
-  "targetType": "post",
-  "targetId": "post-123",
   "postId": "post-123",
-  "createdAt": "2026-06-08T12:00:00.000Z",
-  "updatedAt": "2026-06-08T12:00:00.000Z"
+  "createdAt": "2026-06-08T12:00:00.000Z"
+}
+```
+
+**POST /comments/comment-456/likes — 201**
+
+```json
+{
+  "_id": "...",
+  "userId": "alice",
+  "commentId": "comment-456",
+  "postId": "post-123",
+  "createdAt": "2026-06-08T12:00:00.000Z"
+}
+```
+
+**POST /comments/reply-789/likes — 201** (like d'une réponse)
+
+```json
+{
+  "_id": "...",
+  "userId": "alice",
+  "commentId": "reply-789",
+  "postId": "post-123",
+  "createdAt": "2026-06-08T12:00:00.000Z"
 }
 ```
 
@@ -108,11 +139,11 @@ Contrainte : index unique `(userId, targetType, targetId)` — un utilisateur ne
 }
 ```
 
-**Erreurs métier**
+### Erreurs métier
 
 | Code | Cas |
 |------|-----|
-| `400` | `userId` ou `targetId` manquant |
+| `400` | `userId`, `postId` ou `commentId` manquant |
 | `404` | Like introuvable (unlike) |
 | `409` | Like déjà existant |
 | `500` | Erreur serveur |
@@ -215,15 +246,15 @@ curl -X POST http://localhost:3007/comments/comment-456/likes `
   -d '{"userId":"alice","postId":"post-123"}'
 ```
 
-**Like une réponse**
+**Like une réponse** (même route, ID de la réponse dans l'URL)
 
 ```powershell
-curl -X POST http://localhost:3007/replies/reply-789/likes `
+curl -X POST http://localhost:3007/comments/reply-789/likes `
   -H "Content-Type: application/json" `
   -d '{"userId":"alice","postId":"post-123"}'
 ```
 
-**Doublon (409)** — relancer le même POST avec le même `userId` et la même cible.
+**Doublon (409)** — relancer le même POST avec le même `userId` et le même `commentId`.
 
 ---
 
@@ -242,7 +273,7 @@ Les tests **mockent Mongoose** : pas besoin de MongoDB pour `pnpm test`.
 
 Cas couverts :
 
-- création / suppression de likes (post, commentaire, réponse) ;
+- création / suppression de likes (post, commentaire, réponse via commentaires) ;
 - refus des doublons ;
 - comptage ;
 - codes HTTP de l'API.
@@ -254,7 +285,7 @@ Cas couverts :
 | Service | Interaction |
 |---------|-------------|
 | **notification-service** | (futur Fx15) Notifier lors d'un like — hors périmètre Fx6 |
-| **post-service** | (futur) Les IDs post/comment/reply sont opaques pour Fx6 |
+| **post-service** | (futur) Les IDs post/comment sont opaques pour Fx6 |
 | **api-gateway** | (futur) Point d'entrée `/api/interactions` |
 
 Pour Fx6, le service fonctionne **de manière autonome** : aucun appel HTTP vers les autres microservices.

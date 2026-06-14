@@ -26,6 +26,11 @@ export const servicesConfig = {
     gatewayPrefix: "/follows",
     internalBasePath: "/follows",
   },
+  interactions: {
+    serviceName: "interaction-service",
+    gatewayPrefix: "",
+    internalBasePath: "/interactions",
+  },
 } as const;
 
 export type ServiceKey = keyof typeof servicesConfig;

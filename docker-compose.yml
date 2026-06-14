@@ -25,6 +25,7 @@ services:
       - profile-service
       - post-service
       - follow-service
+      - interaction-service
     networks:
       - breezy-network
 

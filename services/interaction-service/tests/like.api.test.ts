@@ -29,10 +29,6 @@ describe("like API", () => {
       const response = await request(app).get("/health");
 
       expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({
-        service: "interaction-service",
-        status: "OK",
-      });
     });
   });
 

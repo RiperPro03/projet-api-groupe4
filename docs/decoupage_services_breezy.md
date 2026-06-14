@@ -49,7 +49,7 @@ L’objectif est de permettre aux membres de l’équipe de savoir clairement qu
 | `post-service` | Fx18 | Ajout d’images aux messages |
 | `post-service` | Fx19 | Ajout de vidéos aux messages |
 | `feed-service` | Fx5 | Flux chronologique des messages des utilisateurs suivis |
-| `interaction-service` | Fx6 | Liker un post |
+| `interaction-service` | Fx6 | Liker un post, un commentaire ou une réponse |
 | `interaction-service` | Fx7 | Répondre à un post sous forme de commentaire |
 | `interaction-service` | Fx8 | Répondre à un commentaire sur un post |
 | `follow-service` | Fx9 | Suivre ou être suivi par d’autres utilisateurs |
@@ -171,23 +171,24 @@ Ce service gère les interactions autour des posts.
 
 **Fonctionnalités concernées :**
 
-- Fx6 : Liker un post
+- Fx6 : Liker un post, un commentaire ou une réponse
 - Fx7 : Répondre à un post sous forme de commentaire
 - Fx8 : Répondre à un commentaire sur un post
 
 **Tâches à développer :**
 
-- Ajouter un like sur un post
-- Retirer un like sur un post
-- Compter le nombre de likes
-- Empêcher un utilisateur de liker deux fois le même post
+- Ajouter un like sur un post, un commentaire ou une réponse
+- Retirer un like sur un post, un commentaire ou une réponse
+- Compter le nombre de likes (post, commentaire, réponse)
+- Empêcher un utilisateur de liker deux fois la même cible
 - Créer un commentaire sur un post
 - Modifier un commentaire
 - Supprimer un commentaire
 - Créer une réponse à un commentaire
 - Afficher les commentaires d’un post
 - Afficher les réponses aux commentaires
-- Envoyer un événement vers le `notification-service` lorsqu’un post est liké
+
+> Les notifications de likes (Fx15) sont gérées par le `notification-service`, pas par l’`interaction-service`.
 
 ---
 

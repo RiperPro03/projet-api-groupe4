@@ -104,6 +104,21 @@ services:
       timeout: 5s
       retries: 10
 
+  # interaction-mongodb:
+  #   image: mongo:8
+  #   container_name: interaction-mongodb
+  #   restart: unless-stopped
+  #   ports:
+  #     - "27020:27017"
+  #   volumes:
+  #     - interaction_mongodb_data:/data/db
+  #   networks:
+  #     - breezy-network
+  #   healthcheck:
+  #     test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 10
   post-mongodb:
     image: mongo:8
     container_name: post-mongodb
@@ -205,6 +220,20 @@ services:
     networks:
       - breezy-network
 
+  # interaction-service:
+  #   build:
+  #     context: ./services/interaction-service
+  #     dockerfile: Dockerfile
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3007:3007"
+  #   environment:
+  #     PORT: 3007
+  #     SERVICE_NAME: interaction-service
+  #     MONGO_URI: mongodb://interaction-mongodb:27017/interaction_db
+  #   depends_on:
+  #     interaction-mongodb:
+  #       condition: service_healthy
   post-service:
     build:
       context: ./services/post-service
@@ -229,6 +258,7 @@ volumes:
   user_postgres_data:
   follow_postgres_data:
   profile_mongodb_data:
+  # interaction_mongodb_data:
   post_mongodb_data:
 
 networks:

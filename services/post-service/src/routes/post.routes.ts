@@ -58,23 +58,35 @@ router.post(
     postController.createPost
 );
 
-// GET /posts — Fx4 : Lister les posts d'un utilisateur
+// GET /posts — Fx4 / Fx11 : Lister les posts d'un utilisateur
 router.get(
     "/",
     postController.getPostsByAuthor
 );
- 
+
+// GET /posts/all — Récupérer tous les posts
+router.get(
+    "/all",
+    postController.getAllPosts
+);
+
 // GET /posts/:id — Récupérer un post par son id
 router.get(
     "/:id",
     postController.getPostById
 );
- 
+
 // PATCH /posts/:id — Modifier un post
 router.patch(
     "/:id",
     postValidator.validateCreatePost,
     postController.updatePost
+);
+
+// DELETE /posts/:id — Soft delete d'un post
+router.delete(
+    "/:id",
+    postController.softDeletePost
 );
 
 export default router;

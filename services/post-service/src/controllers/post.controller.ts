@@ -1,9 +1,6 @@
 import type { Request, Response } from "express";
 import postService from "../services/post.service";
 
-const getRouteParam = (value: string | string[] | undefined): string | undefined =>
-    Array.isArray(value) ? value[0] : value;
-
 // POST /posts — Fx3 : Créer un post
 async function createPost(req: Request, res: Response) {
     try {
@@ -30,16 +27,16 @@ async function createPost(req: Request, res: Response) {
 async function getPostsByAuthor(req: Request, res: Response) {
     try {
         const authorId = req.query.authorId as string;
- 
+
         if (!authorId) {
             return res.status(400).json({
                 status: "error",
                 message: "authorId query param is required",
             });
         }
- 
+
         const posts = await postService.getPostsByAuthor(authorId);
- 
+
         return res.status(200).json({
             status: "success",
             message: "Posts retrieved",
@@ -53,21 +50,12 @@ async function getPostsByAuthor(req: Request, res: Response) {
         });
     }
 }
- 
+
 // GET /posts/:id — Récupérer un post par son id
 async function getPostById(req: Request, res: Response) {
     try {
-        const postId = getRouteParam(req.params.id);
+        const post = await postService.getPostById(req.params.id);
 
-        if (!postId) {
-            return res.status(400).json({
-                status: "error",
-                message: "Post id is required",
-            });
-        }
-
-        const post = await postService.getPostById(postId);
- 
         return res.status(200).json({
             status: "success",
             message: "Post retrieved",
@@ -87,27 +75,62 @@ async function getPostById(req: Request, res: Response) {
         });
     }
 }
- 
+
 // PATCH /posts/:id — Modifier un post
 async function updatePost(req: Request, res: Response) {
     try {
-        const postId = getRouteParam(req.params.id);
-
-        if (!postId) {
-            return res.status(400).json({
-                status: "error",
-                message: "Post id is required",
-            });
-        }
-
-        const post = await postService.updatePost(postId, {
+        const post = await postService.updatePost(req.params.id, {
             content: req.body.content,
             tags: req.body.tags,
         });
- 
+
         return res.status(200).json({
             status: "success",
             message: "Post updated",
+            data: { post },
+        });
+    } catch (error) {
+        if (error instanceof Error && error.message === "POST_NOT_FOUND") {
+            return res.status(404).json({
+                status: "error",
+                message: "Post not found",
+            });
+        }
+        console.error(error);
+        return res.status(500).json({
+            status: "error",
+            message: "Internal server error",
+        });
+    }
+}
+
+// GET /posts/all — Récupérer tous les posts
+async function getAllPosts(req: Request, res: Response) {
+    try {
+        const posts = await postService.getAllPosts();
+
+        return res.status(200).json({
+            status: "success",
+            message: "Posts retrieved",
+            data: { posts },
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: "error",
+            message: "Internal server error",
+        });
+    }
+}
+
+// DELETE /posts/:id — Soft delete d'un post
+async function softDeletePost(req: Request, res: Response) {
+    try {
+        const post = await postService.softDeletePost(req.params.id);
+
+        return res.status(200).json({
+            status: "success",
+            message: "Post deleted",
             data: { post },
         });
     } catch (error) {
@@ -129,7 +152,9 @@ const postController = {
     createPost,
     getPostsByAuthor,
     getPostById,
-    updatePost, 
+    getAllPosts,
+    updatePost,
+    softDeletePost,
 };
 
 export default postController;

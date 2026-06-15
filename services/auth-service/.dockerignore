@@ -1,5 +1,8 @@
 node_modules
 src/generated/prisma
-tests
-coverage
 .env
+coverage
+dist
+.git
+npm-debug.log*
+pnpm-debug.log*

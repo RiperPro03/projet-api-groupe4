@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ChangeEventHandler, type FormEvent } from "react";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 import { loginAction, registerAction } from "@/app/auth/actions";
 import { persistAuthTokens } from "@/lib/auth-token-storage";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
@@ -49,6 +50,10 @@ function Field({
   pattern,
   minLength,
 }: FieldProps) {
+  const isPasswordField = type === "password";
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const inputType = isPasswordField && isPasswordVisible ? "text" : type;
+
   return (
     <div>
       <div
@@ -74,7 +79,7 @@ function Field({
         <input
           id={id}
           name={id}
-          type={type}
+          type={inputType}
           autoComplete={autoComplete}
           placeholder={label}
           value={value}
@@ -84,8 +89,27 @@ function Field({
           required
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${id}-error` : undefined}
-          className={fieldClassName}
+          className={`${fieldClassName} ${isPasswordField ? "pr-14" : ""}`}
         />
+        {isPasswordField && (
+          <button
+            type="button"
+            aria-label={
+              isPasswordVisible
+                ? "Masquer le mot de passe"
+                : "Afficher le mot de passe"
+            }
+            aria-pressed={isPasswordVisible}
+            onClick={() => setIsPasswordVisible((visible) => !visible)}
+            className="absolute inset-y-0 right-0 z-30 flex w-14 items-center justify-center rounded-r-[inherit] text-xl text-white/55 transition-colors hover:text-breezy-green focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-breezy-yellow"
+          >
+            {isPasswordVisible ? (
+              <FiEyeOff aria-hidden="true" />
+            ) : (
+              <FiEye aria-hidden="true" />
+            )}
+          </button>
+        )}
       </div>
       {error && (
         <p id={`${id}-error`} className="mt-2 text-sm text-red-400" role="alert">

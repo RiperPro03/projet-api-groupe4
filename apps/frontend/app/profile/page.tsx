@@ -1,57 +1,70 @@
 import type { Metadata } from "next";
-import { FiCalendar, FiEdit3 } from "react-icons/fi";
-import { connectedUser } from "@/lib/mock-user";
-import { Meteors } from "@/components/ui/meteors";
+import { redirect } from "next/navigation";
+import { FiCalendar } from "react-icons/fi";
+import ProfileSettingsMenu from "@/components/profile/ProfileSettingsMenu";
+import { Particles } from "@/components/ui/particles";
+import { getCurrentUser } from "@/lib/current-user";
 
 export const metadata: Metadata = {
-  title: `Profil de ${connectedUser.data.profile.nickname}`,
-  description: `Profil Breezyl de ${connectedUser.data.profile.nickname}.`,
+  title: "Mon profil",
+  description: "Votre profil Breezyl.",
 };
 
-export default function ProfilePage() {
-  const { profile } = connectedUser.data;
-  const initial = profile.nickname.charAt(0).toUpperCase();
+export default async function ProfilePage() {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    redirect("/login?redirect=/profile");
+  }
+
+  const { auth, profile } = currentUser;
+  const username = profile?.username || auth.email.split("@")[0];
+  const displayName = profile?.nickname || username;
+  const joinedAtSource = profile?.createdAt || auth.createdAt;
   const joinedAt = new Intl.DateTimeFormat("fr-FR", {
     month: "long",
     year: "numeric",
-  }).format(new Date(profile.createdAt));
+  }).format(new Date(joinedAtSource));
 
   return (
     <section className="relative min-h-[calc(100svh-64px)] overflow-hidden bg-breezy-black px-5 py-8 text-white md:min-h-svh">
-      <Meteors
-        number={25}
-        minDuration={4}
-        maxDuration={9}
+      <Particles
         className="z-0"
+        quantity={120}
+        size={1.2}
+        speed={0.35}
       />
 
       <div className="relative z-10 mx-auto w-full max-w-2xl">
         <div className="flex items-center justify-between gap-4">
           <div
             className="flex size-20 shrink-0 items-center justify-center rounded-full bg-breezy-green bg-cover bg-center text-2xl font-bold text-black"
-            style={{ backgroundImage: `url(${profile.url_photo})` }}
-            aria-label={`Photo de profil de ${profile.nickname}`}
-          >
-            {initial}
-          </div>
+            style={
+              profile?.url_photo
+                ? { backgroundImage: `url(${profile.url_photo})` }
+                : undefined
+            }
+            aria-label={`Photo de profil de ${displayName}`}
+          />
 
-          <div className="relative rounded-full">
-            <button
-              type="button"
-              className="relative flex items-center gap-2 rounded-full bg-breezy-green hover:bg-breezy-green/90 px-4 py-2 text-sm font-semibold"
-            >
-              <FiEdit3 aria-hidden="true" />
-              Modifier
-            </button>
-          </div>
+          <ProfileSettingsMenu
+            profile={{
+              username,
+              nickname: profile?.nickname ?? "",
+              bio: profile?.bio ?? "",
+              url_photo: profile?.url_photo ?? "",
+            }}
+          />
         </div>
 
         <div className="mt-4">
-          <h1 className="text-2xl font-bold">{profile.nickname}</h1>
-          <p className="text-white/50">@{profile.username}</p>
+          <h1 className="text-2xl font-bold">{displayName}</h1>
+          <p className="text-white/50">@{username}</p>
         </div>
 
-        <p className="mt-4 leading-6 text-white/85">{profile.bio}</p>
+        {profile?.bio && (
+          <p className="mt-4 leading-6 text-white/85">{profile.bio}</p>
+        )}
 
         <p className="mt-4 flex items-center gap-1.5 text-sm text-white/50">
           <FiCalendar aria-hidden="true" />

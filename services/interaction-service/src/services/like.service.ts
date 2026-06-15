@@ -1,4 +1,5 @@
-import { Like, type TargetType, TARGET_TYPES } from "../models/like.model.js";
+import { CommentLike } from "../models/comment-like.model.js";
+import { PostLike } from "../models/post-like.model.js";
 
 /** Erreur métier avec un code HTTP associé (utilisée par le controller). */
 export class LikeError extends Error {
@@ -20,35 +21,19 @@ function isDuplicateKeyError(error: unknown): boolean {
   );
 }
 
-export function isTargetType(value: string): value is TargetType {
-  return (TARGET_TYPES as readonly string[]).includes(value);
+function requireNonEmpty(value: string, fieldName: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new LikeError(`${fieldName} est requis`, 400);
+  }
+  return trimmed;
 }
 
-/** Ajoute un like sur une cible (post, commentaire ou réponse). */
-export async function addLike(
-  userId: string,
-  targetType: TargetType,
-  targetId: string,
-  postId?: string
-) {
-  if (!userId.trim()) {
-    throw new LikeError("userId est requis", 400);
-  }
-
-  if (!targetId.trim()) {
-    throw new LikeError("targetId est requis", 400);
-  }
-
-  const resolvedPostId =
-    targetType === "post" ? targetId.trim() : postId?.trim();
-
+async function createLike<T>(
+  createFn: () => Promise<T>
+): Promise<T> {
   try {
-    return await Like.create({
-      userId: userId.trim(),
-      targetType,
-      targetId: targetId.trim(),
-      ...(resolvedPostId ? { postId: resolvedPostId } : {}),
-    });
+    return await createFn();
   } catch (error) {
     if (isDuplicateKeyError(error)) {
       throw new LikeError("Ce like existe déjà", 409);
@@ -57,20 +42,30 @@ export async function addLike(
   }
 }
 
-/** Retire un like existant. */
-export async function removeLike(
-  userId: string,
-  targetType: TargetType,
-  targetId: string
-): Promise<void> {
-  if (!userId.trim()) {
-    throw new LikeError("userId est requis", 400);
-  }
+/** Ajoute un like sur un post. */
+export async function addPostLike(userId: string, postId: string) {
+  const resolvedUserId = requireNonEmpty(userId, "userId");
+  const resolvedPostId = requireNonEmpty(postId, "postId");
 
-  const deleted = await Like.findOneAndDelete({
-    userId: userId.trim(),
-    targetType,
-    targetId: targetId.trim(),
+  return createLike(() =>
+    PostLike.create({
+      userId: resolvedUserId,
+      postId: resolvedPostId,
+    })
+  );
+}
+
+/** Retire un like sur un post. */
+export async function removePostLike(
+  userId: string,
+  postId: string
+): Promise<void> {
+  const resolvedUserId = requireNonEmpty(userId, "userId");
+  const resolvedPostId = requireNonEmpty(postId, "postId");
+
+  const deleted = await PostLike.findOneAndDelete({
+    userId: resolvedUserId,
+    postId: resolvedPostId,
   });
 
   if (!deleted) {
@@ -78,17 +73,53 @@ export async function removeLike(
   }
 }
 
-/** Compte les likes d'une cible. */
-export async function countLikes(
-  targetType: TargetType,
-  targetId: string
-): Promise<number> {
-  if (!targetId.trim()) {
-    throw new LikeError("targetId est requis", 400);
-  }
+/** Compte les likes d'un post. */
+export async function countPostLikes(postId: string): Promise<number> {
+  const resolvedPostId = requireNonEmpty(postId, "postId");
 
-  return Like.countDocuments({
-    targetType,
-    targetId: targetId.trim(),
+  return PostLike.countDocuments({ postId: resolvedPostId });
+}
+
+/** Ajoute un like sur un commentaire (y compris une réponse, traitée comme commentaire enfant). */
+export async function addCommentLike(
+  userId: string,
+  commentId: string,
+  postId: string
+) {
+  const resolvedUserId = requireNonEmpty(userId, "userId");
+  const resolvedCommentId = requireNonEmpty(commentId, "commentId");
+  const resolvedPostId = requireNonEmpty(postId, "postId");
+
+  return createLike(() =>
+    CommentLike.create({
+      userId: resolvedUserId,
+      commentId: resolvedCommentId,
+      postId: resolvedPostId,
+    })
+  );
+}
+
+/** Retire un like sur un commentaire. */
+export async function removeCommentLike(
+  userId: string,
+  commentId: string
+): Promise<void> {
+  const resolvedUserId = requireNonEmpty(userId, "userId");
+  const resolvedCommentId = requireNonEmpty(commentId, "commentId");
+
+  const deleted = await CommentLike.findOneAndDelete({
+    userId: resolvedUserId,
+    commentId: resolvedCommentId,
   });
+
+  if (!deleted) {
+    throw new LikeError("Like introuvable", 404);
+  }
+}
+
+/** Compte les likes d'un commentaire. */
+export async function countCommentLikes(commentId: string): Promise<number> {
+  const resolvedCommentId = requireNonEmpty(commentId, "commentId");
+
+  return CommentLike.countDocuments({ commentId: resolvedCommentId });
 }

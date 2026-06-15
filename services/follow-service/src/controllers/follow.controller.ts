@@ -23,16 +23,26 @@ function getBodyIds(req: Request): { followerId: string; followingId: string } |
 }
 
 function getFollowerId(req: Request): string | null {
-  const { followerId } = req.body;
-  return typeof followerId === "string" && followerId.trim()
-    ? followerId.trim()
+  const bodyFollowerId = req.body?.followerId;
+  if (typeof bodyFollowerId === "string" && bodyFollowerId.trim()) {
+    return bodyFollowerId.trim();
+  }
+
+  const queryFollowerId = req.query.followerId;
+  return typeof queryFollowerId === "string" && queryFollowerId.trim()
+    ? queryFollowerId.trim()
     : null;
 }
 
 function getFollowingId(req: Request): string | null {
-  const { followingId } = req.body;
-  return typeof followingId === "string" && followingId.trim()
-    ? followingId.trim()
+  const bodyFollowingId = req.body?.followingId;
+  if (typeof bodyFollowingId === "string" && bodyFollowingId.trim()) {
+    return bodyFollowingId.trim();
+  }
+
+  const queryFollowingId = req.query.followingId;
+  return typeof queryFollowingId === "string" && queryFollowingId.trim()
+    ? queryFollowingId.trim()
     : null;
 }
 

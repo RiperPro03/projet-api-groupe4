@@ -8,7 +8,7 @@ ENV CI=true
 RUN corepack enable
 
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml ./
 
 RUN pnpm install
 

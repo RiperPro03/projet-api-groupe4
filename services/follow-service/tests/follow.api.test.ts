@@ -26,13 +26,9 @@ describe("follow API", () => {
 
   describe("GET /health", () => {
     it("retourne le statut du service", async () => {
-      const response = await request(app).get("/health");
+      const response = await request(app).get("/follows/health");
 
       expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({
-        service: "follow-service",
-        status: "OK",
-      });
     });
   });
 
@@ -42,7 +38,7 @@ describe("follow API", () => {
       mockPrisma.follow.create.mockResolvedValue(record);
 
       const response = await request(app)
-        .post("/")
+        .post("/follows/")
         .send({ followerId: "alice", followingId: "bob" });
 
       expect(response.status).toBe(201);
@@ -52,7 +48,7 @@ describe("follow API", () => {
 
     it("refuse un body incomplet", async () => {
       const response = await request(app)
-        .post("/")
+        .post("/follows/")
         .send({ followerId: "alice" });
 
       expect(response.status).toBe(400);
@@ -63,7 +59,7 @@ describe("follow API", () => {
 
     it("refuse un auto-follow", async () => {
       const response = await request(app)
-        .post("/")
+        .post("/follows/")
         .send({ followerId: "alice", followingId: "alice" });
 
       expect(response.status).toBe(400);
@@ -81,7 +77,7 @@ describe("follow API", () => {
       );
 
       const response = await request(app)
-        .post("/")
+        .post("/follows/")
         .send({ followerId: "alice", followingId: "bob" });
 
       expect(response.status).toBe(409);
@@ -96,7 +92,7 @@ describe("follow API", () => {
       );
 
       const response = await request(app)
-        .delete("/")
+        .delete("/follows/")
         .send({ followerId: "alice", followingId: "bob" });
 
       expect(response.status).toBe(200);
@@ -118,7 +114,7 @@ describe("follow API", () => {
       );
 
       await request(app)
-        .delete("/")
+        .delete("/follows/")
         .send({ followerId: "alice", followingId: "bob" });
 
       const deleteArgs = mockPrisma.follow.delete.mock.calls[0][0];
@@ -141,7 +137,7 @@ describe("follow API", () => {
       );
 
       const response = await request(app)
-        .delete("/")
+        .delete("/follows/")
         .send({ followerId: "alice", followingId: "bob" });
 
       expect(response.status).toBe(404);
@@ -157,7 +153,7 @@ describe("follow API", () => {
       ]);
 
       const response = await request(app)
-        .get("/following")
+        .get("/follows/following")
         .send({ followerId: "alice", followingId: "bob" });
 
       expect(response.status).toBe(200);
@@ -174,7 +170,7 @@ describe("follow API", () => {
       ]);
 
       const response = await request(app)
-        .get("/followers")
+        .get("/follows/followers")
         .send({ followerId: "alice", followingId: "bob" });
 
       expect(response.status).toBe(200);

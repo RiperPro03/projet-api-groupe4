@@ -13,7 +13,8 @@
     "dev:user": "pnpm --filter user-service dev",
     "dev:post": "pnpm --filter post-service dev",
     "dev:follow": "pnpm --filter follow-service dev",
-    "dev:feed": "pnpm --filter feed-service dev"
+    "dev:feed": "pnpm --filter feed-service dev",
+    "dev:interaction": "pnpm --filter interaction-service dev"
   },
   "keywords": [
     "microservices",

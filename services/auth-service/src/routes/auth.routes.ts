@@ -69,7 +69,7 @@ router.post(
     authController.logout,
 );
 
-router.put(
+router.patch(
     "/password",
     authValidator.authenticate,
     authValidator.requiredFields(["currentPassword", "newPassword"]),

@@ -2,10 +2,19 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { FiEdit3, FiLogOut, FiSettings, FiX } from "react-icons/fi";
+import {
+  FiEdit3,
+  FiEye,
+  FiEyeOff,
+  FiLogOut,
+  FiSettings,
+  FiShield,
+  FiX,
+} from "react-icons/fi";
 import { logoutAction } from "@/app/auth/actions";
 import {
   updateCurrentProfileAction,
+  updatePasswordAction,
   type UpdateProfilePayload,
 } from "@/app/profile/actions";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
@@ -18,6 +27,59 @@ type ProfileSettingsMenuProps = {
 const fieldClassName =
   "w-full rounded-xl border border-white/15 bg-black px-4 py-3 text-white outline-none transition-colors placeholder:text-white/35 focus:border-breezy-green";
 
+type PasswordFieldProps = {
+  id: string;
+  label: string;
+  autoComplete: string;
+  value: string;
+  onChange: (value: string) => void;
+  autoFocus?: boolean;
+  minLength?: number;
+};
+
+function PasswordField({
+  id,
+  label,
+  autoComplete,
+  value,
+  onChange,
+  autoFocus,
+  minLength,
+}: PasswordFieldProps) {
+  const [isVisible, setIsVisible] = useState(false);
+
+  return (
+    <label className="block" htmlFor={id}>
+      <span className="mb-1.5 block text-sm font-medium text-white/75">
+        {label}
+      </span>
+      <span className="relative block">
+        <input
+          id={id}
+          type={isVisible ? "text" : "password"}
+          required
+          minLength={minLength}
+          autoFocus={autoFocus}
+          autoComplete={autoComplete}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className={`${fieldClassName} pr-12`}
+        />
+        <button
+          type="button"
+          aria-label={
+            isVisible ? "Masquer le mot de passe" : "Afficher le mot de passe"
+          }
+          onClick={() => setIsVisible((visible) => !visible)}
+          className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-lg text-white/50 transition-colors hover:text-breezy-green"
+        >
+          {isVisible ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
+        </button>
+      </span>
+    </label>
+  );
+}
+
 export default function ProfileSettingsMenu({
   profile,
 }: ProfileSettingsMenuProps) {
@@ -26,9 +88,16 @@ export default function ProfileSettingsMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isSecurityOpen, setIsSecurityOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [form, setForm] = useState(profile);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    passwordConfirmation: "",
+  });
 
   useEffect(() => {
     function handleMouseDown(event: MouseEvent) {
@@ -44,6 +113,7 @@ export default function ProfileSettingsMenu({
       if (event.key === "Escape") {
         setIsMenuOpen(false);
         setIsEditorOpen(false);
+        setIsSecurityOpen(false);
       }
     }
 
@@ -57,7 +127,7 @@ export default function ProfileSettingsMenu({
   }, [isMenuOpen]);
 
   useEffect(() => {
-    if (!isEditorOpen) {
+    if (!isEditorOpen && !isSecurityOpen) {
       return;
     }
 
@@ -67,12 +137,22 @@ export default function ProfileSettingsMenu({
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [isEditorOpen]);
+  }, [isEditorOpen, isSecurityOpen]);
 
   function openEditor() {
     setForm(profile);
     setIsMenuOpen(false);
     setIsEditorOpen(true);
+  }
+
+  function openSecurity() {
+    setPasswordForm({
+      currentPassword: "",
+      newPassword: "",
+      passwordConfirmation: "",
+    });
+    setIsMenuOpen(false);
+    setIsSecurityOpen(true);
   }
 
   function updateField(field: keyof UpdateProfilePayload, value: string) {
@@ -139,6 +219,53 @@ export default function ProfileSettingsMenu({
     }
   }
 
+  async function handlePasswordUpdate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (isUpdatingPassword) {
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.passwordConfirmation) {
+      notify({
+        tone: "error",
+        title: "Modification impossible",
+        description: "La confirmation ne correspond pas au nouveau mot de passe.",
+      });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+
+    try {
+      const result = await updatePasswordAction({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+
+      if (result.status === "error") {
+        notify({
+          tone: "error",
+          title: "Modification impossible",
+          description: result.message,
+        });
+        return;
+      }
+
+      clearAuthTokens();
+      router.replace("/login");
+      router.refresh();
+    } catch {
+      notify({
+        tone: "error",
+        title: "Modification impossible",
+        description: "Une erreur inattendue est survenue.",
+      });
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  }
+
   return (
     <div ref={menuRef} className="relative">
       <button
@@ -165,6 +292,16 @@ export default function ProfileSettingsMenu({
           >
             <FiEdit3 className="text-breezy-green" aria-hidden="true" />
             Modifier le profil
+          </button>
+
+          <button
+            type="button"
+            role="menuitem"
+            onClick={openSecurity}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-breezy-yellow"
+          >
+            <FiShield className="text-breezy-yellow" aria-hidden="true" />
+            Securite
           </button>
 
           <div className="my-1 border-t border-white/10" />
@@ -280,6 +417,94 @@ export default function ProfileSettingsMenu({
                   className="rounded-full bg-breezy-green px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-breezy-green/90 disabled:cursor-wait disabled:opacity-60"
                 >
                   {isSaving ? "Enregistrement..." : "Enregistrer"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {isSecurityOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+          onMouseDown={() => setIsSecurityOpen(false)}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="security-title"
+            onMouseDown={(event) => event.stopPropagation()}
+            className="max-h-[calc(100svh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-white/15 bg-[#111] p-6 text-white shadow-2xl shadow-black md:p-8"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="security-title" className="text-xl font-bold">
+                  Securite
+                </h2>
+                <p className="mt-1 text-sm text-white/50">
+                  Modifiez votre mot de passe. Vous devrez ensuite vous reconnecter.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                aria-label="Fermer"
+                onClick={() => setIsSecurityOpen(false)}
+                className="flex size-9 shrink-0 items-center justify-center rounded-full text-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <FiX aria-hidden="true" />
+              </button>
+            </div>
+
+            <form className="mt-6 space-y-4" onSubmit={handlePasswordUpdate}>
+              <PasswordField
+                id="current-password"
+                label="Mot de passe actuel"
+                autoComplete="current-password"
+                autoFocus
+                value={passwordForm.currentPassword}
+                onChange={(currentPassword) =>
+                  setPasswordForm((current) => ({ ...current, currentPassword }))
+                }
+              />
+              <PasswordField
+                id="new-password"
+                label="Nouveau mot de passe"
+                autoComplete="new-password"
+                minLength={8}
+                value={passwordForm.newPassword}
+                onChange={(newPassword) =>
+                  setPasswordForm((current) => ({ ...current, newPassword }))
+                }
+              />
+              <PasswordField
+                id="password-confirmation"
+                label="Confirmer le nouveau mot de passe"
+                autoComplete="new-password"
+                minLength={8}
+                value={passwordForm.passwordConfirmation}
+                onChange={(passwordConfirmation) =>
+                  setPasswordForm((current) => ({
+                    ...current,
+                    passwordConfirmation,
+                  }))
+                }
+              />
+
+              <div className="flex justify-end gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsSecurityOpen(false)}
+                  className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingPassword}
+                  className="rounded-full bg-breezy-yellow px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-breezy-yellow/90 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {isUpdatingPassword ? "Modification..." : "Modifier"}
                 </button>
               </div>
             </form>

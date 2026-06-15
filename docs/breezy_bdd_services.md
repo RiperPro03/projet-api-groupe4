@@ -450,16 +450,12 @@ MongoDB
 
 Les likes, commentaires et réponses peuvent être très nombreux. MongoDB est adapté pour stocker ces interactions sous forme de documents.
 
-## Collection `likes`
-
-Modèle polymorphe (option A) : un like cible un post, un commentaire ou une réponse via `targetType` + `targetId`.
+## Collection `post_likes`
 
 ```json
 {
   "_id": "ObjectId",
   "userId": "uuid",
-  "targetType": "post",
-  "targetId": "ObjectId",
   "postId": "ObjectId",
   "createdAt": "2026-06-04T10:00:00.000Z"
 }
@@ -467,19 +463,40 @@ Modèle polymorphe (option A) : un like cible un post, un commentaire ou une ré
 
 | Champ | Description |
 |-------|-------------|
-| `targetType` | `"post"` \| `"comment"` \| `"reply"` |
-| `targetId` | ID de la cible likée |
-| `postId` | Contexte du post parent (obligatoire pour `post`, recommandé pour `comment` / `reply`) |
+| `userId` | Utilisateur qui like |
+| `postId` | Post liké |
 
-> Un utilisateur peut liker un post **et** un commentaire **et** une réponse. L'unicité porte sur le triplet `(userId, targetType, targetId)`.
+> Unicité : `(userId, postId)`.
+
+## Collection `comment_likes`
+
+```json
+{
+  "_id": "ObjectId",
+  "userId": "uuid",
+  "commentId": "ObjectId",
+  "postId": "ObjectId",
+  "createdAt": "2026-06-04T10:00:00.000Z"
+}
+```
+
+| Champ | Description |
+|-------|-------------|
+| `userId` | Utilisateur qui like |
+| `commentId` | Commentaire liké (racine ou réponse) |
+| `postId` | Contexte du post parent |
+
+> Unicité : `(userId, commentId)`. Les réponses sont likées via la même collection en passant l'ID de la réponse dans `commentId`.
 
 ## Index recommandés
 
 ```js
-db.likes.createIndex({ userId: 1, targetType: 1, targetId: 1 }, { unique: true })
-db.likes.createIndex({ targetType: 1, targetId: 1 })
-db.likes.createIndex({ postId: 1 })
-db.likes.createIndex({ userId: 1 })
+db.post_likes.createIndex({ userId: 1, postId: 1 }, { unique: true })
+db.post_likes.createIndex({ postId: 1 })
+
+db.comment_likes.createIndex({ userId: 1, commentId: 1 }, { unique: true })
+db.comment_likes.createIndex({ commentId: 1 })
+db.comment_likes.createIndex({ postId: 1 })
 ```
 
 ## Collection `comments`

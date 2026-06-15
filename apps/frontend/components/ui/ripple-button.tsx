@@ -25,7 +25,7 @@ export const RippleButton = React.forwardRef<
     ref
   ) => {
     const [buttonRipples, setButtonRipples] = useState<
-      Array<{ x: number; y: number; size: number; key: number }>
+      Array<{ x: string; y: string; size: string; key: number }>
     >([])
 
     const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
@@ -39,8 +39,17 @@ export const RippleButton = React.forwardRef<
       const size = Math.max(rect.width, rect.height)
       const x = event.clientX - rect.left - size / 2
       const y = event.clientY - rect.top - size / 2
+      const rootFontSize = Number.parseFloat(
+        window.getComputedStyle(document.documentElement).fontSize
+      )
+      const toRem = (value: number) => `${value / rootFontSize}rem`
 
-      const newRipple = { x, y, size, key: Date.now() }
+      const newRipple = {
+        x: toRem(x),
+        y: toRem(y),
+        size: toRem(size),
+        key: Date.now(),
+      }
       setButtonRipples((prevRipples) => [...prevRipples, newRipple])
     }
 
@@ -81,10 +90,10 @@ export const RippleButton = React.forwardRef<
               key={ripple.key}
               style={
                 {
-                  width: `${ripple.size}px`,
-                  height: `${ripple.size}px`,
-                  top: `${ripple.y}px`,
-                  left: `${ripple.x}px`,
+                  width: ripple.size,
+                  height: ripple.size,
+                  top: ripple.y,
+                  left: ripple.x,
                   backgroundColor: rippleColor,
                   transform: `scale(0)`,
                   "--duration": duration,

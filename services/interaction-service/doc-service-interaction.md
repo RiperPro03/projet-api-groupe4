@@ -314,3 +314,4 @@ Pour Fx6, le service fonctionne **de manière autonome** : aucun appel HTTP vers
 | Fx7 / Fx8 | CRUD commentaires et réponses |
 | Fx15 | Événement vers `notification-service` lors d'un like |
 | API Gateway | Proxy `/api/interactions/*` |
+ 

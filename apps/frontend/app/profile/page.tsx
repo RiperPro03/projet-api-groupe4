@@ -27,7 +27,7 @@ export default async function ProfilePage() {
   }).format(new Date(joinedAtSource));
 
   return (
-    <section className="relative min-h-[calc(100svh-64px)] overflow-hidden bg-breezy-black px-5 py-8 text-white md:min-h-svh">
+    <section className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-breezy-black px-5 py-8 text-white md:min-h-svh">
       <Particles
         className="z-0"
         quantity={120}

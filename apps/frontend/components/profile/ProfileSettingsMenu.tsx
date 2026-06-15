@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   FiEdit3,
@@ -18,6 +19,8 @@ import {
   type UpdateProfilePayload,
 } from "@/app/profile/actions";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
+import { RippleButton } from "@/components/ui/ripple-button";
+import { ShineBorder } from "@/components/ui/shine-border";
 import { clearAuthTokens } from "@/lib/auth-token-storage";
 
 type ProfileSettingsMenuProps = {
@@ -25,7 +28,10 @@ type ProfileSettingsMenuProps = {
 };
 
 const fieldClassName =
-  "w-full rounded-xl border border-white/15 bg-black px-4 py-3 text-white outline-none transition-colors placeholder:text-white/35 focus:border-breezy-green";
+  "w-full rounded-[inherit] bg-black px-4 py-3 text-white outline-none placeholder:text-white/35";
+
+const fieldContainerClassName =
+  "group relative rounded-xl border border-[#536471] transition-shadow focus-within:border-transparent focus-within:shadow-[0_0_1.25rem_rgba(0,146,62,0.28)]";
 
 type PasswordFieldProps = {
   id: string;
@@ -53,7 +59,13 @@ function PasswordField({
       <span className="mb-1.5 block text-sm font-medium text-white/75">
         {label}
       </span>
-      <span className="relative block">
+      <span className={`${fieldContainerClassName} block`}>
+        <ShineBorder
+          borderWidth="0.125rem"
+          duration={15}
+          shineColor={["#00923e", "#f8c100", "#00923e"]}
+          className="z-20 opacity-0 transition-opacity group-focus-within:opacity-100"
+        />
         <input
           id={id}
           type={isVisible ? "text" : "password"}
@@ -63,7 +75,7 @@ function PasswordField({
           autoComplete={autoComplete}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className={`${fieldClassName} pr-12`}
+          className={`${fieldClassName} relative z-10 pr-12`}
         />
         <button
           type="button"
@@ -71,7 +83,7 @@ function PasswordField({
             isVisible ? "Masquer le mot de passe" : "Afficher le mot de passe"
           }
           onClick={() => setIsVisible((visible) => !visible)}
-          className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-lg text-white/50 transition-colors hover:text-breezy-green"
+          className="absolute inset-y-0 right-0 z-30 flex w-12 items-center justify-center text-lg text-white/50 transition-colors hover:text-breezy-green"
         >
           {isVisible ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
         </button>
@@ -319,9 +331,9 @@ export default function ProfileSettingsMenu({
         </div>
       )}
 
-      {isEditorOpen && (
+      {isEditorOpen && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-[100] flex items-stretch justify-center bg-black/80 md:items-center md:p-4"
           onMouseDown={() => setIsEditorOpen(false)}
         >
           <section
@@ -329,9 +341,9 @@ export default function ProfileSettingsMenu({
             aria-modal="true"
             aria-labelledby="edit-profile-title"
             onMouseDown={(event) => event.stopPropagation()}
-            className="max-h-[calc(100svh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/15 bg-[#111] p-6 text-white shadow-2xl shadow-black md:p-8"
+            className="flex h-[100dvh] w-full max-w-lg flex-col overflow-hidden bg-[#111] text-white shadow-2xl shadow-black md:h-auto md:max-h-[calc(100dvh-2rem)] md:rounded-2xl md:border md:border-white/15"
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 p-5 md:border-b-0 md:p-8 md:pb-0">
               <div>
                 <h2 id="edit-profile-title" className="text-xl font-bold">
                   Modifier le profil
@@ -351,82 +363,120 @@ export default function ProfileSettingsMenu({
               </button>
             </div>
 
-            <form className="mt-6 space-y-4" onSubmit={handleProfileUpdate}>
+            <form
+              className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:mt-6 md:p-8 md:pt-0"
+              onSubmit={handleProfileUpdate}
+            >
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-white/75">
                   Nom d&apos;utilisateur
                 </span>
-                <input
-                  autoFocus
-                  required
-                  value={form.username}
-                  onChange={(event) => updateField("username", event.target.value)}
-                  className={fieldClassName}
-                  autoComplete="username"
-                />
+                <div className={fieldContainerClassName}>
+                  <ShineBorder
+                    borderWidth="0.125rem"
+                    duration={15}
+                    shineColor={["#00923e", "#f8c100", "#00923e"]}
+                    className="z-20 opacity-0 transition-opacity group-focus-within:opacity-100"
+                  />
+                  <input
+                    autoFocus
+                    required
+                    value={form.username}
+                    onChange={(event) => updateField("username", event.target.value)}
+                    className={fieldClassName}
+                    autoComplete="username"
+                  />
+                </div>
               </label>
 
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-white/75">
                   Nom affiche
                 </span>
-                <input
-                  value={form.nickname}
-                  onChange={(event) => updateField("nickname", event.target.value)}
-                  className={fieldClassName}
-                  placeholder="Votre nom affiche"
-                />
+                <div className={fieldContainerClassName}>
+                  <ShineBorder
+                    borderWidth="0.125rem"
+                    duration={15}
+                    shineColor={["#00923e", "#f8c100", "#00923e"]}
+                    className="z-20 opacity-0 transition-opacity group-focus-within:opacity-100"
+                  />
+                  <input
+                    value={form.nickname}
+                    onChange={(event) => updateField("nickname", event.target.value)}
+                    className={fieldClassName}
+                    placeholder="Votre nom affiche"
+                  />
+                </div>
               </label>
 
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-white/75">
                   Biographie
                 </span>
-                <textarea
-                  value={form.bio}
-                  onChange={(event) => updateField("bio", event.target.value)}
-                  className={`${fieldClassName} min-h-28 resize-y`}
-                  placeholder="Presentez-vous en quelques mots"
-                />
+                <div className={fieldContainerClassName}>
+                  <ShineBorder
+                    borderWidth="0.125rem"
+                    duration={15}
+                    shineColor={["#00923e", "#f8c100", "#00923e"]}
+                    className="z-20 opacity-0 transition-opacity group-focus-within:opacity-100"
+                  />
+                  <textarea
+                    value={form.bio}
+                    onChange={(event) => updateField("bio", event.target.value)}
+                    className={`${fieldClassName} block min-h-28 resize-y`}
+                    placeholder="Presentez-vous en quelques mots"
+                  />
+                </div>
               </label>
 
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-white/75">
                   URL de la photo
                 </span>
-                <input
-                  type="url"
-                  value={form.url_photo}
-                  onChange={(event) => updateField("url_photo", event.target.value)}
-                  className={fieldClassName}
-                  placeholder="https://exemple.com/photo.jpg"
-                />
+                <div className={fieldContainerClassName}>
+                  <ShineBorder
+                    borderWidth="0.125rem"
+                    duration={15}
+                    shineColor={["#00923e", "#f8c100", "#00923e"]}
+                    className="z-20 opacity-0 transition-opacity group-focus-within:opacity-100"
+                  />
+                  <input
+                    type="url"
+                    value={form.url_photo}
+                    onChange={(event) => updateField("url_photo", event.target.value)}
+                    className={fieldClassName}
+                    placeholder="https://exemple.com/photo.jpg"
+                  />
+                </div>
               </label>
 
               <div className="flex justify-end gap-3 pt-3">
-                <button
+                <RippleButton
                   type="button"
+                  rippleColor="#ffffff"
                   onClick={() => setIsEditorOpen(false)}
-                  className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  className="rounded-full border border-white/15 bg-transparent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
                 >
                   Annuler
-                </button>
-                <button
+                </RippleButton>
+                <RippleButton
                   type="submit"
                   disabled={isSaving}
-                  className="rounded-full bg-breezy-green px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-breezy-green/90 disabled:cursor-wait disabled:opacity-60"
+                  rippleColor="#000000"
+                  className="rounded-full border-0 bg-breezy-green px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-breezy-green/90 disabled:cursor-wait disabled:opacity-60"
                 >
                   {isSaving ? "Enregistrement..." : "Enregistrer"}
-                </button>
+                </RippleButton>
               </div>
             </form>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
 
-      {isSecurityOpen && (
+      {isSecurityOpen && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-[100] flex items-stretch justify-center bg-black/80 md:items-center md:p-4"
           onMouseDown={() => setIsSecurityOpen(false)}
         >
           <section
@@ -434,9 +484,9 @@ export default function ProfileSettingsMenu({
             aria-modal="true"
             aria-labelledby="security-title"
             onMouseDown={(event) => event.stopPropagation()}
-            className="max-h-[calc(100svh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-white/15 bg-[#111] p-6 text-white shadow-2xl shadow-black md:p-8"
+            className="flex h-[100dvh] w-full max-w-md flex-col overflow-hidden bg-[#111] text-white shadow-2xl shadow-black md:h-auto md:max-h-[calc(100dvh-2rem)] md:rounded-2xl md:border md:border-white/15"
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 p-5 md:border-b-0 md:p-8 md:pb-0">
               <div>
                 <h2 id="security-title" className="text-xl font-bold">
                   Securite
@@ -456,7 +506,10 @@ export default function ProfileSettingsMenu({
               </button>
             </div>
 
-            <form className="mt-6 space-y-4" onSubmit={handlePasswordUpdate}>
+            <form
+              className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:mt-6 md:p-8 md:pt-0"
+              onSubmit={handlePasswordUpdate}
+            >
               <PasswordField
                 id="current-password"
                 label="Mot de passe actuel"
@@ -492,24 +545,27 @@ export default function ProfileSettingsMenu({
               />
 
               <div className="flex justify-end gap-3 pt-3">
-                <button
+                <RippleButton
                   type="button"
+                  rippleColor="#ffffff"
                   onClick={() => setIsSecurityOpen(false)}
-                  className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  className="rounded-full border border-white/15 bg-transparent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
                 >
                   Annuler
-                </button>
-                <button
+                </RippleButton>
+                <RippleButton
                   type="submit"
                   disabled={isUpdatingPassword}
-                  className="rounded-full bg-breezy-yellow px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-breezy-yellow/90 disabled:cursor-wait disabled:opacity-60"
+                  rippleColor="#000000"
+                  className="rounded-full border-0 bg-breezy-yellow px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-breezy-yellow/90 disabled:cursor-wait disabled:opacity-60"
                 >
                   {isUpdatingPassword ? "Modification..." : "Modifier"}
-                </button>
+                </RippleButton>
               </div>
             </form>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

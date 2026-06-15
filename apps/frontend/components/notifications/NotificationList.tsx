@@ -50,7 +50,7 @@ function NotificationItem({ title, description, tone }: AppNotification) {
   return (
     <figure
       className={cn(
-        "w-full overflow-hidden rounded-xl border bg-breezy-black/95 p-4 text-white shadow-2xl shadow-black/30 backdrop-blur-md",
+        "w-full overflow-hidden rounded-xl border bg-card/95 p-4 text-card-foreground shadow-2xl backdrop-blur-md",
         "transition-all duration-200 ease-in-out",
         styles.borderClassName,
       )}
@@ -72,7 +72,7 @@ function NotificationItem({ title, description, tone }: AppNotification) {
           <figcaption className="truncate text-sm font-semibold">
             {title}
           </figcaption>
-          <p className="mt-0.5 text-sm text-white/65">{description}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
         </div>
       </div>
     </figure>

@@ -89,7 +89,7 @@ export async function updateCurrentProfileAction(
     };
   }
 
-  revalidatePath("/profile");
+  revalidatePath("/profil");
 
   return { status: "success" };
 }

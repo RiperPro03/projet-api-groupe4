@@ -10,6 +10,7 @@ import "@mantine/core/styles.css";
 
 import AppShell from "@/components/AppShell";
 import { NotificationProvider } from "@/components/notifications/NotificationProvider";
+import { getCurrentUser } from "@/lib/current-user";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,11 +27,13 @@ export const metadata: Metadata = {
   description: "Rejoignez la communauté Breezyl.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const currentUser = await getCurrentUser().catch(() => null);
+
   return (
     <html
       lang="fr"
@@ -38,12 +41,12 @@ export default function RootLayout({
       {...mantineHtmlProps}
     >
       <head>
-        <ColorSchemeScript />
+        <ColorSchemeScript defaultColorScheme="dark" />
       </head>
       <body className="min-h-full flex flex-col">
-        <MantineProvider>
+        <MantineProvider defaultColorScheme="dark">
           <NotificationProvider>
-            <AppShell>{children}</AppShell>
+            <AppShell currentUser={currentUser}>{children}</AppShell>
           </NotificationProvider>
         </MantineProvider>
       </body>

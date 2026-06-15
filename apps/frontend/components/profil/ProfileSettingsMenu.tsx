@@ -16,7 +16,7 @@ import {
   updateCurrentProfileAction,
   updatePasswordAction,
   type UpdateProfilePayload,
-} from "@/app/profile/actions";
+} from "@/app/profil/actions";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
 import { clearAuthTokens } from "@/lib/auth-token-storage";
 
@@ -25,7 +25,7 @@ type ProfileSettingsMenuProps = {
 };
 
 const fieldClassName =
-  "w-full rounded-xl border border-white/15 bg-black px-4 py-3 text-white outline-none transition-colors placeholder:text-white/35 focus:border-breezy-green";
+  "w-full rounded-xl border border-input bg-background px-4 py-3 text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-breezy-green";
 
 type PasswordFieldProps = {
   id: string;
@@ -50,7 +50,7 @@ function PasswordField({
 
   return (
     <label className="block" htmlFor={id}>
-      <span className="mb-1.5 block text-sm font-medium text-white/75">
+      <span className="mb-1.5 block text-sm font-medium text-foreground/75">
         {label}
       </span>
       <span className="relative block">
@@ -71,7 +71,7 @@ function PasswordField({
             isVisible ? "Masquer le mot de passe" : "Afficher le mot de passe"
           }
           onClick={() => setIsVisible((visible) => !visible)}
-          className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-lg text-white/50 transition-colors hover:text-breezy-green"
+          className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-lg text-muted-foreground transition-colors hover:text-breezy-green"
         >
           {isVisible ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
         </button>
@@ -274,7 +274,7 @@ export default function ProfileSettingsMenu({
         aria-haspopup="menu"
         aria-expanded={isMenuOpen}
         onClick={() => setIsMenuOpen((open) => !open)}
-        className="flex size-11 items-center justify-center rounded-full border border-white/20 bg-white/5 text-xl text-white transition-colors hover:border-breezy-green hover:bg-breezy-green hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-breezy-yellow"
+        className="flex size-11 items-center justify-center rounded-full border border-border bg-card text-xl text-foreground transition-colors hover:border-breezy-green hover:bg-breezy-green hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-breezy-yellow"
       >
         <FiSettings aria-hidden="true" />
       </button>
@@ -282,13 +282,13 @@ export default function ProfileSettingsMenu({
       {isMenuOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-14 z-30 w-56 overflow-hidden rounded-2xl border border-white/15 bg-[#111] p-2 shadow-2xl shadow-black/50"
+          className="absolute right-0 top-14 z-30 w-56 overflow-hidden rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-2xl"
         >
           <button
             type="button"
             role="menuitem"
             onClick={openEditor}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-breezy-yellow"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-breezy-yellow"
           >
             <FiEdit3 className="text-breezy-green" aria-hidden="true" />
             Modifier le profil
@@ -298,13 +298,13 @@ export default function ProfileSettingsMenu({
             type="button"
             role="menuitem"
             onClick={openSecurity}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-breezy-yellow"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-breezy-yellow"
           >
             <FiShield className="text-breezy-yellow" aria-hidden="true" />
-            Securite
+            Sécurité
           </button>
 
-          <div className="my-1 border-t border-white/10" />
+          <div className="my-1 border-t border-border" />
 
           <button
             type="button"
@@ -329,14 +329,14 @@ export default function ProfileSettingsMenu({
             aria-modal="true"
             aria-labelledby="edit-profile-title"
             onMouseDown={(event) => event.stopPropagation()}
-            className="max-h-[calc(100svh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/15 bg-[#111] p-6 text-white shadow-2xl shadow-black md:p-8"
+            className="max-h-[calc(100svh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-2xl md:p-8"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 id="edit-profile-title" className="text-xl font-bold">
                   Modifier le profil
                 </h2>
-                <p className="mt-1 text-sm text-white/50">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Mettez a jour les informations visibles sur votre profil.
                 </p>
               </div>
@@ -345,7 +345,7 @@ export default function ProfileSettingsMenu({
                 type="button"
                 aria-label="Fermer"
                 onClick={() => setIsEditorOpen(false)}
-                className="flex size-9 shrink-0 items-center justify-center rounded-full text-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full text-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
                 <FiX aria-hidden="true" />
               </button>
@@ -353,7 +353,7 @@ export default function ProfileSettingsMenu({
 
             <form className="mt-6 space-y-4" onSubmit={handleProfileUpdate}>
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-white/75">
+                <span className="mb-1.5 block text-sm font-medium text-foreground/75">
                   Nom d&apos;utilisateur
                 </span>
                 <input
@@ -367,7 +367,7 @@ export default function ProfileSettingsMenu({
               </label>
 
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-white/75">
+                <span className="mb-1.5 block text-sm font-medium text-foreground/75">
                   Nom affiche
                 </span>
                 <input
@@ -379,7 +379,7 @@ export default function ProfileSettingsMenu({
               </label>
 
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-white/75">
+                <span className="mb-1.5 block text-sm font-medium text-foreground/75">
                   Biographie
                 </span>
                 <textarea
@@ -391,7 +391,7 @@ export default function ProfileSettingsMenu({
               </label>
 
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-white/75">
+                <span className="mb-1.5 block text-sm font-medium text-foreground/75">
                   URL de la photo
                 </span>
                 <input
@@ -407,7 +407,7 @@ export default function ProfileSettingsMenu({
                 <button
                   type="button"
                   onClick={() => setIsEditorOpen(false)}
-                  className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
                 >
                   Annuler
                 </button>
@@ -434,14 +434,14 @@ export default function ProfileSettingsMenu({
             aria-modal="true"
             aria-labelledby="security-title"
             onMouseDown={(event) => event.stopPropagation()}
-            className="max-h-[calc(100svh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-white/15 bg-[#111] p-6 text-white shadow-2xl shadow-black md:p-8"
+            className="max-h-[calc(100svh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-2xl md:p-8"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 id="security-title" className="text-xl font-bold">
                   Securite
                 </h2>
-                <p className="mt-1 text-sm text-white/50">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Modifiez votre mot de passe. Vous devrez ensuite vous reconnecter.
                 </p>
               </div>
@@ -450,7 +450,7 @@ export default function ProfileSettingsMenu({
                 type="button"
                 aria-label="Fermer"
                 onClick={() => setIsSecurityOpen(false)}
-                className="flex size-9 shrink-0 items-center justify-center rounded-full text-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full text-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
                 <FiX aria-hidden="true" />
               </button>
@@ -495,7 +495,7 @@ export default function ProfileSettingsMenu({
                 <button
                   type="button"
                   onClick={() => setIsSecurityOpen(false)}
-                  className="rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
                 >
                   Annuler
                 </button>

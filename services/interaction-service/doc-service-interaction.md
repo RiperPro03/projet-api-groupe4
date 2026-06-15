@@ -300,7 +300,7 @@ Cas couverts :
 |---------|-------------|
 | **notification-service** | (futur Fx15) Notifier lors d'un like — hors périmètre Fx6 |
 | **post-service** | (futur) Les IDs post/comment sont opaques pour Fx6 |
-| **api-gateway** | (futur) Point d'entrée `/api/interactions` |
+| **api-gateway** | Point d'entrée `/api/interactions` |
 
 Pour Fx6, le service fonctionne **de manière autonome** : aucun appel HTTP vers les autres microservices.
 

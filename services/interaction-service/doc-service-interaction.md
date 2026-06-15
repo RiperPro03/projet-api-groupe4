@@ -18,7 +18,7 @@ Gérer les **likes** sur :
 - un **post** ;
 - un **commentaire** (y compris une **réponse**, modélisée comme commentaire enfant).
 
-Une réponse n'a pas de table ou de route dédiée : on la like via `/comments/:commentId/likes` en passant l'ID de la réponse dans `commentId`.
+Une réponse n'a pas de table dédiée : on la like via `/comments/likes` en passant l'ID de la réponse dans `commentId`.
 
 ---
 
@@ -29,7 +29,7 @@ Requête HTTP
     ↓
 routes/like.routes.ts          → définit les endpoints
     ↓
-controllers/like.controller.ts → lit req.params / body, codes HTTP
+controllers/like.controller.ts → lit req.body / req.query, codes HTTP
     ↓
 services/like.service.ts       → règles métier
     ↓
@@ -80,23 +80,37 @@ models/*.model.ts (Mongoose)   → MongoDB
 
 ## API
 
+Convention alignée sur le **follow-service** : les mutations (`POST` / `DELETE`) passent par le **body** ; les lectures (`GET`) acceptent **query param** ou **body** en secours.
+
 ### Service direct (`http://localhost:3007`)
 
-| Méthode | Route | Body | Description |
-|---------|-------|------|-------------|
+| Méthode | Route | Body / Query | Description |
+|---------|-------|--------------|-------------|
 | `GET` | `/health` | — | Santé du service |
-| `POST` | `/posts/:targetId/likes` | `{ userId }` | Like un post |
-| `DELETE` | `/posts/:targetId/likes` | `{ userId }` | Unlike post |
-| `GET` | `/posts/:targetId/likes/count` | — | Compteur post |
-| `POST` | `/comments/:targetId/likes` | `{ userId, postId }` | Like un commentaire ou une réponse |
-| `DELETE` | `/comments/:targetId/likes` | `{ userId }` | Unlike commentaire ou réponse |
-| `GET` | `/comments/:targetId/likes/count` | — | Compteur commentaire ou réponse |
+| `POST` | `/posts/likes` | `{ userId, postId }` | Like un post |
+| `DELETE` | `/posts/likes` | `{ userId, postId }` | Unlike post |
+| `GET` | `/posts/likes/count` | `?postId=` ou `{ postId }` | Compteur post |
+| `POST` | `/comments/likes` | `{ userId, commentId, postId }` | Like un commentaire ou une réponse |
+| `DELETE` | `/comments/likes` | `{ userId, commentId }` | Unlike commentaire ou réponse |
+| `GET` | `/comments/likes/count` | `?commentId=` ou `{ commentId }` | Compteur commentaire ou réponse |
 
-`:targetId` dans l'URL correspond à `postId` (posts) ou `commentId` (commentaires et réponses).
+### Via API Gateway (futur)
+
+Préfixe `/api/interactions` :
+
+```txt
+POST   /api/interactions/posts/likes       body: { userId, postId }
+DELETE /api/interactions/posts/likes       body: { userId, postId }
+GET    /api/interactions/posts/likes/count ?postId=
+
+POST   /api/interactions/comments/likes       body: { userId, commentId, postId }
+DELETE /api/interactions/comments/likes       body: { userId, commentId }
+GET    /api/interactions/comments/likes/count ?commentId=
+```
 
 ### Exemples de réponses
 
-**POST /posts/post-123/likes — 201**
+**POST /posts/likes — 201**
 
 ```json
 {
@@ -107,7 +121,7 @@ models/*.model.ts (Mongoose)   → MongoDB
 }
 ```
 
-**POST /comments/comment-456/likes — 201**
+**POST /comments/likes — 201** (commentaire racine)
 
 ```json
 {
@@ -119,19 +133,9 @@ models/*.model.ts (Mongoose)   → MongoDB
 }
 ```
 
-**POST /comments/reply-789/likes — 201** (like d'une réponse)
+**POST /comments/likes — 201** (réponse, même route avec `commentId: "reply-789"`)
 
-```json
-{
-  "_id": "...",
-  "userId": "alice",
-  "commentId": "reply-789",
-  "postId": "post-123",
-  "createdAt": "2026-06-08T12:00:00.000Z"
-}
-```
-
-**GET /posts/post-123/likes/count — 200**
+**GET /posts/likes/count?postId=post-123 — 200**
 
 ```json
 {
@@ -143,10 +147,20 @@ models/*.model.ts (Mongoose)   → MongoDB
 
 | Code | Cas |
 |------|-----|
-| `400` | `userId`, `postId` ou `commentId` manquant |
+| `400` | Champs requis manquants dans le body ou la query |
 | `404` | Like introuvable (unlike) |
 | `409` | Like déjà existant |
 | `500` | Erreur serveur |
+
+Messages `400` :
+
+| Route | Message |
+|-------|---------|
+| `POST` / `DELETE` `/posts/likes` | `userId et postId sont requis` |
+| `POST` `/comments/likes` | `userId, commentId et postId sont requis` |
+| `DELETE` `/comments/likes` | `userId et commentId sont requis` |
+| `GET` `/posts/likes/count` | `postId est requis` |
+| `GET` `/comments/likes/count` | `commentId est requis` |
 
 ---
 
@@ -219,42 +233,42 @@ curl http://localhost:3007/health
 **Like un post**
 
 ```powershell
-curl -X POST http://localhost:3007/posts/post-123/likes `
+curl -X POST http://localhost:3007/posts/likes `
   -H "Content-Type: application/json" `
-  -d '{"userId":"alice"}'
+  -d '{"userId":"alice","postId":"post-123"}'
 ```
 
 **Compter les likes d'un post**
 
 ```powershell
-curl http://localhost:3007/posts/post-123/likes/count
+curl "http://localhost:3007/posts/likes/count?postId=post-123"
 ```
 
 **Unlike un post**
 
 ```powershell
-curl -X DELETE http://localhost:3007/posts/post-123/likes `
+curl -X DELETE http://localhost:3007/posts/likes `
   -H "Content-Type: application/json" `
-  -d '{"userId":"alice"}'
+  -d '{"userId":"alice","postId":"post-123"}'
 ```
 
 **Like un commentaire**
 
 ```powershell
-curl -X POST http://localhost:3007/comments/comment-456/likes `
+curl -X POST http://localhost:3007/comments/likes `
   -H "Content-Type: application/json" `
-  -d '{"userId":"alice","postId":"post-123"}'
+  -d '{"userId":"alice","commentId":"comment-456","postId":"post-123"}'
 ```
 
-**Like une réponse** (même route, ID de la réponse dans l'URL)
+**Like une réponse** (même route, ID de la réponse dans `commentId`)
 
 ```powershell
-curl -X POST http://localhost:3007/comments/reply-789/likes `
+curl -X POST http://localhost:3007/comments/likes `
   -H "Content-Type: application/json" `
-  -d '{"userId":"alice","postId":"post-123"}'
+  -d '{"userId":"alice","commentId":"reply-789","postId":"post-123"}'
 ```
 
-**Doublon (409)** — relancer le même POST avec le même `userId` et le même `commentId`.
+**Doublon (409)** — relancer le même POST avec le même `userId` et le même identifiant cible.
 
 ---
 
@@ -274,8 +288,8 @@ Les tests **mockent Mongoose** : pas besoin de MongoDB pour `pnpm test`.
 Cas couverts :
 
 - création / suppression de likes (post, commentaire, réponse via commentaires) ;
-- refus des doublons ;
-- comptage ;
+- refus des doublons et body incomplet ;
+- comptage via query param ou body ;
 - codes HTTP de l'API.
 
 ---

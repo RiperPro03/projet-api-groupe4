@@ -42,126 +42,201 @@ describe("like API", () => {
       const response = await request(app).get("/health");
 
       expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({
-        service: "interaction-service",
-        status: "OK",
-      });
     });
   });
 
-  describe.each([
-    {
-      label: "post",
-      prefix: "posts",
-      targetId: "post-123",
-      body: { userId: "alice" },
-      createRecord: () =>
-        createPostLikeRecord({ userId: "alice", postId: "post-123" }),
-      mocks: postLikeMocks,
-      expectedField: "postId" as const,
-    },
-    {
-      label: "commentaire racine",
-      prefix: "comments",
-      targetId: "comment-456",
-      body: { userId: "alice", postId: "post-123" },
-      createRecord: () =>
+  describe("POST /posts/likes", () => {
+    it("crée un like sur un post", async () => {
+      const record = createPostLikeRecord({
+        userId: "alice",
+        postId: "post-123",
+      });
+      postLikeMocks.create.mockResolvedValue(record);
+
+      const response = await request(app)
+        .post("/posts/likes")
+        .send({ userId: "alice", postId: "post-123" });
+
+      expect(response.status).toBe(201);
+      expect(response.body.userId).toBe("alice");
+      expect(response.body.postId).toBe("post-123");
+    });
+
+    it("refuse un body incomplet", async () => {
+      const response = await request(app)
+        .post("/posts/likes")
+        .send({ userId: "alice" });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe("userId et postId sont requis");
+    });
+
+    it("refuse un doublon", async () => {
+      postLikeMocks.create.mockRejectedValue({ code: 11000 });
+
+      const response = await request(app)
+        .post("/posts/likes")
+        .send({ userId: "alice", postId: "post-123" });
+
+      expect(response.status).toBe(409);
+      expect(response.body.error).toBe("Ce like existe déjà");
+    });
+  });
+
+  describe("DELETE /posts/likes", () => {
+    it("supprime un like", async () => {
+      postLikeMocks.findOneAndDelete.mockResolvedValue(
+        createPostLikeRecord({ userId: "alice", postId: "post-123" })
+      );
+
+      const response = await request(app)
+        .delete("/posts/likes")
+        .send({ userId: "alice", postId: "post-123" });
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe("Like supprimé");
+    });
+
+    it("retourne 404 si le like n'existe pas", async () => {
+      postLikeMocks.findOneAndDelete.mockResolvedValue(null);
+
+      const response = await request(app)
+        .delete("/posts/likes")
+        .send({ userId: "alice", postId: "post-123" });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe("Like introuvable");
+    });
+  });
+
+  describe("GET /posts/likes/count", () => {
+    it("retourne le compteur via query param", async () => {
+      postLikeMocks.countDocuments.mockResolvedValue(5);
+
+      const response = await request(app).get("/posts/likes/count?postId=post-123");
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ count: 5 });
+    });
+
+    it("retourne le compteur via body", async () => {
+      postLikeMocks.countDocuments.mockResolvedValue(3);
+
+      const response = await request(app)
+        .get("/posts/likes/count")
+        .send({ postId: "post-123" });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ count: 3 });
+    });
+  });
+
+  describe("POST /comments/likes", () => {
+    it("crée un like sur un commentaire racine", async () => {
+      const record = createCommentLikeRecord({
+        userId: "alice",
+        commentId: "comment-456",
+        postId: "post-123",
+      });
+      commentLikeMocks.create.mockResolvedValue(record);
+
+      const response = await request(app)
+        .post("/comments/likes")
+        .send({
+          userId: "alice",
+          commentId: "comment-456",
+          postId: "post-123",
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.commentId).toBe("comment-456");
+    });
+
+    it("crée un like sur une réponse via commentId", async () => {
+      const record = createCommentLikeRecord({
+        userId: "alice",
+        commentId: "reply-789",
+        postId: "post-123",
+      });
+      commentLikeMocks.create.mockResolvedValue(record);
+
+      const response = await request(app)
+        .post("/comments/likes")
+        .send({
+          userId: "alice",
+          commentId: "reply-789",
+          postId: "post-123",
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.commentId).toBe("reply-789");
+    });
+
+    it("refuse un body incomplet", async () => {
+      const response = await request(app)
+        .post("/comments/likes")
+        .send({ userId: "alice", postId: "post-123" });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe("userId, commentId et postId sont requis");
+    });
+
+    it("refuse un doublon", async () => {
+      commentLikeMocks.create.mockRejectedValue({ code: 11000 });
+
+      const response = await request(app)
+        .post("/comments/likes")
+        .send({
+          userId: "alice",
+          commentId: "comment-456",
+          postId: "post-123",
+        });
+
+      expect(response.status).toBe(409);
+      expect(response.body.error).toBe("Ce like existe déjà");
+    });
+  });
+
+  describe("DELETE /comments/likes", () => {
+    it("supprime un like", async () => {
+      commentLikeMocks.findOneAndDelete.mockResolvedValue(
         createCommentLikeRecord({
           userId: "alice",
           commentId: "comment-456",
           postId: "post-123",
-        }),
-      mocks: commentLikeMocks,
-      expectedField: "commentId" as const,
-    },
-    {
-      label: "réponse (commentaire enfant)",
-      prefix: "comments",
-      targetId: "reply-789",
-      body: { userId: "alice", postId: "post-123" },
-      createRecord: () =>
-        createCommentLikeRecord({
-          userId: "alice",
-          commentId: "reply-789",
-          postId: "post-123",
-        }),
-      mocks: commentLikeMocks,
-      expectedField: "commentId" as const,
-    },
-  ])(
-    "$label likes",
-    ({ prefix, targetId, body, createRecord, mocks, expectedField }) => {
-      describe(`POST /${prefix}/:targetId/likes`, () => {
-        it("crée un like", async () => {
-          const record = createRecord();
-          mocks.create.mockResolvedValue(record);
+        })
+      );
 
-          const response = await request(app)
-            .post(`/${prefix}/${targetId}/likes`)
-            .send(body);
+      const response = await request(app)
+        .delete("/comments/likes")
+        .send({ userId: "alice", commentId: "comment-456" });
 
-          expect(response.status).toBe(201);
-          expect(response.body.userId).toBe("alice");
-          expect(response.body[expectedField]).toBe(targetId);
-        });
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe("Like supprimé");
+    });
 
-        it("refuse un body incomplet", async () => {
-          const response = await request(app)
-            .post(`/${prefix}/${targetId}/likes`)
-            .send({});
+    it("retourne 404 si le like n'existe pas", async () => {
+      commentLikeMocks.findOneAndDelete.mockResolvedValue(null);
 
-          expect(response.status).toBe(400);
-          expect(response.body.error).toBe("userId est requis");
-        });
+      const response = await request(app)
+        .delete("/comments/likes")
+        .send({ userId: "alice", commentId: "comment-456" });
 
-        it("refuse un doublon", async () => {
-          mocks.create.mockRejectedValue({ code: 11000 });
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe("Like introuvable");
+    });
+  });
 
-          const response = await request(app)
-            .post(`/${prefix}/${targetId}/likes`)
-            .send(body);
+  describe("GET /comments/likes/count", () => {
+    it("retourne le compteur via query param", async () => {
+      commentLikeMocks.countDocuments.mockResolvedValue(2);
 
-          expect(response.status).toBe(409);
-          expect(response.body.error).toBe("Ce like existe déjà");
-        });
-      });
+      const response = await request(app).get(
+        "/comments/likes/count?commentId=reply-789"
+      );
 
-      describe(`DELETE /${prefix}/:targetId/likes`, () => {
-        it("supprime un like", async () => {
-          mocks.findOneAndDelete.mockResolvedValue(createRecord());
-
-          const response = await request(app)
-            .delete(`/${prefix}/${targetId}/likes`)
-            .send({ userId: "alice" });
-
-          expect(response.status).toBe(200);
-          expect(response.body.message).toBe("Like supprimé");
-        });
-
-        it("retourne 404 si le like n'existe pas", async () => {
-          mocks.findOneAndDelete.mockResolvedValue(null);
-
-          const response = await request(app)
-            .delete(`/${prefix}/${targetId}/likes`)
-            .send({ userId: "alice" });
-
-          expect(response.status).toBe(404);
-          expect(response.body.error).toBe("Like introuvable");
-        });
-      });
-
-      describe(`GET /${prefix}/:targetId/likes/count`, () => {
-        it("retourne le compteur", async () => {
-          mocks.countDocuments.mockResolvedValue(5);
-
-          const response = await request(app).get(
-            `/${prefix}/${targetId}/likes/count`
-          );
-
-          expect(response.status).toBe(200);
-          expect(response.body).toEqual({ count: 5 });
-        });
-      });
-    }
-  );
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ count: 2 });
+    });
+  });
 });

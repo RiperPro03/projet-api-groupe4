@@ -1,4 +1,4 @@
-import type { RequestHandler } from "express";
+import type { Request, RequestHandler } from "express";
 
 import {
   addCommentLike,
@@ -10,38 +10,67 @@ import {
   removePostLike,
 } from "../services/like.service.js";
 
-function getUserId(body: Record<string, unknown>): string | null {
-  const { userId } = body;
-  return typeof userId === "string" && userId.trim() ? userId.trim() : null;
+function getTrimmedString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function getPostId(body: Record<string, unknown>): string | null {
-  const { postId } = body;
-  return typeof postId === "string" && postId.trim() ? postId.trim() : null;
+function getField(req: Request, fieldName: string): string | null {
+  const fromBody = getTrimmedString(req.body?.[fieldName]);
+  if (fromBody) {
+    return fromBody;
+  }
+
+  return getTrimmedString(req.query[fieldName]);
 }
 
-function getParamId(params: Record<string, unknown>): string | null {
-  const { targetId } = params;
-  if (typeof targetId !== "string" || !targetId.trim()) {
+function getPostLikeBody(
+  req: Request
+): { userId: string; postId: string } | null {
+  const userId = getTrimmedString(req.body?.userId);
+  const postId = getTrimmedString(req.body?.postId);
+
+  if (!userId || !postId) {
     return null;
   }
-  return targetId.trim();
+
+  return { userId, postId };
+}
+
+function getCommentLikeBody(
+  req: Request
+): { userId: string; commentId: string; postId: string } | null {
+  const userId = getTrimmedString(req.body?.userId);
+  const commentId = getTrimmedString(req.body?.commentId);
+  const postId = getTrimmedString(req.body?.postId);
+
+  if (!userId || !commentId || !postId) {
+    return null;
+  }
+
+  return { userId, commentId, postId };
+}
+
+function getCommentUnlikeBody(
+  req: Request
+): { userId: string; commentId: string } | null {
+  const userId = getTrimmedString(req.body?.userId);
+  const commentId = getTrimmedString(req.body?.commentId);
+
+  if (!userId || !commentId) {
+    return null;
+  }
+
+  return { userId, commentId };
 }
 
 export const addPostLikeHandler: RequestHandler = async (req, res, next) => {
   try {
-    const userId = getUserId(req.body);
-    const postId = getParamId(req.params);
-
-    if (!userId) {
-      throw new LikeError("userId est requis", 400);
+    const body = getPostLikeBody(req);
+    if (!body) {
+      throw new LikeError("userId et postId sont requis", 400);
     }
 
-    if (!postId) {
-      throw new LikeError("postId est requis", 400);
-    }
-
-    const like = await addPostLike(userId, postId);
+    const like = await addPostLike(body.userId, body.postId);
     res.status(201).json(like);
   } catch (error) {
     next(error);
@@ -50,18 +79,12 @@ export const addPostLikeHandler: RequestHandler = async (req, res, next) => {
 
 export const removePostLikeHandler: RequestHandler = async (req, res, next) => {
   try {
-    const userId = getUserId(req.body);
-    const postId = getParamId(req.params);
-
-    if (!userId) {
-      throw new LikeError("userId est requis", 400);
+    const body = getPostLikeBody(req);
+    if (!body) {
+      throw new LikeError("userId et postId sont requis", 400);
     }
 
-    if (!postId) {
-      throw new LikeError("postId est requis", 400);
-    }
-
-    await removePostLike(userId, postId);
+    await removePostLike(body.userId, body.postId);
     res.status(200).json({ message: "Like supprimé" });
   } catch (error) {
     next(error);
@@ -70,8 +93,7 @@ export const removePostLikeHandler: RequestHandler = async (req, res, next) => {
 
 export const countPostLikesHandler: RequestHandler = async (req, res, next) => {
   try {
-    const postId = getParamId(req.params);
-
+    const postId = getField(req, "postId");
     if (!postId) {
       throw new LikeError("postId est requis", 400);
     }
@@ -85,23 +107,12 @@ export const countPostLikesHandler: RequestHandler = async (req, res, next) => {
 
 export const addCommentLikeHandler: RequestHandler = async (req, res, next) => {
   try {
-    const userId = getUserId(req.body);
-    const commentId = getParamId(req.params);
-    const postId = getPostId(req.body);
-
-    if (!userId) {
-      throw new LikeError("userId est requis", 400);
+    const body = getCommentLikeBody(req);
+    if (!body) {
+      throw new LikeError("userId, commentId et postId sont requis", 400);
     }
 
-    if (!commentId) {
-      throw new LikeError("commentId est requis", 400);
-    }
-
-    if (!postId) {
-      throw new LikeError("postId est requis", 400);
-    }
-
-    const like = await addCommentLike(userId, commentId, postId);
+    const like = await addCommentLike(body.userId, body.commentId, body.postId);
     res.status(201).json(like);
   } catch (error) {
     next(error);
@@ -114,18 +125,12 @@ export const removeCommentLikeHandler: RequestHandler = async (
   next
 ) => {
   try {
-    const userId = getUserId(req.body);
-    const commentId = getParamId(req.params);
-
-    if (!userId) {
-      throw new LikeError("userId est requis", 400);
+    const body = getCommentUnlikeBody(req);
+    if (!body) {
+      throw new LikeError("userId et commentId sont requis", 400);
     }
 
-    if (!commentId) {
-      throw new LikeError("commentId est requis", 400);
-    }
-
-    await removeCommentLike(userId, commentId);
+    await removeCommentLike(body.userId, body.commentId);
     res.status(200).json({ message: "Like supprimé" });
   } catch (error) {
     next(error);
@@ -138,8 +143,7 @@ export const countCommentLikesHandler: RequestHandler = async (
   next
 ) => {
   try {
-    const commentId = getParamId(req.params);
-
+    const commentId = getField(req, "commentId");
     if (!commentId) {
       throw new LikeError("commentId est requis", 400);
     }

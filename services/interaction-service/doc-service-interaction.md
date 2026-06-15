@@ -1,24 +1,35 @@
 # Interaction Service — Documentation
 
-Microservice **Breezy** responsable des likes sur les posts et commentaires (**Fx6**).
+Microservice **Breezy** responsable des likes (**Fx6**), commentaires et réponses (**Fx7**, **Fx8**).
 
 | Propriété | Valeur |
 |-----------|--------|
 | Port | `3007` |
 | Base de données | MongoDB (`interaction_db`) |
-| Collections | `post_likes`, `comment_likes` |
+| Collections | `post_likes`, `comment_likes`, `comments` |
 | Proxy API Gateway (futur) | `/api/interactions` → ce service |
 
 ---
 
 ## Rôle du service
 
+### Fx6 — Likes
+
 Gérer les **likes** sur :
 
 - un **post** ;
 - un **commentaire** (y compris une **réponse**, modélisée comme commentaire enfant).
 
-Une réponse n'a pas de table dédiée : on la like via `/comments/likes` en passant l'ID de la réponse dans `commentId`.
+Une réponse n'a pas de table dédiée côté likes : on la like via `/comments/likes` en passant l'ID de la réponse dans `commentId`.
+
+### Fx7 / Fx8 — Commentaires et réponses
+
+Gérer les **commentaires** sur un post :
+
+- **Fx7** : commentaire racine sur un post (`parentCommentId` absent) ;
+- **Fx8** : réponse à un commentaire racine (`parentCommentId` renseigné).
+
+Une réponse est un **commentaire** dans la même collection `comments` — pas de route `/replies` dédiée.
 
 ---
 
@@ -27,13 +38,13 @@ Une réponse n'a pas de table dédiée : on la like via `/comments/likes` en pas
 ```txt
 Requête HTTP
     ↓
-routes/like.routes.ts          → définit les endpoints
+routes/*.routes.ts              → définit les endpoints
     ↓
-controllers/like.controller.ts → lit req.body / req.query, codes HTTP
+controllers/*.controller.ts     → lit req.params / req.body / req.query, codes HTTP
     ↓
-services/like.service.ts       → règles métier
+services/*.service.ts           → règles métier
     ↓
-models/*.model.ts (Mongoose)   → MongoDB
+models/*.model.ts (Mongoose)    → MongoDB
 ```
 
 ### Fichiers principaux
@@ -42,12 +53,17 @@ models/*.model.ts (Mongoose)   → MongoDB
 |---------|------|
 | `src/server.ts` | Démarre le serveur, connecte MongoDB |
 | `src/app.ts` | Express + middlewares + routes |
-| `src/routes/like.routes.ts` | Déclaration des endpoints likes |
-| `src/controllers/like.controller.ts` | Couche HTTP |
-| `src/services/like.service.ts` | Logique métier |
+| `src/routes/like.routes.ts` | Endpoints likes (Fx6) |
+| `src/routes/comment.routes.ts` | Endpoints commentaires (Fx7, Fx8) |
+| `src/controllers/like.controller.ts` | Couche HTTP likes |
+| `src/controllers/comment.controller.ts` | Couche HTTP commentaires |
+| `src/services/like.service.ts` | Logique métier likes |
+| `src/services/comment.service.ts` | Logique métier commentaires |
+| `src/middlewares/error.middleware.ts` | Gestion `LikeError` et `CommentError` |
 | `src/config/database.ts` | Connexion Mongoose |
 | `src/models/post-like.model.ts` | Schéma likes de posts |
-| `src/models/comment-like.model.ts` | Schéma likes de commentaires (et réponses) |
+| `src/models/comment-like.model.ts` | Schéma likes de commentaires |
+| `src/models/comment.model.ts` | Schéma commentaires et réponses |
 
 ---
 
@@ -68,21 +84,46 @@ models/*.model.ts (Mongoose)   → MongoDB
 | Champ | Type | Description |
 |-------|------|-------------|
 | `userId` | string | Utilisateur qui like (FK logique → user-service) |
-| `commentId` | string | Commentaire liké — racine ou réponse (FK logique → post-service) |
+| `commentId` | string | Commentaire liké — racine ou réponse (FK logique → collection `comments`) |
 | `postId` | string | Contexte du post parent (FK logique → post-service) |
 | `createdAt` | Date | Date de création |
 
 **Contrainte d'unicité :** `(userId, commentId)`
 
-> Un utilisateur peut liker un post **et** plusieurs commentaires. L'unicité porte sur `(userId, commentId)` quel que soit le niveau du commentaire (racine ou réponse).
+### Collection `comments`
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `_id` | ObjectId | Identifiant du commentaire |
+| `postId` | string | Post concerné (FK logique → post-service) |
+| `userId` | string | Auteur (FK logique → user-service) |
+| `parentCommentId` | string \| null | `null` = commentaire racine (Fx7) ; ID parent = réponse (Fx8) |
+| `content` | string | Texte (max 500 caractères) |
+| `deletedAt` | Date \| null | `null` = actif ; date = soft delete |
+| `createdAt` | Date | Date de création |
+| `updatedAt` | Date | Dernière modification |
+
+**Index recommandés :**
+
+```js
+db.comments.createIndex({ postId: 1, parentCommentId: 1, createdAt: 1 })
+db.comments.createIndex({ parentCommentId: 1 })
+db.comments.createIndex({ userId: 1 })
+```
+
+**Règle de profondeur :** une réponse (Fx8) ne peut viser qu'un **commentaire racine**. Pas de réponse à une réponse.
 
 ---
 
 ## API
 
-Convention alignée sur le **follow-service** : les mutations (`POST` / `DELETE`) passent par le **body** ; les lectures (`GET`) acceptent **query param** ou **body** en secours.
+Convention alignée sur le **follow-service** : les mutations (`POST` / `PATCH` / `DELETE`) passent par le **body** ; les lectures (`GET`) acceptent **query param** ou **body** en secours pour les champs optionnels.
+
+`postId` est **toujours dans l'URL** pour les routes commentaires.
 
 ### Service direct (`http://localhost:3007`)
+
+#### Likes (Fx6)
 
 | Méthode | Route | Body / Query | Description |
 |---------|-------|--------------|-------------|
@@ -93,6 +134,15 @@ Convention alignée sur le **follow-service** : les mutations (`POST` / `DELETE`
 | `POST` | `/comments/likes` | `{ userId, commentId, postId }` | Like un commentaire ou une réponse |
 | `DELETE` | `/comments/likes` | `{ userId, commentId }` | Unlike commentaire ou réponse |
 | `GET` | `/comments/likes/count` | `?commentId=` ou `{ commentId }` | Compteur commentaire ou réponse |
+
+#### Commentaires (Fx7, Fx8)
+
+| Méthode | Route | Body / Query | Description |
+|---------|-------|--------------|-------------|
+| `POST` | `/posts/:postId/comments` | `{ userId, content, parentCommentId? }` | **Fx7** sans `parentCommentId` ; **Fx8** avec |
+| `PATCH` | `/posts/:postId/comments/:commentId` | `{ userId, content }` | Modifier (auteur uniquement) |
+| `DELETE` | `/posts/:postId/comments/:commentId` | `{ userId }` | Soft delete (auteur uniquement) |
+| `GET` | `/posts/:postId/comments` | `?parentCommentId=` ou `{ parentCommentId }` (optionnel) | Sans filtre → racines ; avec → réponses |
 
 ### Via API Gateway (futur)
 
@@ -106,9 +156,62 @@ GET    /api/interactions/posts/likes/count ?postId=
 POST   /api/interactions/comments/likes       body: { userId, commentId, postId }
 DELETE /api/interactions/comments/likes       body: { userId, commentId }
 GET    /api/interactions/comments/likes/count ?commentId=
+
+POST   /api/interactions/posts/:postId/comments       body: { userId, content, parentCommentId? }
+PATCH  /api/interactions/posts/:postId/comments/:commentId  body: { userId, content }
+DELETE /api/interactions/posts/:postId/comments/:commentId  body: { userId }
+GET    /api/interactions/posts/:postId/comments       ?parentCommentId=
 ```
 
 ### Exemples de réponses
+
+**POST /posts/post-123/comments — 201** (Fx7, commentaire racine)
+
+```json
+{
+  "_id": "...",
+  "postId": "post-123",
+  "userId": "alice",
+  "parentCommentId": null,
+  "content": "Très intéressant !",
+  "deletedAt": null,
+  "createdAt": "2026-06-08T12:00:00.000Z",
+  "updatedAt": "2026-06-08T12:00:00.000Z"
+}
+```
+
+**POST /posts/post-123/comments — 201** (Fx8, réponse)
+
+```json
+{
+  "_id": "...",
+  "postId": "post-123",
+  "userId": "bob",
+  "parentCommentId": "comment-456",
+  "content": "Je suis d'accord",
+  "deletedAt": null,
+  "createdAt": "2026-06-08T12:05:00.000Z",
+  "updatedAt": "2026-06-08T12:05:00.000Z"
+}
+```
+
+**GET /posts/post-123/comments — 200**
+
+```json
+{
+  "comments": [
+    {
+      "_id": "comment-456",
+      "postId": "post-123",
+      "userId": "alice",
+      "parentCommentId": null,
+      "content": "Très intéressant !",
+      "createdAt": "2026-06-08T12:00:00.000Z",
+      "updatedAt": "2026-06-08T12:00:00.000Z"
+    }
+  ]
+}
+```
 
 **POST /posts/likes — 201**
 
@@ -121,38 +224,17 @@ GET    /api/interactions/comments/likes/count ?commentId=
 }
 ```
 
-**POST /comments/likes — 201** (commentaire racine)
-
-```json
-{
-  "_id": "...",
-  "userId": "alice",
-  "commentId": "comment-456",
-  "postId": "post-123",
-  "createdAt": "2026-06-08T12:00:00.000Z"
-}
-```
-
-**POST /comments/likes — 201** (réponse, même route avec `commentId: "reply-789"`)
-
-**GET /posts/likes/count?postId=post-123 — 200**
-
-```json
-{
-  "count": 3
-}
-```
-
 ### Erreurs métier
 
 | Code | Cas |
 |------|-----|
-| `400` | Champs requis manquants dans le body ou la query |
-| `404` | Like introuvable (unlike) |
+| `400` | Champs requis manquants, contenu vide, réponse à une réponse |
+| `403` | Modification ou suppression par un non-auteur |
+| `404` | Ressource introuvable (like, commentaire, parent) |
 | `409` | Like déjà existant |
 | `500` | Erreur serveur |
 
-Messages `400` :
+Messages `400` — likes :
 
 | Route | Message |
 |-------|---------|
@@ -161,6 +243,14 @@ Messages `400` :
 | `DELETE` `/comments/likes` | `userId et commentId sont requis` |
 | `GET` `/posts/likes/count` | `postId est requis` |
 | `GET` `/comments/likes/count` | `commentId est requis` |
+
+Messages — commentaires :
+
+| Route | Message |
+|-------|---------|
+| `POST` `/posts/:postId/comments` | `userId et content sont requis` |
+| `PATCH` `/posts/:postId/comments/:commentId` | `userId et content sont requis` |
+| `DELETE` `/posts/:postId/comments/:commentId` | `userId est requis` |
 
 ---
 
@@ -230,6 +320,54 @@ curl http://localhost:3007/health
 
 ## Guide manuel — exemples curl (PowerShell)
 
+### Commentaires
+
+**Commenter un post (Fx7)**
+
+```powershell
+curl -X POST http://localhost:3007/posts/post-123/comments `
+  -H "Content-Type: application/json" `
+  -d '{"userId":"alice","content":"Très intéressant !"}'
+```
+
+**Répondre à un commentaire (Fx8)**
+
+```powershell
+curl -X POST http://localhost:3007/posts/post-123/comments `
+  -H "Content-Type: application/json" `
+  -d '{"userId":"bob","content":"Je suis d accord","parentCommentId":"comment-456"}'
+```
+
+**Lister les commentaires racine**
+
+```powershell
+curl http://localhost:3007/posts/post-123/comments
+```
+
+**Lister les réponses d'un commentaire**
+
+```powershell
+curl "http://localhost:3007/posts/post-123/comments?parentCommentId=comment-456"
+```
+
+**Modifier un commentaire**
+
+```powershell
+curl -X PATCH http://localhost:3007/posts/post-123/comments/comment-456 `
+  -H "Content-Type: application/json" `
+  -d '{"userId":"alice","content":"Contenu mis à jour"}'
+```
+
+**Supprimer un commentaire (soft delete)**
+
+```powershell
+curl -X DELETE http://localhost:3007/posts/post-123/comments/comment-456 `
+  -H "Content-Type: application/json" `
+  -d '{"userId":"alice"}'
+```
+
+### Likes
+
 **Like un post**
 
 ```powershell
@@ -252,23 +390,13 @@ curl -X DELETE http://localhost:3007/posts/likes `
   -d '{"userId":"alice","postId":"post-123"}'
 ```
 
-**Like un commentaire**
+**Like un commentaire ou une réponse**
 
 ```powershell
 curl -X POST http://localhost:3007/comments/likes `
   -H "Content-Type: application/json" `
   -d '{"userId":"alice","commentId":"comment-456","postId":"post-123"}'
 ```
-
-**Like une réponse** (même route, ID de la réponse dans `commentId`)
-
-```powershell
-curl -X POST http://localhost:3007/comments/likes `
-  -H "Content-Type: application/json" `
-  -d '{"userId":"alice","commentId":"reply-789","postId":"post-123"}'
-```
-
-**Doublon (409)** — relancer le même POST avec le même `userId` et le même identifiant cible.
 
 ---
 
@@ -278,18 +406,30 @@ Stack : **Vitest** (unitaires) + **Supertest** (HTTP).
 
 ```txt
 tests/
-├── like.service.test.ts   → logique métier
-├── like.api.test.ts       → routes HTTP
-└── helpers/like.mock.ts   → données fictives
+├── like.service.test.ts      → logique métier likes
+├── like.api.test.ts          → routes HTTP likes
+├── comment.service.test.ts   → logique métier commentaires
+├── comment.api.test.ts       → routes HTTP commentaires
+└── helpers/
+    ├── like.mock.ts
+    └── comment.mock.ts
 ```
 
 Les tests **mockent Mongoose** : pas besoin de MongoDB pour `pnpm test`.
 
-Cas couverts :
+Cas couverts — likes :
 
-- création / suppression de likes (post, commentaire, réponse via commentaires) ;
+- création / suppression de likes (post, commentaire, réponse) ;
 - refus des doublons et body incomplet ;
 - comptage via query param ou body ;
+- codes HTTP de l'API.
+
+Cas couverts — commentaires :
+
+- création commentaire racine (Fx7) et réponse (Fx8) ;
+- refus parent inexistant, réponse à une réponse, champs vides ;
+- modification / suppression par auteur ; refus non-auteur (403) ;
+- liste racines et réponses via query ou body ;
 - codes HTTP de l'API.
 
 ---
@@ -298,11 +438,11 @@ Cas couverts :
 
 | Service | Interaction |
 |---------|-------------|
-| **notification-service** | (futur Fx15) Notifier lors d'un like — hors périmètre Fx6 |
-| **post-service** | (futur) Les IDs post/comment sont opaques pour Fx6 |
+| **notification-service** | (futur Fx15) Notifier lors d'un like ou commentaire |
+| **post-service** | (futur) IDs post opaques ; sync `commentsCount` |
 | **api-gateway** | Point d'entrée `/api/interactions` |
 
-Pour Fx6, le service fonctionne **de manière autonome** : aucun appel HTTP vers les autres microservices.
+Le service fonctionne **de manière autonome** : aucun appel HTTP vers les autres microservices pour l'instant.
 
 ---
 
@@ -311,7 +451,6 @@ Pour Fx6, le service fonctionne **de manière autonome** : aucun appel HTTP vers
 | Évolution | Description |
 |-----------|-------------|
 | Auth JWT | `userId` pris du token au lieu du body |
-| Fx7 / Fx8 | CRUD commentaires et réponses |
-| Fx15 | Événement vers `notification-service` lors d'un like |
+| Fx15 | Événement vers `notification-service` |
 | API Gateway | Proxy `/api/interactions/*` |
- 
+| `commentsCount` | Mise à jour du compteur côté `post-service` |

@@ -5,7 +5,11 @@ import {
   addPostLike,
   countCommentLikes,
   countPostLikes,
+  hasCommentLike,
+  hasPostLike,
   LikeError,
+  listLikedCommentIds,
+  listLikedPostIds,
   removeCommentLike,
   removePostLike,
 } from "../services/like.service.js";
@@ -21,6 +25,22 @@ function getField(req: Request, fieldName: string): string | null {
   }
 
   return getTrimmedString(req.query[fieldName]);
+}
+
+function getListField(req: Request, fieldName: string): string[] {
+  const value = req.query[fieldName] ?? req.body?.[fieldName];
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) =>
+      typeof item === "string" ? item.split(",") : []
+    );
+  }
+
+  if (typeof value === "string") {
+    return value.split(",");
+  }
+
+  return [];
 }
 
 function getPostLikeBody(
@@ -105,6 +125,33 @@ export const countPostLikesHandler: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const hasPostLikeHandler: RequestHandler = async (req, res, next) => {
+  try {
+    const userId = getField(req, "userId");
+    const postIds = getListField(req, "postIds");
+    const postId = getField(req, "postId");
+
+    if (!userId || (!postId && postIds.length === 0)) {
+      throw new LikeError("userId et postId sont requis", 400);
+    }
+
+    if (postIds.length > 0) {
+      const likedIds = await listLikedPostIds(userId, postIds);
+      res.status(200).json({ likedIds });
+      return;
+    }
+
+    if (!postId) {
+      throw new LikeError("postId est requis", 400);
+    }
+
+    const isLiked = await hasPostLike(userId, postId);
+    res.status(200).json({ isLiked });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const addCommentLikeHandler: RequestHandler = async (req, res, next) => {
   try {
     const body = getCommentLikeBody(req);
@@ -150,6 +197,37 @@ export const countCommentLikesHandler: RequestHandler = async (
 
     const count = await countCommentLikes(commentId);
     res.status(200).json({ count });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const hasCommentLikeHandler: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    const userId = getField(req, "userId");
+    const commentIds = getListField(req, "commentIds");
+    const commentId = getField(req, "commentId");
+
+    if (!userId || (!commentId && commentIds.length === 0)) {
+      throw new LikeError("userId et commentId sont requis", 400);
+    }
+
+    if (commentIds.length > 0) {
+      const likedIds = await listLikedCommentIds(userId, commentIds);
+      res.status(200).json({ likedIds });
+      return;
+    }
+
+    if (!commentId) {
+      throw new LikeError("commentId est requis", 400);
+    }
+
+    const isLiked = await hasCommentLike(userId, commentId);
+    res.status(200).json({ isLiked });
   } catch (error) {
     next(error);
   }

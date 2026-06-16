@@ -7,6 +7,7 @@ import {
   errorHandler,
   notFoundHandler,
 } from "./middlewares/error.middleware.js";
+import commentRoutes from "./routes/comment.routes.js";
 import likeRoutes from "./routes/like.routes.js";
 
 const app = express();
@@ -26,6 +27,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/", likeRoutes);
+app.use("/", commentRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 

@@ -74,7 +74,7 @@ export default async function ProfilePage() {
 
         <div className="mt-8">
           <ProfileActivityTabs
-            userId={profile?.id_user ?? currentUser.user?.id_user ?? auth.id}
+            profileUserId={profile?.id_user ?? currentUser.user?.id_user ?? auth.id}
           />
         </div>
       </div>

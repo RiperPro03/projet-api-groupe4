@@ -1,9 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Box, Button, Group, Paper, Stack, Text } from "@mantine/core";
 import CommentComposer from "@/components/comments/CommentComposer";
 import ContentCard from "@/components/feed/ContentCard";
+import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
+import { isApiStatusCode } from "@/lib/api/http-client";
+import { likeComment, unlikeComment } from "@/lib/api/interaction.service";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  hydrateLike,
+  markLiked,
+  markUnliked,
+  selectLikeState,
+} from "@/store/likesSlice";
 import type { Comment } from "@/types/comment";
 
 type CommentThreadProps = {
@@ -61,6 +71,63 @@ function ThreadNode({
 }) {
   const visualDepth = Math.min(depth, maxVisualDepth);
   const isReplying = activeReplyId === node.id;
+  const dispatch = useAppDispatch();
+  const likeState = useAppSelector((state) =>
+    selectLikeState(state, "comment", node.id)
+  );
+  const likesCount = likeState?.likesCount ?? node.likesCount;
+  const isLiked = likeState?.isLiked ?? node.isLiked ?? false;
+  const [isLikePending, setIsLikePending] = useState(false);
+
+  useEffect(() => {
+    dispatch(
+      hydrateLike({
+        targetType: "comment",
+        targetId: node.id,
+        likesCount: node.likesCount,
+        isLiked: node.isLiked,
+      })
+    );
+  }, [dispatch, node.id, node.isLiked, node.likesCount]);
+
+  async function handleLike() {
+    if (isLikePending) {
+      return;
+    }
+
+    const currentUser = await getCurrentUserFromApi();
+    const userId =
+      currentUser.profile?.id_user ??
+      currentUser.user?.id_user ??
+      currentUser.auth.id;
+
+    setIsLikePending(true);
+
+    if (isLiked) {
+      dispatch(markUnliked({ targetType: "comment", targetId: node.id }));
+      try {
+        await unlikeComment(userId, node.id);
+      } catch (error) {
+        if (!isApiStatusCode(error, 404)) {
+          dispatch(markLiked({ targetType: "comment", targetId: node.id }));
+        }
+      } finally {
+        setIsLikePending(false);
+      }
+      return;
+    }
+
+    dispatch(markLiked({ targetType: "comment", targetId: node.id }));
+    try {
+      await likeComment(userId, node.id, node.id_post);
+    } catch (error) {
+      if (!isApiStatusCode(error, 409)) {
+        dispatch(markUnliked({ targetType: "comment", targetId: node.id }));
+      }
+    } finally {
+      setIsLikePending(false);
+    }
+  }
 
   return (
     <Box
@@ -77,10 +144,12 @@ function ThreadNode({
           content={node.content}
           media={node.media}
           createdAt={node.createdAt}
-          likesCount={node.likesCount}
+          likesCount={likesCount}
           repliesCount={node.repliesCount}
           isReply={depth > 0}
+          isLiked={isLiked}
           onComment={() => onStartReply(node)}
+          onLike={handleLike}
         />
 
         {isReplying && (

@@ -4,24 +4,23 @@ import { useMemo } from "react";
 import { Tabs } from "@mantine/core";
 import CommentList from "@/components/comments/CommentList";
 import PostList from "@/components/posts/PostList";
-import { fetchMockUserComments } from "@/lib/mock-comments";
-import { fetchMockUserPosts } from "@/lib/mock-posts";
+import { fetchUserComments } from "@/lib/api/comment.service";
+import { fetchUserPosts } from "@/lib/api/post.service";
 
 type ProfileActivityTabsProps = {
-  userId: string;
+  profileUserId: string;
 };
 
 export default function ProfileActivityTabs({
-  userId,
+  profileUserId,
 }: ProfileActivityTabsProps) {
   const fetchPosts = useMemo(() => {
-    return (params: Parameters<typeof fetchMockUserPosts>[1]) =>
-      fetchMockUserPosts(userId, params);
-  }, [userId]);
+    return fetchUserPosts(profileUserId);
+  }, [profileUserId]);
 
   const fetchComments = useMemo(() => {
-    return () => fetchMockUserComments(userId);
-  }, [userId]);
+    return () => fetchUserComments(profileUserId);
+  }, [profileUserId]);
 
   return (
     <Tabs defaultValue="posts" color="green" keepMounted={false}>
@@ -31,7 +30,7 @@ export default function ProfileActivityTabs({
       </Tabs.List>
 
       <Tabs.Panel value="posts" pt="md">
-        <PostList fetchPosts={fetchPosts} />
+        <PostList fetchPosts={fetchPosts} title="Posts du profil" />
       </Tabs.Panel>
 
       <Tabs.Panel value="comments" pt="md">

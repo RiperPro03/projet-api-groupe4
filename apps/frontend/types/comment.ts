@@ -8,6 +8,7 @@ export type Comment = {
   content: string;
   media: Media[];
   likesCount: number;
+  isLiked?: boolean;
   repliesCount: number;
   createdAt: string;
 };

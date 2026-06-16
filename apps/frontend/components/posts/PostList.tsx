@@ -1,12 +1,33 @@
 "use client";
 
-import { Alert, Button, Group, Loader, Stack, Text } from "@mantine/core";
+import {
+  Alert,
+  Button,
+  Group,
+  Loader,
+  Modal,
+  Stack,
+  Text,
+  Textarea,
+} from "@mantine/core";
 import { useEffect, useRef, useState } from "react";
-import { FiRefreshCw } from "react-icons/fi";
+import { FiPlus, FiSend } from "react-icons/fi";
 import CommentComposer from "@/components/comments/CommentComposer";
 import CommentThread from "@/components/comments/CommentThread";
 import { AnimatedList } from "@/components/ui/animated-list";
 import { usePostList, type FetchPostPage } from "@/hooks/usePostList";
+import { createComment } from "@/lib/api/comment.service";
+import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
+import { isApiStatusCode } from "@/lib/api/http-client";
+import { likePost, unlikePost } from "@/lib/api/interaction.service";
+import { createPost } from "@/lib/api/post.service";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  hydrateLike,
+  markLiked,
+  markUnliked,
+  selectLikeState,
+} from "@/store/likesSlice";
 import type { Comment } from "@/types/comment";
 import type { Post } from "@/types/post";
 import ContentCard from "@/components/feed/ContentCard";
@@ -16,29 +37,8 @@ type PostListProps = {
   fetchUpdatedPosts?: FetchPostPage;
   fetchCommentsForPost?: (postId: string) => Promise<Comment[]>;
   pageSize?: number;
+  title?: string;
 };
-
-function createLocalComment(
-  postId: string,
-  content: string,
-  parentCommentId: string | null = null
-): Comment {
-  return {
-    id: `local-comment-${Date.now()}`,
-    id_post: postId,
-    parentCommentId,
-    author: {
-      id: "current-user",
-      name: "Vous",
-      username: "vous",
-    },
-    content,
-    media: [],
-    likesCount: 0,
-    repliesCount: 0,
-    createdAt: new Date().toISOString(),
-  };
-}
 
 function PostFeedItem({
   post,
@@ -50,8 +50,26 @@ function PostFeedItem({
   const [comments, setComments] = useState<Comment[]>([]);
   const [showComments, setShowComments] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
-  const [likesCount, setLikesCount] = useState(post.likesCount);
+  const [isLikePending, setIsLikePending] = useState(false);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount);
+  const canOpenComments = Boolean(fetchCommentsForPost);
+  const dispatch = useAppDispatch();
+  const likeState = useAppSelector((state) =>
+    selectLikeState(state, "post", post.id)
+  );
+  const likesCount = likeState?.likesCount ?? post.likesCount;
+  const isLiked = likeState?.isLiked ?? post.isLiked ?? false;
+
+  useEffect(() => {
+    dispatch(
+      hydrateLike({
+        targetType: "post",
+        targetId: post.id,
+        likesCount: post.likesCount,
+        isLiked: post.isLiked,
+      })
+    );
+  }, [dispatch, post.id, post.isLiked, post.likesCount]);
 
   useEffect(() => {
     if (!showComments || !fetchCommentsForPost || comments.length > 0) {
@@ -80,14 +98,22 @@ function PostFeedItem({
   }, [comments.length, fetchCommentsForPost, post.id, showComments]);
 
   async function handleCommentSubmit(content: string) {
-    const newComment = createLocalComment(post.id, content);
+    const newComment = await createComment({
+      postId: post.id,
+      content,
+    });
+
     setComments((currentComments) => [newComment, ...currentComments]);
     setCommentsCount((count) => count + 1);
     setShowComments(true);
   }
 
   async function handleReplySubmit(parentComment: Comment, content: string) {
-    const newReply = createLocalComment(post.id, content, parentComment.id);
+    const newReply = await createComment({
+      postId: post.id,
+      content,
+      parentCommentId: parentComment.id,
+    });
 
     setComments((currentComments) =>
       currentComments
@@ -110,11 +136,51 @@ function PostFeedItem({
         createdAt={post.createdAt}
         likesCount={likesCount}
         commentsCount={commentsCount}
-        onComment={() => setShowComments((value) => !value)}
-        onLike={() => setLikesCount((count) => count + 1)}
+        isLiked={isLiked}
+        onComment={
+          canOpenComments ? () => setShowComments((value) => !value) : undefined
+        }
+        onLike={async () => {
+          if (isLikePending) {
+            return;
+          }
+
+          const currentUser = await getCurrentUserFromApi();
+          const userId =
+            currentUser.profile?.id_user ??
+            currentUser.user?.id_user ??
+            currentUser.auth.id;
+
+          setIsLikePending(true);
+
+          if (isLiked) {
+            dispatch(markUnliked({ targetType: "post", targetId: post.id }));
+            try {
+              await unlikePost(userId, post.id);
+            } catch (error) {
+              if (!isApiStatusCode(error, 404)) {
+                dispatch(markLiked({ targetType: "post", targetId: post.id }));
+              }
+            } finally {
+              setIsLikePending(false);
+            }
+            return;
+          }
+
+          dispatch(markLiked({ targetType: "post", targetId: post.id }));
+          try {
+            await likePost(userId, post.id);
+          } catch (error) {
+            if (!isApiStatusCode(error, 409)) {
+              dispatch(markUnliked({ targetType: "post", targetId: post.id }));
+            }
+          } finally {
+            setIsLikePending(false);
+          }
+        }}
       />
 
-      {showComments && (
+      {canOpenComments && showComments && (
         <Stack gap="sm" pl={{ base: 0, sm: 56 }}>
           <CommentComposer onSubmit={handleCommentSubmit} />
           {isLoadingComments ? (
@@ -139,22 +205,44 @@ export default function PostList({
   fetchUpdatedPosts,
   fetchCommentsForPost,
   pageSize = 5,
+  title = "Fil d'actualite",
 }: PostListProps) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+  const [postContent, setPostContent] = useState("");
+  const [isCreatingPost, setIsCreatingPost] = useState(false);
   const {
     posts,
     isLoading,
     isLoadingMore,
-    isRefreshing,
     hasMore,
     error,
-    refresh,
+    prependPost,
     loadMore,
   } = usePostList({
     fetchPosts,
     fetchUpdatedPosts,
     pageSize,
   });
+
+  async function handleCreatePost() {
+    const trimmedContent = postContent.trim();
+
+    if (!trimmedContent || isCreatingPost) {
+      return;
+    }
+
+    setIsCreatingPost(true);
+
+    try {
+      const post = await createPost({ content: trimmedContent });
+      prependPost(post);
+      setPostContent("");
+      setIsCreatePostOpen(false);
+    } finally {
+      setIsCreatingPost(false);
+    }
+  }
 
   useEffect(() => {
     const element = loadMoreRef.current;
@@ -189,19 +277,56 @@ export default function PostList({
 
   return (
     <Stack gap="md">
+      <Modal
+        opened={isCreatePostOpen}
+        onClose={() => setIsCreatePostOpen(false)}
+        title="Ajouter un post"
+        centered
+        radius={8}
+        overlayProps={{ backgroundOpacity: 0.72, blur: 2 }}
+      >
+        <Stack gap="md">
+          <Textarea
+            value={postContent}
+            onChange={(event) => setPostContent(event.currentTarget.value)}
+            placeholder="Quoi de neuf ?"
+            autosize
+            minRows={4}
+            maxRows={10}
+          />
+          <Group justify="flex-end">
+            <Button
+              variant="subtle"
+              color="gray"
+              onClick={() => setIsCreatePostOpen(false)}
+            >
+              Annuler
+            </Button>
+            <Button
+              leftSection={<FiSend size={16} />}
+              color="green"
+              disabled={!postContent.trim()}
+              loading={isCreatingPost}
+              onClick={handleCreatePost}
+            >
+              Publier
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
       <Group justify="space-between" align="center">
         <Text fw={700} c="white" size="lg">
-          Fil d'actualite
+          {title}
         </Text>
         <Button
-          leftSection={<FiRefreshCw size={16} />}
+          leftSection={<FiPlus size={16} />}
           variant="light"
           color="green"
           radius="xl"
-          loading={isRefreshing}
-          onClick={refresh}
+          onClick={() => setIsCreatePostOpen(true)}
         >
-          Recharger
+          Ajouter un post
         </Button>
       </Group>
 

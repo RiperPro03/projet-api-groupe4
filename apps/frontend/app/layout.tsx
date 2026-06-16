@@ -10,6 +10,7 @@ import "@mantine/core/styles.css";
 
 import AppShell from "@/components/AppShell";
 import { NotificationProvider } from "@/components/notifications/NotificationProvider";
+import ReduxProvider from "@/components/providers/ReduxProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,9 +43,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <MantineProvider>
-          <NotificationProvider>
-            <AppShell>{children}</AppShell>
-          </NotificationProvider>
+          <ReduxProvider>
+            <NotificationProvider>
+              <AppShell>{children}</AppShell>
+            </NotificationProvider>
+          </ReduxProvider>
         </MantineProvider>
       </body>
     </html>

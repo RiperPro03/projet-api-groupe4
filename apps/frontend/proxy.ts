@@ -12,7 +12,7 @@ type AuthResponse = {
 };
 
 const AUTH_ROUTES = ["/login", "/register"];
-const PROTECTED_ROUTES = ["/profile"];
+const PROTECTED_ROUTES = ["/", "/profile"];
 const TOKEN_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
 function isMatchingRoute(pathname: string, routes: string[]) {
@@ -23,7 +23,9 @@ function isMatchingRoute(pathname: string, routes: string[]) {
 
 function getApiUrl(request: NextRequest, path: string) {
   const baseUrl =
-    process.env.INTERNAL_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "/api";
+    process.env.INTERNAL_API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "http://localhost:8080/api";
   const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
 
   if (normalizedBaseUrl.startsWith("http")) {
@@ -84,22 +86,6 @@ function redirectToLogin(request: NextRequest) {
   return response;
 }
 
-async function verifyAccessToken(request: NextRequest, accessToken: string) {
-  try {
-    const response = await fetch(getApiUrl(request, "/auth/verify"), {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      cache: "no-store",
-    });
-
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
-
 async function refreshAccessToken(request: NextRequest, refreshToken: string) {
   try {
     const response = await fetch(getApiUrl(request, "/auth/refresh-token"), {
@@ -128,14 +114,10 @@ export async function proxy(request: NextRequest) {
   const isAuthRoute = isMatchingRoute(pathname, AUTH_ROUTES);
   const isProtectedRoute = isMatchingRoute(pathname, PROTECTED_ROUTES);
 
-  if (!isAuthRoute && !isProtectedRoute) {
-    return NextResponse.next();
-  }
-
   const accessToken = request.cookies.get(ACCESS_TOKEN_KEY)?.value;
   const refreshToken = request.cookies.get(REFRESH_TOKEN_KEY)?.value;
 
-  if (accessToken && (await verifyAccessToken(request, accessToken))) {
+  if (accessToken) {
     if (isAuthRoute) {
       return NextResponse.redirect(new URL("/", request.url));
     }
@@ -158,6 +140,15 @@ export async function proxy(request: NextRequest) {
 
       return response;
     }
+
+    if (isProtectedRoute) {
+      return redirectToLogin(request);
+    }
+
+    const response = NextResponse.next();
+    clearTokenCookies(response);
+
+    return response;
   }
 
   if (isProtectedRoute) {
@@ -171,5 +162,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/register", "/profile/:path*"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",
+  ],
 };

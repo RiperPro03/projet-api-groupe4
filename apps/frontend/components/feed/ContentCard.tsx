@@ -25,6 +25,7 @@ type ContentCardProps = {
   commentsCount?: number;
   repliesCount?: number;
   isReply?: boolean;
+  isLiked?: boolean;
   onComment?: () => void;
   onLike?: () => void;
 };
@@ -173,6 +174,7 @@ export default function ContentCard({
   commentsCount,
   repliesCount,
   isReply = false,
+  isLiked = false,
   onComment,
   onLike,
 }: ContentCardProps) {
@@ -227,8 +229,10 @@ export default function ContentCard({
             >
               <FiMessageCircle size={18} />
             </ActionButton>
-            <ActionButton label="Aimer" count={likesCount} onClick={onLike}>
+            <ActionButton label={isLiked ? "Retirer le like" : "Aimer"} count={likesCount} onClick={onLike}>
+              <Box c={isLiked ? "green.4" : undefined} component="span" lh={0}>
               <FiHeart size={18} />
+              </Box>
             </ActionButton>
           </Group>
         </Stack>

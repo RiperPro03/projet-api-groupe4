@@ -24,9 +24,13 @@ export default function CommentComposer({
     }
 
     setIsSubmitting(true);
-    await onSubmit?.(trimmed);
-    setContent("");
-    setIsSubmitting(false);
+
+    try {
+      await onSubmit?.(trimmed);
+      setContent("");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { getApiErrorMessage } from "@/lib/api/http-client";
 import type { Post } from "@/types/post";
 
 export type PostPageParams = {
@@ -49,9 +50,9 @@ export function usePostList({
           setNextCursor(page.nextCursor);
           setHasMore(page.hasMore);
         }
-      } catch {
+      } catch (loadError) {
         if (isMounted) {
-          setError("Impossible de charger les posts.");
+          setError(`Impossible de charger les posts. ${getApiErrorMessage(loadError)}`);
         }
       } finally {
         if (isMounted) {
@@ -80,12 +81,22 @@ export function usePostList({
 
         return [...newPosts, ...currentPosts];
       });
-    } catch {
-      setError("Impossible de recharger les posts.");
+    } catch (refreshError) {
+      setError(`Impossible de recharger les posts. ${getApiErrorMessage(refreshError)}`);
     } finally {
       setIsRefreshing(false);
     }
   }, [fetchPosts, fetchUpdatedPosts, pageSize]);
+
+  const prependPost = useCallback((post: Post) => {
+    setPosts((currentPosts) => {
+      if (currentPosts.some((currentPost) => currentPost.id === post.id)) {
+        return currentPosts;
+      }
+
+      return [post, ...currentPosts];
+    });
+  }, []);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || isLoadingMore || !nextCursor) {
@@ -106,8 +117,8 @@ export function usePostList({
       });
       setNextCursor(page.nextCursor);
       setHasMore(page.hasMore);
-    } catch {
-      setError("Impossible de charger plus de posts.");
+    } catch (loadMoreError) {
+      setError(`Impossible de charger plus de posts. ${getApiErrorMessage(loadMoreError)}`);
     } finally {
       setIsLoadingMore(false);
     }
@@ -121,6 +132,7 @@ export function usePostList({
     hasMore,
     error,
     refresh,
+    prependPost,
     loadMore,
   };
 }

@@ -5,8 +5,18 @@ import { Alert, Group, Loader, Stack, Text } from "@mantine/core";
 import CommentComposer from "@/components/comments/CommentComposer";
 import CommentThread from "@/components/comments/CommentThread";
 import ContentCard from "@/components/feed/ContentCard";
-import { fetchMockPostComments } from "@/lib/mock-comments";
-import { fetchMockPostById } from "@/lib/mock-posts";
+import { createComment, fetchPostComments } from "@/lib/api/comment.service";
+import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
+import { isApiStatusCode } from "@/lib/api/http-client";
+import { likePost, unlikePost } from "@/lib/api/interaction.service";
+import { fetchPostById } from "@/lib/api/post.service";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  hydrateLike,
+  markLiked,
+  markUnliked,
+  selectLikeState,
+} from "@/store/likesSlice";
 import type { Comment } from "@/types/comment";
 import type { Post } from "@/types/post";
 
@@ -19,7 +29,13 @@ export default function PostDetail({ postId }: PostDetailProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [likesCount, setLikesCount] = useState(0);
+  const [isLikePending, setIsLikePending] = useState(false);
+  const dispatch = useAppDispatch();
+  const likeState = useAppSelector((state) =>
+    post ? selectLikeState(state, "post", post.id) : undefined
+  );
+  const likesCount = likeState?.likesCount ?? post?.likesCount ?? 0;
+  const isLiked = likeState?.isLiked ?? post?.isLiked ?? false;
 
   useEffect(() => {
     let isMounted = true;
@@ -30,14 +46,24 @@ export default function PostDetail({ postId }: PostDetailProps) {
 
       try {
         const [postItem, commentItems] = await Promise.all([
-          fetchMockPostById(postId),
-          fetchMockPostComments(postId),
+          fetchPostById(postId),
+          fetchPostComments(postId),
         ]);
 
         if (isMounted) {
           setPost(postItem);
           setComments(commentItems);
-          setLikesCount(postItem?.likesCount ?? 0);
+
+          if (postItem) {
+            dispatch(
+              hydrateLike({
+                targetType: "post",
+                targetId: postItem.id,
+                likesCount: postItem.likesCount,
+                isLiked: postItem.isLiked,
+              })
+            );
+          }
         }
       } catch {
         if (isMounted) {
@@ -55,7 +81,7 @@ export default function PostDetail({ postId }: PostDetailProps) {
     return () => {
       isMounted = false;
     };
-  }, [postId]);
+  }, [dispatch, postId]);
 
   if (isLoading) {
     return (
@@ -81,36 +107,21 @@ export default function PostDetail({ postId }: PostDetailProps) {
     );
   }
 
-  function createLocalComment(
-    content: string,
-    parentCommentId: string | null = null
-  ): Comment {
-    return {
-      id: `local-comment-${Date.now()}`,
-      id_post: postId,
-      parentCommentId,
-      author: {
-        id: "current-user",
-        name: "Vous",
-        username: "vous",
-      },
-      content,
-      media: [],
-      likesCount: 0,
-      repliesCount: 0,
-      createdAt: new Date().toISOString(),
-    };
-  }
-
   async function handleCommentSubmit(content: string) {
+    const comment = await createComment({ postId, content });
+
     setComments((currentComments) => [
-      createLocalComment(content),
+      comment,
       ...currentComments,
     ]);
   }
 
   async function handleReplySubmit(parentComment: Comment, content: string) {
-    const newReply = createLocalComment(content, parentComment.id);
+    const newReply = await createComment({
+      postId,
+      content,
+      parentCommentId: parentComment.id,
+    });
 
     setComments((currentComments) =>
       currentComments
@@ -133,7 +144,45 @@ export default function PostDetail({ postId }: PostDetailProps) {
         createdAt={post.createdAt}
         likesCount={likesCount}
         commentsCount={comments.filter((comment) => !comment.parentCommentId).length}
-        onLike={() => setLikesCount((count) => count + 1)}
+        isLiked={isLiked}
+        onLike={async () => {
+          if (isLikePending) {
+            return;
+          }
+
+          const currentUser = await getCurrentUserFromApi();
+          const userId =
+            currentUser.profile?.id_user ??
+            currentUser.user?.id_user ??
+            currentUser.auth.id;
+
+          setIsLikePending(true);
+
+          if (isLiked) {
+            dispatch(markUnliked({ targetType: "post", targetId: post.id }));
+            try {
+              await unlikePost(userId, post.id);
+            } catch (error) {
+              if (!isApiStatusCode(error, 404)) {
+                dispatch(markLiked({ targetType: "post", targetId: post.id }));
+              }
+            } finally {
+              setIsLikePending(false);
+            }
+            return;
+          }
+
+          dispatch(markLiked({ targetType: "post", targetId: post.id }));
+          try {
+            await likePost(userId, post.id);
+          } catch (error) {
+            if (!isApiStatusCode(error, 409)) {
+              dispatch(markUnliked({ targetType: "post", targetId: post.id }));
+            }
+          } finally {
+            setIsLikePending(false);
+          }
+        }}
       />
       <CommentComposer onSubmit={handleCommentSubmit} />
       <CommentThread comments={comments} onReplySubmit={handleReplySubmit} />

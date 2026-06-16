@@ -1,8 +1,4 @@
 import axios from "axios";
-import {
-  clearAuthTokens,
-  getStoredAccessToken,
-} from "@/lib/auth-token-storage";
 
 export type ApiErrorBody = {
   message?: string;
@@ -17,29 +13,18 @@ export const httpClient = axios.create({
   },
 });
 
-httpClient.interceptors.request.use((config) => {
-  if (typeof window === "undefined") {
-    return config;
-  }
-
-  const token = getStoredAccessToken();
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
-  return config;
-});
-
 httpClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (
       axios.isAxiosError(error) &&
       error.response?.status === 401 &&
       typeof window !== "undefined"
     ) {
-      clearAuthTokens();
+      await fetch("/api/auth/session", {
+        method: "DELETE",
+        cache: "no-store",
+      }).catch(() => undefined);
 
       if (!window.location.pathname.startsWith("/login")) {
         const redirect = `${window.location.pathname}${window.location.search}`;

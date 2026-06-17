@@ -16,7 +16,7 @@ import {
   updateCurrentProfileAction,
   updatePasswordAction,
   type UpdateProfilePayload,
-} from "@/app/profil/actions";
+} from "@/app/profile/actions";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { clearAuthTokens } from "@/lib/auth-token-storage";

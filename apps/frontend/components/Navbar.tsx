@@ -29,7 +29,7 @@ export default function Navbar({
         { href: "/search", label: "Recherche", icon: FiSearch },
         { href: "/notif", label: "Notifications", icon: FiBell },
         { href: "/msg", label: "Messages", icon: FiMail },
-        { href: "/profil", label: "Profil", icon: FiUser },
+        { href: "/profile", label: "Profil", icon: FiUser },
     ];
 
     return (
@@ -79,7 +79,7 @@ export default function Navbar({
                             }`}
                         >
                             <span className="flex w-6 shrink-0 justify-center">
-                                {href === "/profil" && currentUser ? (
+                                {href === "/profile" && currentUser ? (
                                     <span
                                         className="flex size-8 shrink-0 items-center justify-center rounded-full bg-breezy-green bg-cover bg-center text-xs font-bold text-black"
                                         style={

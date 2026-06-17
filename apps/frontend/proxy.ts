@@ -12,7 +12,7 @@ type AuthResponse = {
 };
 
 const AUTH_ROUTES = ["/login", "/register"];
-const PROTECTED_ROUTES = ["/profil"];
+const PROTECTED_ROUTES = ["/profile"];
 const TOKEN_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
 function isMatchingRoute(pathname: string, routes: string[]) {
@@ -171,5 +171,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/register", "/profil/:path*"],
+  matcher: ["/login", "/register", "/profile/:path*"],
 };

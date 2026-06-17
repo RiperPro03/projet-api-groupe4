@@ -16,6 +16,20 @@ const controllerMocks = vi.hoisted(() => ({
       id_user: req.params.id_user,
     }),
   ),
+  getProfileByUsernameController: vi.fn((req, res) =>
+    res.status(200).json({
+      route: "getByUsername",
+      method: req.method,
+      username: req.params.username,
+    }),
+  ),
+  searchProfilesByUsernameController: vi.fn((req, res) =>
+    res.status(200).json({
+      route: "searchByUsername",
+      method: req.method,
+      username: req.query.username,
+    }),
+  ),
   updateProfileController: vi.fn((req, res) =>
     res.status(200).json({
       route: "update",
@@ -120,6 +134,32 @@ describe("profile routes", () => {
       method: "GET",
     });
     expect(controllerMocks.getProfilesController).toHaveBeenCalledTimes(1);
+  });
+
+  it("routes GET /username/:username to getProfileByUsernameController", async () => {
+    const response = await request(app).get("/profiles/username/alice");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      route: "getByUsername",
+      method: "GET",
+      username: "alice",
+    });
+    expect(controllerMocks.getProfileByUsernameController).toHaveBeenCalledTimes(1);
+    expect(controllerMocks.getProfileByIdController).not.toHaveBeenCalled();
+  });
+
+  it("routes GET /search to searchProfilesByUsernameController", async () => {
+    const response = await request(app).get("/profiles/search?username=ali");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      route: "searchByUsername",
+      method: "GET",
+      username: "ali",
+    });
+    expect(controllerMocks.searchProfilesByUsernameController).toHaveBeenCalledTimes(1);
+    expect(controllerMocks.getProfileByIdController).not.toHaveBeenCalled();
   });
 
   it("routes GET /:id_user to getProfileByIdController", async () => {

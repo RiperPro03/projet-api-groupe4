@@ -4,6 +4,7 @@ const modelMocks = vi.hoisted(() => ({
   create: vi.fn(),
   find: vi.fn(),
   sort: vi.fn(),
+  limit: vi.fn(),
   findOne: vi.fn(),
   findOneAndUpdate: vi.fn(),
   findOneAndDelete: vi.fn(),
@@ -24,7 +25,9 @@ import {
   createProfile,
   deleteProfile,
   getProfileById,
+  getProfileByUsername,
   getProfiles,
+  searchProfilesByUsername,
   updateProfile,
 } from "../../../src/services/profile.service";
 
@@ -91,6 +94,68 @@ describe("profile.service", () => {
 
     expect(modelMocks.findOne).toHaveBeenCalledWith({ id_user: "user-42" });
     expect(result).toEqual({ id_user: "user-42" });
+  });
+
+  it("getProfileByUsername returns the matching profile", async () => {
+    const profile = {
+      toJSON: vi.fn(() => ({ id_user: "user-42", username: "alice" })),
+    };
+
+    modelMocks.findOne.mockResolvedValue(profile);
+
+    const result = await getProfileByUsername("alice");
+
+    expect(modelMocks.findOne).toHaveBeenCalledWith({ username: "alice" });
+    expect(result).toEqual({ id_user: "user-42", username: "alice" });
+  });
+
+  it("getProfileByUsername throws AppError when the profile does not exist", async () => {
+    modelMocks.findOne.mockResolvedValue(null);
+
+    await expect(getProfileByUsername("missing")).rejects.toMatchObject({
+      name: "AppError",
+      statusCode: 404,
+      message: "Profile not found",
+    });
+  });
+
+  it("searchProfilesByUsername returns partial case-insensitive matches", async () => {
+    const profile = {
+      toJSON: vi.fn(() => ({ id_user: "user-42", username: "alice" })),
+    };
+
+    modelMocks.find.mockReturnValueOnce({
+      sort: modelMocks.sort,
+    });
+    modelMocks.sort.mockReturnValueOnce({
+      limit: modelMocks.limit,
+    });
+    modelMocks.limit.mockResolvedValueOnce([profile]);
+
+    const result = await searchProfilesByUsername("ali");
+
+    expect(modelMocks.find).toHaveBeenCalledWith({
+      username: { $regex: "ali", $options: "i" },
+    });
+    expect(modelMocks.sort).toHaveBeenCalledWith({ username: 1 });
+    expect(modelMocks.limit).toHaveBeenCalledWith(10);
+    expect(result).toEqual([{ id_user: "user-42", username: "alice" }]);
+  });
+
+  it("searchProfilesByUsername escapes regex characters", async () => {
+    modelMocks.find.mockReturnValueOnce({
+      sort: modelMocks.sort,
+    });
+    modelMocks.sort.mockReturnValueOnce({
+      limit: modelMocks.limit,
+    });
+    modelMocks.limit.mockResolvedValueOnce([]);
+
+    await searchProfilesByUsername("a.*");
+
+    expect(modelMocks.find).toHaveBeenCalledWith({
+      username: { $regex: "a\\.\\*", $options: "i" },
+    });
   });
 
   it("getProfileById throws AppError when the profile does not exist", async () => {

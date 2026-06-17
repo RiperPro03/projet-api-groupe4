@@ -21,7 +21,6 @@ import {
 import { useNotifications } from "@/components/notifications/NotificationProvider";
 import { RippleButton } from "@/components/ui/ripple-button";
 import { ShineBorder } from "@/components/ui/shine-border";
-import { clearAuthTokens } from "@/lib/auth-token-storage";
 
 type ProfileSettingsMenuProps = {
   profile: UpdateProfilePayload;

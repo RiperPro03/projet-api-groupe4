@@ -8,10 +8,10 @@ connectDatabase()
     .then(() => ensureBucket())
     .then(() => {
         app.listen(env.port, () => {
-            console.log(`🚀 media-service running on http://localhost:${env.port}`);
+            console.log(`media-service running on http://localhost:${env.port}`);
         });
     })
     .catch((error) => {
-        console.error("❌ Startup failed:", error);
+        console.error("Startup failed:", error);
         process.exit(1);
     });

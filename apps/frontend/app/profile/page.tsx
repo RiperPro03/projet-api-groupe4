@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { FiCalendar } from "react-icons/fi";
-import ProfileActivityTabs from "@/components/profile/ProfileActivityTabs";
-import ProfileSettingsMenu from "@/components/profile/ProfileSettingsMenu";
+import ProfileActivityTabs from "@/components/profil/ProfileActivityTabs";
+import ProfileSettingsMenu from "@/components/profil/ProfileSettingsMenu";
 import { Particles } from "@/components/ui/particles";
 import { getCurrentUser } from "@/lib/current-user";
 
@@ -28,10 +28,11 @@ export default async function ProfilePage() {
   }).format(new Date(joinedAtSource));
 
   return (
-    <section className="relative min-h-[calc(100svh-4rem)] overflow-hidden bg-breezy-black px-5 py-8 text-white md:min-h-svh">
+    <section className="relative min-h-[calc(100svh-64px)] overflow-hidden bg-background px-5 py-8 text-foreground md:min-h-svh">
       <Particles
         className="z-0"
         quantity={120}
+        color="var(--foreground)"
         size={1.2}
         speed={0.35}
       />
@@ -60,14 +61,14 @@ export default async function ProfilePage() {
 
         <div className="mt-4">
           <h1 className="text-2xl font-bold">{displayName}</h1>
-          <p className="text-white/50">@{username}</p>
+          <p className="text-muted-foreground">@{username}</p>
         </div>
 
         {profile?.bio && (
-          <p className="mt-4 leading-6 text-white/85">{profile.bio}</p>
+          <p className="mt-4 leading-6 text-foreground/85">{profile.bio}</p>
         )}
 
-        <p className="mt-4 flex items-center gap-1.5 text-sm text-white/50">
+        <p className="mt-4 flex items-center gap-1.5 text-sm text-muted-foreground">
           <FiCalendar aria-hidden="true" />
           A rejoint Breezyl en {joinedAt}
         </p>

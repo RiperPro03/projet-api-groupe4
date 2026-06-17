@@ -21,16 +21,17 @@ import {
 import { useNotifications } from "@/components/notifications/NotificationProvider";
 import { RippleButton } from "@/components/ui/ripple-button";
 import { ShineBorder } from "@/components/ui/shine-border";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 type ProfileSettingsMenuProps = {
   profile: UpdateProfilePayload;
 };
 
 const fieldClassName =
-  "w-full rounded-[inherit] bg-black px-4 py-3 text-white outline-none placeholder:text-white/35";
+  "w-full rounded-[inherit] bg-background px-4 py-3 text-foreground outline-none placeholder:text-muted-foreground";
 
 const fieldContainerClassName =
-  "group relative rounded-xl border border-[#536471] transition-shadow focus-within:border-transparent focus-within:shadow-[0_0_1.25rem_rgba(0,146,62,0.28)]";
+  "group relative rounded-xl border border-input bg-background transition-shadow focus-within:border-transparent focus-within:shadow-[0_0_1.25rem_rgba(0,146,62,0.28)]";
 
 type PasswordFieldProps = {
   id: string;
@@ -55,7 +56,7 @@ function PasswordField({
 
   return (
     <label className="block" htmlFor={id}>
-      <span className="mb-1.5 block text-sm font-medium text-white/75">
+      <span className="mb-1.5 block text-sm font-medium text-foreground/75">
         {label}
       </span>
       <span className={`${fieldContainerClassName} block`}>
@@ -82,7 +83,7 @@ function PasswordField({
             isVisible ? "Masquer le mot de passe" : "Afficher le mot de passe"
           }
           onClick={() => setIsVisible((visible) => !visible)}
-          className="absolute inset-y-0 right-0 z-30 flex w-12 items-center justify-center text-lg text-white/50 transition-colors hover:text-breezy-green"
+          className="absolute inset-y-0 right-0 z-30 flex w-12 items-center justify-center text-lg text-muted-foreground transition-colors hover:text-breezy-green"
         >
           {isVisible ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
         </button>
@@ -283,7 +284,7 @@ export default function ProfileSettingsMenu({
         aria-haspopup="menu"
         aria-expanded={isMenuOpen}
         onClick={() => setIsMenuOpen((open) => !open)}
-        className="flex size-11 items-center justify-center rounded-full border border-white/20 bg-white/5 text-xl text-white transition-colors hover:border-breezy-green hover:bg-breezy-green hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-breezy-yellow"
+        className="flex size-11 items-center justify-center rounded-full border border-border bg-card text-xl text-foreground transition-colors hover:border-breezy-green hover:bg-breezy-green hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-breezy-yellow"
       >
         <FiSettings aria-hidden="true" />
       </button>
@@ -291,13 +292,13 @@ export default function ProfileSettingsMenu({
       {isMenuOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-14 z-30 w-56 overflow-hidden rounded-2xl border border-white/15 bg-[#111] p-2 shadow-2xl shadow-black/50"
+          className="absolute right-0 top-14 z-30 w-56 overflow-hidden rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-2xl"
         >
           <button
             type="button"
             role="menuitem"
             onClick={openEditor}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-breezy-yellow"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-breezy-yellow"
           >
             <FiEdit3 className="text-breezy-green" aria-hidden="true" />
             Modifier le profil
@@ -307,13 +308,20 @@ export default function ProfileSettingsMenu({
             type="button"
             role="menuitem"
             onClick={openSecurity}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-breezy-yellow"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-breezy-yellow"
           >
             <FiShield className="text-breezy-yellow" aria-hidden="true" />
-            Securite
+            Sécurité
           </button>
 
-          <div className="my-1 border-t border-white/10" />
+          <div className="my-1 border-t border-border" />
+
+          <div className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
+            <span>Thème</span>
+            <ThemeToggle className="size-9" />
+          </div>
+
+          <div className="my-1 border-t border-border" />
 
           <button
             type="button"
@@ -338,14 +346,14 @@ export default function ProfileSettingsMenu({
             aria-modal="true"
             aria-labelledby="edit-profile-title"
             onMouseDown={(event) => event.stopPropagation()}
-            className="flex h-[100dvh] w-full max-w-lg flex-col overflow-hidden bg-[#111] text-white shadow-2xl shadow-black md:h-auto md:max-h-[calc(100dvh-2rem)] md:rounded-2xl md:border md:border-white/15"
+            className="flex h-[100dvh] w-full max-w-lg flex-col overflow-hidden bg-card text-card-foreground shadow-2xl shadow-black md:h-auto md:max-h-[calc(100dvh-2rem)] md:rounded-2xl md:border md:border-border"
           >
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 p-5 md:border-b-0 md:p-8 md:pb-0">
               <div>
                 <h2 id="edit-profile-title" className="text-xl font-bold">
                   Modifier le profil
                 </h2>
-                <p className="mt-1 text-sm text-white/50">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Mettez a jour les informations visibles sur votre profil.
                 </p>
               </div>
@@ -354,7 +362,7 @@ export default function ProfileSettingsMenu({
                 type="button"
                 aria-label="Fermer"
                 onClick={() => setIsEditorOpen(false)}
-                className="flex size-9 shrink-0 items-center justify-center rounded-full text-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full text-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
                 <FiX aria-hidden="true" />
               </button>
@@ -365,7 +373,7 @@ export default function ProfileSettingsMenu({
               onSubmit={handleProfileUpdate}
             >
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-white/75">
+                <span className="mb-1.5 block text-sm font-medium text-foreground/75">
                   Nom d&apos;utilisateur
                 </span>
                 <div className={fieldContainerClassName}>
@@ -387,7 +395,7 @@ export default function ProfileSettingsMenu({
               </label>
 
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-white/75">
+                <span className="mb-1.5 block text-sm font-medium text-foreground/75">
                   Nom affiche
                 </span>
                 <div className={fieldContainerClassName}>
@@ -407,7 +415,7 @@ export default function ProfileSettingsMenu({
               </label>
 
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-white/75">
+                <span className="mb-1.5 block text-sm font-medium text-foreground/75">
                   Biographie
                 </span>
                 <div className={fieldContainerClassName}>
@@ -427,7 +435,7 @@ export default function ProfileSettingsMenu({
               </label>
 
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-white/75">
+                <span className="mb-1.5 block text-sm font-medium text-foreground/75">
                   URL de la photo
                 </span>
                 <div className={fieldContainerClassName}>
@@ -452,7 +460,7 @@ export default function ProfileSettingsMenu({
                   type="button"
                   rippleColor="#ffffff"
                   onClick={() => setIsEditorOpen(false)}
-                  className="rounded-full border border-white/15 bg-transparent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
                 >
                   Annuler
                 </RippleButton>
@@ -481,14 +489,14 @@ export default function ProfileSettingsMenu({
             aria-modal="true"
             aria-labelledby="security-title"
             onMouseDown={(event) => event.stopPropagation()}
-            className="flex h-[100dvh] w-full max-w-md flex-col overflow-hidden bg-[#111] text-white shadow-2xl shadow-black md:h-auto md:max-h-[calc(100dvh-2rem)] md:rounded-2xl md:border md:border-white/15"
+            className="flex h-[100dvh] w-full max-w-md flex-col overflow-hidden bg-card text-card-foreground shadow-2xl shadow-black md:h-auto md:max-h-[calc(100dvh-2rem)] md:rounded-2xl md:border md:border-border"
           >
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 p-5 md:border-b-0 md:p-8 md:pb-0">
               <div>
                 <h2 id="security-title" className="text-xl font-bold">
                   Securite
                 </h2>
-                <p className="mt-1 text-sm text-white/50">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Modifiez votre mot de passe. Vous devrez ensuite vous reconnecter.
                 </p>
               </div>
@@ -497,7 +505,7 @@ export default function ProfileSettingsMenu({
                 type="button"
                 aria-label="Fermer"
                 onClick={() => setIsSecurityOpen(false)}
-                className="flex size-9 shrink-0 items-center justify-center rounded-full text-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full text-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
                 <FiX aria-hidden="true" />
               </button>
@@ -546,7 +554,7 @@ export default function ProfileSettingsMenu({
                   type="button"
                   rippleColor="#ffffff"
                   onClick={() => setIsSecurityOpen(false)}
-                  className="rounded-full border border-white/15 bg-transparent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
                 >
                   Annuler
                 </RippleButton>

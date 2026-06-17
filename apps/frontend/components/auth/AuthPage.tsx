@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ChangeEventHandler, type FormEvent } from "react";
@@ -11,6 +10,8 @@ import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { Meteors } from "@/components/ui/meteors";
 import { RippleButton } from "@/components/ui/ripple-button";
 import { ShineBorder } from "@/components/ui/shine-border";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { ThemedLogo } from "@/components/branding/ThemedLogo";
 
 type AuthMode = "login" | "register";
 
@@ -35,7 +36,7 @@ const logoColors = [
 ];
 
 const fieldClassName =
-  "h-full w-full rounded-[inherit] bg-black px-4 text-base text-white outline-none placeholder:text-[#71767b] lg:px-5 lg:text-lg";
+  "h-full w-full rounded-[inherit] bg-background px-4 text-base text-foreground outline-none placeholder:text-muted-foreground lg:px-5 lg:text-lg";
 
 // Shared animated input used by both authentication modes.
 function Field({
@@ -98,9 +99,9 @@ function Field({
                 ? "Masquer le mot de passe"
                 : "Afficher le mot de passe"
             }
-            aria-pressed={isPasswordVisible}
-            onClick={() => setIsPasswordVisible((visible) => !visible)}
-            className="absolute inset-y-0 right-0 z-30 flex w-14 items-center justify-center rounded-r-[inherit] text-xl text-white/55 transition-colors hover:text-breezy-green focus-visible:outline-2 focus-visible:outline-offset-[-0.25rem] focus-visible:outline-breezy-yellow"
+          aria-pressed={isPasswordVisible}
+          onClick={() => setIsPasswordVisible((visible) => !visible)}
+            className="absolute inset-y-0 right-0 z-30 flex w-14 items-center justify-center rounded-r-[inherit] text-xl text-muted-foreground transition-colors hover:text-breezy-green focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-breezy-yellow"
           >
             {isPasswordVisible ? (
               <FiEyeOff aria-hidden="true" />
@@ -300,10 +301,10 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
         },
       ];
 
-  // Mobile uses a black background; desktop adds the illustrated backdrop.
   return (
-    <main className="min-h-svh bg-breezy-black px-6 py-5 text-white lg:flex lg:h-svh lg:items-center lg:justify-center lg:bg-[url('/auth-background.png')] lg:bg-cover lg:bg-center lg:px-10 lg:py-8 xl:px-16 2xl:px-24">
-      <div className="relative mx-auto flex min-h-[calc(100svh-2.5rem)] w-full max-w-sm flex-col justify-center overflow-hidden lg:min-h-0 lg:max-w-lg lg:rounded-3xl lg:border lg:border-white/10 lg:bg-breezy-black/90 lg:p-10 lg:shadow-2xl xl:max-w-xl xl:p-12 2xl:max-w-2xl 2xl:p-14">
+    <main className="relative min-h-svh bg-background px-6 py-5 text-foreground lg:flex lg:h-svh lg:items-center lg:justify-center lg:bg-[url('/auth-background.png')] lg:bg-cover lg:bg-center lg:px-10 lg:py-8 xl:px-16 2xl:px-24">
+      <ThemeToggle className="absolute right-5 top-5 z-30 shadow-lg" />
+      <div className="relative mx-auto flex min-h-[calc(100svh-40px)] w-full max-w-sm flex-col justify-center overflow-hidden lg:min-h-0 lg:max-w-lg lg:rounded-3xl lg:border lg:border-border lg:bg-background/90 lg:p-10 lg:shadow-2xl xl:max-w-xl xl:p-12 2xl:max-w-2xl 2xl:p-14">
         <div aria-hidden="true" className="absolute inset-0">
           <Meteors
             number={25}
@@ -319,18 +320,14 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
             aria-label="Breezyl - Accueil"
             className="mx-auto inline-flex items-center gap-2 rounded-full p-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-breezy-green"
           >
-            <Image
-              src="/breezy-logo.ico"
-              alt=""
-              width={42}
-              height={42}
-              unoptimized
+            <ThemedLogo
+              size={56}
               className="size-14 rounded-2xl object-cover"
             />
             <DiaTextReveal
               className="inline-block py-1 text-4xl font-bold leading-normal tracking-tight"
               colors={logoColors}
-              textColor="white"
+              textColor="var(--foreground)"
               text="Breezyl"
             />
           </Link>
@@ -356,7 +353,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
                 type="submit"
                 disabled={isSubmitting}
                 rippleColor="#000000"
-                className="h-12 w-full rounded-full border-0 bg-white px-5 text-base font-bold text-black shadow-sm transition hover:bg-[#d7dbdc] disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:h-14 lg:bg-breezy-green lg:text-lg lg:text-white lg:shadow-lg lg:shadow-breezy-green/20 lg:hover:bg-[#007f36] lg:focus-visible:outline-breezy-green 2xl:h-16"
+                className="h-12 w-full rounded-full border-0 bg-foreground px-5 text-base font-bold text-background shadow-sm transition hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground lg:h-14 lg:bg-breezy-green lg:text-lg lg:text-white lg:shadow-lg lg:shadow-breezy-green/20 lg:hover:bg-[#007f36] lg:focus-visible:outline-breezy-green 2xl:h-16"
               >
                 {isLogin ? "Se connecter" : "Créer le compte"}
               </RippleButton>
@@ -364,7 +361,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
           </section>
 
           {/* Switch between login and registration. */}
-          <p className="text-[0.95rem] text-[#71767b]">
+          <p className="text-[15.2px] text-muted-foreground">
             {isLogin
               ? "Vous n’avez pas de compte ?"
               : "Vous avez déjà un compte ?"}{" "}

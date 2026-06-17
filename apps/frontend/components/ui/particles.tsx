@@ -19,16 +19,6 @@ type ParticlesProps = CanvasHTMLAttributes<HTMLCanvasElement> & {
   speed?: number;
 };
 
-function hexToRgb(color: string) {
-  const value = Number.parseInt(color.replace("#", ""), 16);
-
-  return {
-    red: (value >> 16) & 255,
-    green: (value >> 8) & 255,
-    blue: value & 255,
-  };
-}
-
 export function Particles({
   className,
   quantity = 100,
@@ -57,11 +47,19 @@ export function Particles({
     const container = containerElement;
     const canvas = canvasElement;
     const canvasContext = context;
-    const rgb = hexToRgb(color);
     let width = 0;
     let height = 0;
     let animationFrame = 0;
     let particles: Particle[] = [];
+    let resolvedColor = color;
+
+    function updateColor() {
+      resolvedColor = color.startsWith("var(")
+        ? getComputedStyle(container).getPropertyValue(
+            color.slice(4, -1).trim(),
+          ).trim()
+        : color;
+    }
 
     function createParticle(): Particle {
       return {
@@ -114,20 +112,29 @@ export function Particles({
           0,
           Math.PI * 2,
         );
-        canvasContext.fillStyle = `rgba(${rgb.red}, ${rgb.green}, ${rgb.blue}, ${particle.alpha})`;
+        canvasContext.globalAlpha = particle.alpha;
+        canvasContext.fillStyle = resolvedColor;
         canvasContext.fill();
       }
+      canvasContext.globalAlpha = 1;
 
       animationFrame = window.requestAnimationFrame(animate);
     }
 
     const resizeObserver = new ResizeObserver(resize);
+    const themeObserver = new MutationObserver(updateColor);
     resizeObserver.observe(container);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-mantine-color-scheme", "class"],
+    });
+    updateColor();
     resize();
     animate();
 
     return () => {
       resizeObserver.disconnect();
+      themeObserver.disconnect();
       window.cancelAnimationFrame(animationFrame);
     };
   }, [color, quantity, size, speed]);

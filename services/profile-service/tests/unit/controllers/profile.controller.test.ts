@@ -13,12 +13,20 @@ const schemaMocks = vi.hoisted(() => ({
   profileParamsSchema: {
     parse: vi.fn((value) => value),
   },
+  profileUsernameParamsSchema: {
+    parse: vi.fn((value) => value),
+  },
+  profileSearchQuerySchema: {
+    parse: vi.fn((value) => value),
+  },
 }));
 
 const serviceMocks = vi.hoisted(() => ({
   createProfile: vi.fn(),
   getProfiles: vi.fn(),
   getProfileById: vi.fn(),
+  getProfileByUsername: vi.fn(),
+  searchProfilesByUsername: vi.fn(),
   updateProfile: vi.fn(),
   deleteProfile: vi.fn(),
 }));
@@ -30,7 +38,9 @@ import {
   createProfileController,
   deleteProfileController,
   getProfileByIdController,
+  getProfileByUsernameController,
   getProfilesController,
+  searchProfilesByUsernameController,
   updateProfileController,
 } from "../../../src/controllers/profile.controller";
 
@@ -124,6 +134,60 @@ describe("profile.controller", () => {
       status: "success",
       data: { id_user: "user-42" },
     });
+  });
+
+  it("getProfileByUsernameController validates params and returns the profile", async () => {
+    const req = {
+      params: {
+        username: "alice",
+      },
+    } as unknown as Request;
+    const res = createMockResponse();
+    const next = vi.fn() as NextFunction;
+
+    serviceMocks.getProfileByUsername.mockResolvedValue({
+      id_user: "user-42",
+      username: "alice",
+    });
+
+    await getProfileByUsernameController(req, res, next);
+
+    expect(schemaMocks.profileUsernameParamsSchema.parse).toHaveBeenCalledWith(req.params);
+    expect(serviceMocks.getProfileByUsername).toHaveBeenCalledWith("alice");
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      status: "success",
+      data: {
+        id_user: "user-42",
+        username: "alice",
+      },
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("searchProfilesByUsernameController validates query and returns profiles", async () => {
+    const req = {
+      query: {
+        username: "ali",
+      },
+    } as unknown as Request;
+    const res = createMockResponse();
+    const next = vi.fn() as NextFunction;
+
+    serviceMocks.searchProfilesByUsername.mockResolvedValue([
+      { id_user: "user-42", username: "alice" },
+    ]);
+
+    await searchProfilesByUsernameController(req, res, next);
+
+    expect(schemaMocks.profileSearchQuerySchema.parse).toHaveBeenCalledWith(req.query);
+    expect(serviceMocks.searchProfilesByUsername).toHaveBeenCalledWith("ali");
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      status: "success",
+      data: [{ id_user: "user-42", username: "alice" }],
+    });
+    expect(next).not.toHaveBeenCalled();
   });
 
   it("updateProfileController validates params and body before updating", async () => {

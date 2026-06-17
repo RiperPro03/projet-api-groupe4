@@ -21,6 +21,28 @@ export const getProfileById = async (id_user: string) => {
   return profile.toJSON();
 };
 
+export const getProfileByUsername = async (username: string) => {
+  const profile = await UserInfo.findOne({ username });
+
+  if (!profile) {
+    throw new AppError(404, "Profile not found");
+  }
+
+  return profile.toJSON();
+};
+
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+export const searchProfilesByUsername = async (username: string) => {
+  const profiles = await UserInfo.find({
+    username: { $regex: escapeRegex(username), $options: "i" },
+  })
+    .sort({ username: 1 })
+    .limit(10);
+
+  return profiles.map((profile) => profile.toJSON());
+};
+
 export const updateProfile = async (
   id_user: string,
   payload: UpdateProfileInput,

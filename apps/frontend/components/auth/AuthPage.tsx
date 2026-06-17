@@ -58,15 +58,15 @@ function Field({
       <div
         className={`group relative h-14 rounded-xl border transition-shadow focus-within:border-transparent lg:h-14 2xl:h-16 ${
           error
-            ? "border-red-500 focus-within:shadow-[0_0_20px_rgba(239,68,68,0.35)]"
-            : "border-[#536471] focus-within:shadow-[0_0_20px_rgba(0,146,62,0.28)]"
+            ? "border-red-500 focus-within:shadow-[0_0_1.25rem_rgba(239,68,68,0.35)]"
+            : "border-[#536471] focus-within:shadow-[0_0_1.25rem_rgba(0,146,62,0.28)]"
         }`}
       >
         <label className="sr-only" htmlFor={id}>
           {label}
         </label>
         <ShineBorder
-          borderWidth={2}
+          borderWidth="0.125rem"
           duration={15}
           shineColor={
             error
@@ -100,7 +100,7 @@ function Field({
             }
             aria-pressed={isPasswordVisible}
             onClick={() => setIsPasswordVisible((visible) => !visible)}
-            className="absolute inset-y-0 right-0 z-30 flex w-14 items-center justify-center rounded-r-[inherit] text-xl text-white/55 transition-colors hover:text-breezy-green focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-breezy-yellow"
+            className="absolute inset-y-0 right-0 z-30 flex w-14 items-center justify-center rounded-r-[inherit] text-xl text-white/55 transition-colors hover:text-breezy-green focus-visible:outline-2 focus-visible:outline-offset-[-0.25rem] focus-visible:outline-breezy-yellow"
           >
             {isPasswordVisible ? (
               <FiEyeOff aria-hidden="true" />
@@ -303,7 +303,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
   // Mobile uses a black background; desktop adds the illustrated backdrop.
   return (
     <main className="min-h-svh bg-breezy-black px-6 py-5 text-white lg:flex lg:h-svh lg:items-center lg:justify-center lg:bg-[url('/auth-background.png')] lg:bg-cover lg:bg-center lg:px-10 lg:py-8 xl:px-16 2xl:px-24">
-      <div className="relative mx-auto flex min-h-[calc(100svh-40px)] w-full max-w-sm flex-col justify-center overflow-hidden lg:min-h-0 lg:max-w-lg lg:rounded-3xl lg:border lg:border-white/10 lg:bg-breezy-black/90 lg:p-10 lg:shadow-2xl xl:max-w-xl xl:p-12 2xl:max-w-2xl 2xl:p-14">
+      <div className="relative mx-auto flex min-h-[calc(100svh-2.5rem)] w-full max-w-sm flex-col justify-center overflow-hidden lg:min-h-0 lg:max-w-lg lg:rounded-3xl lg:border lg:border-white/10 lg:bg-breezy-black/90 lg:p-10 lg:shadow-2xl xl:max-w-xl xl:p-12 2xl:max-w-2xl 2xl:p-14">
         <div aria-hidden="true" className="absolute inset-0">
           <Meteors
             number={25}
@@ -364,7 +364,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
           </section>
 
           {/* Switch between login and registration. */}
-          <p className="text-[15.2px] text-[#71767b]">
+          <p className="text-[0.95rem] text-[#71767b]">
             {isLogin
               ? "Vous n’avez pas de compte ?"
               : "Vous avez déjà un compte ?"}{" "}

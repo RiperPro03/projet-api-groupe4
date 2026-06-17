@@ -6,10 +6,10 @@ import { cn } from "@/lib/utils"
 
 interface ShineBorderProps extends React.HTMLAttributes<HTMLDivElement> {
   /**
-   * Width of the border in pixels
-   * @default 1
+   * CSS width of the border
+   * @default "0.0625rem"
    */
-  borderWidth?: number
+  borderWidth?: string
   /**
    * Duration of the animation in seconds
    * @default 15
@@ -28,7 +28,7 @@ interface ShineBorderProps extends React.HTMLAttributes<HTMLDivElement> {
  * An animated background border effect component with configurable properties.
  */
 export function ShineBorder({
-  borderWidth = 1,
+  borderWidth = "0.0625rem",
   duration = 14,
   shineColor = "#000000",
   className,
@@ -39,7 +39,7 @@ export function ShineBorder({
     <div
       style={
         {
-          "--border-width": `${borderWidth}px`,
+          "--border-width": borderWidth,
           "--duration": `${duration}s`,
           backgroundImage: `radial-gradient(transparent,transparent, ${
             Array.isArray(shineColor) ? shineColor.join(",") : shineColor

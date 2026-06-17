@@ -129,7 +129,7 @@ export async function updatePasswordAction(
   }
 
   const response = await fetch(getApiUrl("/auth/password"), {
-    method: "PUT",
+    method: "PATCH",
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",

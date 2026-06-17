@@ -316,7 +316,7 @@ export default function PostList({
       </Modal>
 
       <Group justify="space-between" align="center">
-        <Text fw={700} c="white" size="lg">
+        <Text fw={700} style={{ color: "var(--foreground)" }} size="lg">
           {title}
         </Text>
         <Button
@@ -337,7 +337,7 @@ export default function PostList({
       )}
 
       {posts.length === 0 ? (
-        <Text c="gray.5" ta="center" py="xl">
+        <Text style={{ color: "var(--muted-foreground)" }} ta="center" py="xl">
           Aucun post pour le moment.
         </Text>
       ) : (
@@ -361,7 +361,7 @@ export default function PostList({
       )}
 
       {!hasMore && posts.length > 0 && (
-        <Text c="gray.6" ta="center" size="sm" py="sm">
+        <Text style={{ color: "var(--muted-foreground)" }} ta="center" size="sm" py="sm">
           Vous avez atteint la fin du feed.
         </Text>
       )}

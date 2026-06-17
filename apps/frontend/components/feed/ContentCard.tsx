@@ -51,7 +51,12 @@ function LinkifiedText({ text }: { text: string }) {
   const parts = text.split(urlRegex);
 
   return (
-    <Text component="p" m={0} lh={1.55} c="gray.0" style={{ whiteSpace: "pre-wrap" }}>
+    <Text
+      component="p"
+      m={0}
+      lh={1.55}
+      style={{ color: "var(--foreground)", whiteSpace: "pre-wrap" }}
+    >
       {parts.map((part, index) => {
         const isUrl = /^https?:\/\/[^\s]+$/.test(part);
 
@@ -97,8 +102,8 @@ function MediaGrid({ media = [] }: { media?: Media[] }) {
             aspectRatio: media.length === 1 ? "16 / 10" : "1 / 1",
             overflow: "hidden",
             borderRadius: 8,
-            border: "1px solid rgba(255, 255, 255, 0.12)",
-            background: "rgba(255, 255, 255, 0.04)",
+            border: "1px solid var(--border)",
+            background: "var(--muted)",
           }}
         >
           {item.type === "image" ? (
@@ -156,7 +161,7 @@ function ActionButton({
         </ActionIcon>
       </Tooltip>
       {typeof count === "number" && (
-        <Text size="sm" c="gray.5" miw={20}>
+        <Text size="sm" style={{ color: "var(--muted-foreground)" }} miw={20}>
           {countLabel(count)}
         </Text>
       )}
@@ -191,9 +196,9 @@ export default function ContentCard({
       radius={8}
       p="md"
       withBorder
-      bg="rgba(9, 12, 11, 0.92)"
+      bg="var(--card)"
       style={{
-        borderColor: isReply ? "rgba(0, 146, 62, 0.28)" : "rgba(255, 255, 255, 0.12)",
+        borderColor: isReply ? "rgba(0, 146, 62, 0.28)" : "var(--border)",
         width: "100%",
       }}
     >
@@ -204,16 +209,16 @@ export default function ContentCard({
 
         <Stack gap={8} flex={1} style={{ minWidth: 0 }}>
           <Group gap={6} wrap="wrap">
-            <Text fw={700} c="gray.0" size="sm">
+            <Text fw={700} style={{ color: "var(--foreground)" }} size="sm">
               {author.name}
             </Text>
-            <Text c="gray.5" size="sm">
+            <Text style={{ color: "var(--muted-foreground)" }} size="sm">
               @{author.username}
             </Text>
-            <Text c="gray.6" size="sm">
+            <Text style={{ color: "var(--muted-foreground)" }} size="sm">
               ·
             </Text>
-            <Text c="gray.5" size="sm">
+            <Text style={{ color: "var(--muted-foreground)" }} size="sm">
               {formatDate(createdAt)}
             </Text>
           </Group>

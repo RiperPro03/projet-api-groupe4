@@ -134,7 +134,7 @@ function ThreadNode({
       pl={{ base: visualDepth * 14, sm: visualDepth * 22 }}
       style={{
         borderLeft:
-          depth > 0 ? "1px solid rgba(255, 255, 255, 0.12)" : undefined,
+          depth > 0 ? "1px solid var(--border)" : undefined,
       }}
     >
       <Stack gap="sm">
@@ -210,7 +210,7 @@ export default function CommentThread({
 
   if (tree.length === 0) {
     return (
-      <Text c="gray.5" ta="center" py="xl">
+      <Text style={{ color: "var(--muted-foreground)" }} ta="center" py="xl">
         Aucun commentaire pour le moment.
       </Text>
     );

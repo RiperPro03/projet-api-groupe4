@@ -38,8 +38,8 @@ export default function CommentComposer({
       withBorder
       radius={8}
       p="sm"
-      bg="rgba(9, 12, 11, 0.92)"
-      style={{ borderColor: "rgba(255, 255, 255, 0.12)" }}
+      bg="var(--card)"
+      style={{ borderColor: "var(--border)" }}
     >
       <Group align="flex-start" wrap="nowrap">
         <Avatar radius="xl" color="green">
@@ -55,7 +55,7 @@ export default function CommentComposer({
           variant="unstyled"
           styles={{
             input: {
-              color: "white",
+              color: "var(--foreground)",
             },
           }}
           style={{ flex: 1 }}

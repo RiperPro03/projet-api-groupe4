@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { FiBell, FiHome, FiMail, FiSearch, FiUser } from "react-icons/fi";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { ThemedLogo } from "@/components/branding/ThemedLogo";
 import type { CurrentUser } from "@/lib/current-user";
 
@@ -101,7 +100,6 @@ export default function Navbar({
                         </Link>
                     );
                 })}
-                <ThemeToggle className="ml-1 hidden shrink-0 md:mt-auto md:flex" />
             </div>
         </nav>
     );

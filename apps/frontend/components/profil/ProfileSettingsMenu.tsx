@@ -318,7 +318,7 @@ export default function ProfileSettingsMenu({
 
           <div className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
             <span>Thème</span>
-            <ThemeToggle className="size-9" />
+            <ThemeToggle className="h-10 w-24 rounded-full" />
           </div>
 
           <div className="my-1 border-t border-border" />

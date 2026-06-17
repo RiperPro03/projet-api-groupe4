@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 
+import { CommentError } from "../services/comment.service.js";
 import { LikeError } from "../services/like.service.js";
 
 export const notFoundHandler = (
@@ -16,7 +17,7 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ): Response => {
-  if (error instanceof LikeError) {
+  if (error instanceof LikeError || error instanceof CommentError) {
     return res.status(error.statusCode).json({ error: error.message });
   }
 

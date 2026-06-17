@@ -222,7 +222,6 @@ export default function ProfileSettingsMenu({
 
     try {
       await logoutAction();
-      clearAuthTokens();
       router.replace("/login");
       router.refresh();
     } finally {
@@ -264,7 +263,6 @@ export default function ProfileSettingsMenu({
         return;
       }
 
-      clearAuthTokens();
       router.replace("/login");
       router.refresh();
     } catch {

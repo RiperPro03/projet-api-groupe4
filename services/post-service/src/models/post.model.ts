@@ -8,6 +8,7 @@ export interface IPost extends Document {
     tags: string[];         // Tags associés — prévu pour Fx12
     createdAt: Date;
     updatedAt: Date;
+    deletedAt?: Date | null; // Pour le soft-delete
 }
 
 // Schéma Mongoose — même logique que le workshop todo-api étape 4
@@ -28,6 +29,10 @@ const postSchema = new Schema<IPost>(
             type: [String],
             default: [],
         },
+        deletedAt: {
+            type: Date,
+            default: null,
+        }
     },
     {
         // timestamps: true génère automatiquement createdAt et updatedAt

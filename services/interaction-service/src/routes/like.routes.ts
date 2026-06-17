@@ -3,27 +3,24 @@ import { Router } from "express";
 import {
   addCommentLikeHandler,
   addPostLikeHandler,
-  addReplyLikeHandler,
   countCommentLikesHandler,
   countPostLikesHandler,
-  countReplyLikesHandler,
+  hasCommentLikeHandler,
+  hasPostLikeHandler,
   removeCommentLikeHandler,
   removePostLikeHandler,
-  removeReplyLikeHandler,
 } from "../controllers/like.controller.js";
 
 const router = Router();
 
-router.post("/posts/:targetId/likes", addPostLikeHandler);
-router.delete("/posts/:targetId/likes", removePostLikeHandler);
-router.get("/posts/:targetId/likes/count", countPostLikesHandler);
+router.post("/posts/likes", addPostLikeHandler);
+router.delete("/posts/likes", removePostLikeHandler);
+router.get("/posts/likes/count", countPostLikesHandler);
+router.get("/posts/likes/status", hasPostLikeHandler);
 
-router.post("/comments/:targetId/likes", addCommentLikeHandler);
-router.delete("/comments/:targetId/likes", removeCommentLikeHandler);
-router.get("/comments/:targetId/likes/count", countCommentLikesHandler);
-
-router.post("/replies/:targetId/likes", addReplyLikeHandler);
-router.delete("/replies/:targetId/likes", removeReplyLikeHandler);
-router.get("/replies/:targetId/likes/count", countReplyLikesHandler);
+router.post("/comments/likes", addCommentLikeHandler);
+router.delete("/comments/likes", removeCommentLikeHandler);
+router.get("/comments/likes/count", countCommentLikesHandler);
+router.get("/comments/likes/status", hasCommentLikeHandler);
 
 export default router;

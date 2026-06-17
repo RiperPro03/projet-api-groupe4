@@ -15,4 +15,11 @@ export type PostResponse = {
     tags: string[];
     createdAt: Date;
     updatedAt: Date;
+    deletedAt?: Date | null;
+};
+
+export type PostPageResponse = {
+    posts: PostResponse[];
+    nextCursor: string | null;
+    hasMore: boolean;
 };

@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useState, type ChangeEventHandler, type FormEvent } from "react";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { loginAction, registerAction } from "@/app/auth/actions";
-import { persistAuthTokens } from "@/lib/auth-token-storage";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { Meteors } from "@/components/ui/meteors";
@@ -208,11 +207,6 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
         });
         return;
       }
-
-      persistAuthTokens({
-        accessToken: result.data.accessToken,
-        refreshToken: result.data.refreshToken,
-      });
 
       notify({
         tone: "success",

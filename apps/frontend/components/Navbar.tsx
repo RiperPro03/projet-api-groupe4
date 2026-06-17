@@ -101,7 +101,7 @@ export default function Navbar({
                         </Link>
                     );
                 })}
-                <ThemeToggle className="ml-1 shrink-0 md:mt-auto" />
+                <ThemeToggle className="ml-1 hidden shrink-0 md:mt-auto md:flex" />
             </div>
         </nav>
     );

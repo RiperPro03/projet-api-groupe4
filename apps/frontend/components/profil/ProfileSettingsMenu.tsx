@@ -18,6 +18,7 @@ import {
   type UpdateProfilePayload,
 } from "@/app/profil/actions";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { clearAuthTokens } from "@/lib/auth-token-storage";
 
 type ProfileSettingsMenuProps = {
@@ -306,6 +307,13 @@ export default function ProfileSettingsMenu({
 
           <div className="my-1 border-t border-border" />
 
+          <div className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
+            <span>Thème</span>
+            <ThemeToggle className="size-9" />
+          </div>
+
+          <div className="my-1 border-t border-border" />
+
           <button
             type="button"
             role="menuitem"
@@ -321,7 +329,7 @@ export default function ProfileSettingsMenu({
 
       {isEditorOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/80 p-4 py-6 sm:items-center"
           onMouseDown={() => setIsEditorOpen(false)}
         >
           <section
@@ -329,7 +337,7 @@ export default function ProfileSettingsMenu({
             aria-modal="true"
             aria-labelledby="edit-profile-title"
             onMouseDown={(event) => event.stopPropagation()}
-            className="max-h-[calc(100svh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-2xl md:p-8"
+            className="my-auto w-full max-w-lg rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-2xl sm:p-6 md:p-8"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -351,7 +359,7 @@ export default function ProfileSettingsMenu({
               </button>
             </div>
 
-            <form className="mt-6 space-y-4" onSubmit={handleProfileUpdate}>
+            <form className="mt-4 space-y-3 sm:mt-6 sm:space-y-4" onSubmit={handleProfileUpdate}>
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground/75">
                   Nom d&apos;utilisateur
@@ -385,7 +393,7 @@ export default function ProfileSettingsMenu({
                 <textarea
                   value={form.bio}
                   onChange={(event) => updateField("bio", event.target.value)}
-                  className={`${fieldClassName} min-h-28 resize-y`}
+                  className={`${fieldClassName} min-h-20 resize-y sm:min-h-28`}
                   placeholder="Presentez-vous en quelques mots"
                 />
               </label>
@@ -426,7 +434,7 @@ export default function ProfileSettingsMenu({
 
       {isSecurityOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/80 p-4 py-6 sm:items-center"
           onMouseDown={() => setIsSecurityOpen(false)}
         >
           <section
@@ -434,7 +442,7 @@ export default function ProfileSettingsMenu({
             aria-modal="true"
             aria-labelledby="security-title"
             onMouseDown={(event) => event.stopPropagation()}
-            className="max-h-[calc(100svh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-2xl md:p-8"
+            className="my-auto w-full max-w-md rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-2xl sm:p-6 md:p-8"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -456,7 +464,7 @@ export default function ProfileSettingsMenu({
               </button>
             </div>
 
-            <form className="mt-6 space-y-4" onSubmit={handlePasswordUpdate}>
+            <form className="mt-4 space-y-3 sm:mt-6 sm:space-y-4" onSubmit={handlePasswordUpdate}>
               <PasswordField
                 id="current-password"
                 label="Mot de passe actuel"

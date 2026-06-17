@@ -6,7 +6,9 @@ import {
   createProfileController,
   deleteProfileController,
   getProfileByIdController,
+  getProfileByUsernameController,
   getProfilesController,
+  searchProfilesByUsernameController,
   updateProfileController,
 } from "../controllers/profile.controller";
 
@@ -25,6 +27,8 @@ router.get("/health", (_req, res) => {
 
 router.post("/", createProfileController);
 router.get("/", getProfilesController);
+router.get("/search", searchProfilesByUsernameController);
+router.get("/username/:username", getProfileByUsernameController);
 router.get("/:id_user", getProfileByIdController);
 router.put("/:id_user", updateProfileController);
 router.patch("/:id_user", updateProfileController);

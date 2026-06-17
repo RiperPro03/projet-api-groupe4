@@ -76,6 +76,14 @@ export const profileParamsSchema = z.object({
   id_user: requiredString,
 });
 
+export const profileUsernameParamsSchema = z.object({
+  username: requiredString,
+});
+
+export const profileSearchQuerySchema = z.object({
+  username: requiredString,
+});
+
 const userInfoSchema = new Schema(
   {
     id_user: {

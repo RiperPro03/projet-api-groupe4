@@ -80,6 +80,43 @@ export async function countPostLikes(postId: string): Promise<number> {
   return PostLike.countDocuments({ postId: resolvedPostId });
 }
 
+export async function hasPostLike(
+  userId: string,
+  postId: string
+): Promise<boolean> {
+  const resolvedUserId = requireNonEmpty(userId, "userId");
+  const resolvedPostId = requireNonEmpty(postId, "postId");
+  const like = await PostLike.exists({
+    userId: resolvedUserId,
+    postId: resolvedPostId,
+  });
+
+  return Boolean(like);
+}
+
+export async function listLikedPostIds(
+  userId: string,
+  postIds: string[]
+): Promise<string[]> {
+  const resolvedUserId = requireNonEmpty(userId, "userId");
+  const resolvedPostIds = postIds
+    .map((postId) => postId.trim())
+    .filter(Boolean);
+
+  if (resolvedPostIds.length === 0) {
+    return [];
+  }
+
+  const likes = await PostLike.find({
+    userId: resolvedUserId,
+    postId: { $in: resolvedPostIds },
+  })
+    .select("postId")
+    .lean();
+
+  return likes.map((like) => like.postId);
+}
+
 /** Ajoute un like sur un commentaire (y compris une réponse, traitée comme commentaire enfant). */
 export async function addCommentLike(
   userId: string,
@@ -122,4 +159,41 @@ export async function countCommentLikes(commentId: string): Promise<number> {
   const resolvedCommentId = requireNonEmpty(commentId, "commentId");
 
   return CommentLike.countDocuments({ commentId: resolvedCommentId });
+}
+
+export async function hasCommentLike(
+  userId: string,
+  commentId: string
+): Promise<boolean> {
+  const resolvedUserId = requireNonEmpty(userId, "userId");
+  const resolvedCommentId = requireNonEmpty(commentId, "commentId");
+  const like = await CommentLike.exists({
+    userId: resolvedUserId,
+    commentId: resolvedCommentId,
+  });
+
+  return Boolean(like);
+}
+
+export async function listLikedCommentIds(
+  userId: string,
+  commentIds: string[]
+): Promise<string[]> {
+  const resolvedUserId = requireNonEmpty(userId, "userId");
+  const resolvedCommentIds = commentIds
+    .map((commentId) => commentId.trim())
+    .filter(Boolean);
+
+  if (resolvedCommentIds.length === 0) {
+    return [];
+  }
+
+  const likes = await CommentLike.find({
+    userId: resolvedUserId,
+    commentId: { $in: resolvedCommentIds },
+  })
+    .select("commentId")
+    .lean();
+
+  return likes.map((like) => like.commentId);
 }

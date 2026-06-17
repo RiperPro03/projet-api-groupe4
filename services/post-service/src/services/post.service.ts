@@ -1,22 +1,78 @@
 import { Post } from "../models/post.model";
-import type { CreatePostInput, PostResponse } from "../models/post.types";
+import type {
+    CreatePostInput,
+    PostPageResponse,
+    PostResponse,
+} from "../types/post.types";
 
-// Couche service : contient la logique métier
-// Le controller appelle le service, le service parle à Mongoose
-
-// Transforme un document Mongoose en objet de réponse propre
 function sanitizePost(post: InstanceType<typeof Post>): PostResponse {
     return {
         id: String(post._id),
         authorId: post.authorId,
         content: post.content,
+        tags: post.tags,
         createdAt: post.createdAt as Date,
         updatedAt: post.updatedAt as Date,
         deletedAt: post.deletedAt,
     };
 }
 
-// Fx3 : Créer un post
+function mapLeanPost(post: {
+    _id: unknown;
+    authorId: string;
+    content: string;
+    tags?: string[];
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date | null;
+}): PostResponse {
+    return {
+        id: String(post._id),
+        authorId: post.authorId,
+        content: post.content,
+        tags: post.tags ?? [],
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        deletedAt: post.deletedAt,
+    };
+}
+
+async function getCursorDate(cursor?: string | null) {
+    if (!cursor) {
+        return null;
+    }
+
+    const cursorPost = await Post.findById(cursor).select("createdAt").lean();
+
+    return cursorPost?.createdAt ?? null;
+}
+
+async function findPostPage(
+    filter: Record<string, unknown>,
+    limit: number,
+    cursor?: string | null
+): Promise<PostPageResponse> {
+    const safeLimit = Math.min(Math.max(limit, 1), 50);
+    const cursorDate = await getCursorDate(cursor);
+    const query = {
+        ...filter,
+        deletedAt: null,
+        ...(cursorDate ? { createdAt: { $lt: cursorDate } } : {}),
+    };
+    const posts = await Post.find(query)
+        .sort({ createdAt: -1 })
+        .limit(safeLimit + 1)
+        .lean();
+    const pageItems = posts.slice(0, safeLimit);
+    const hasMore = posts.length > safeLimit;
+
+    return {
+        posts: pageItems.map(mapLeanPost),
+        nextCursor: hasMore ? String(pageItems.at(-1)?._id) : null,
+        hasMore,
+    };
+}
+
 async function createPost(
     authorId: string,
     data: CreatePostInput
@@ -24,29 +80,44 @@ async function createPost(
     const post = await Post.create({
         authorId,
         content: data.content.trim(),
+        tags: data.tags ?? [],
     });
 
     return sanitizePost(post);
 }
 
-// Fx4 / Fx11 : Récupérer les posts d'un utilisateur, triés par date décroissante
-// On exclut les posts soft-deleted (deletedAt != null)
-async function getPostsByAuthor(authorId: string): Promise<PostResponse[]> {
-    const posts = await Post.find({ authorId, deletedAt: null })
-        .sort({ createdAt: -1 }) // Plus récents en premier
-        .lean();                 // .lean() = objet JS simple, plus rapide
-
-    return posts.map((post) => ({
-        id: String(post._id),
-        authorId: post.authorId,
-        content: post.content,
-        createdAt: post.createdAt as Date,
-        updatedAt: post.updatedAt as Date,
-        deletedAt: post.deletedAt,
-    }));
+async function getPostsByAuthor(
+    authorId: string,
+    limit = 5,
+    cursor?: string | null
+): Promise<PostPageResponse> {
+    return findPostPage({ authorId }, limit, cursor);
 }
 
-// Récupérer un post par son id (un post soft-deleted reste consultable par id)
+async function getPostsByAuthors(
+    authorIds: string[],
+    limit = 5,
+    cursor?: string | null
+): Promise<PostPageResponse> {
+    const normalizedAuthorIds = Array.from(
+        new Set(authorIds.map((authorId) => authorId.trim()).filter(Boolean))
+    );
+
+    if (normalizedAuthorIds.length === 0) {
+        return {
+            posts: [],
+            nextCursor: null,
+            hasMore: false,
+        };
+    }
+
+    return findPostPage(
+        { authorId: { $in: normalizedAuthorIds } },
+        limit,
+        cursor
+    );
+}
+
 async function getPostById(postId: string): Promise<PostResponse> {
     const post = await Post.findById(postId);
 
@@ -57,14 +128,13 @@ async function getPostById(postId: string): Promise<PostResponse> {
     return sanitizePost(post);
 }
 
-// Modifier un post par son id
 async function updatePost(
     postId: string,
     data: Partial<CreatePostInput>
 ): Promise<PostResponse> {
     const post = await Post.findByIdAndUpdate(
         postId,
-        { content: data.content },
+        { content: data.content, tags: data.tags },
         { returnDocument: "after", runValidators: true }
     );
 
@@ -75,23 +145,13 @@ async function updatePost(
     return sanitizePost(post);
 }
 
-// Récupérer tous les posts (non supprimés), triés par date décroissante
-async function getAllPosts(): Promise<PostResponse[]> {
-    const posts = await Post.find({ deletedAt: null })
-        .sort({ createdAt: -1 })
-        .lean();
-
-    return posts.map((post) => ({
-        id: String(post._id),
-        authorId: post.authorId,
-        content: post.content,
-        createdAt: post.createdAt as Date,
-        updatedAt: post.updatedAt as Date,
-        deletedAt: post.deletedAt,
-    }));
+async function getAllPosts(
+    limit = 5,
+    cursor?: string | null
+): Promise<PostPageResponse> {
+    return findPostPage({}, limit, cursor);
 }
 
-// Soft delete : on ne supprime pas le document, on set deletedAt
 async function softDeletePost(postId: string): Promise<PostResponse> {
     const post = await Post.findByIdAndUpdate(
         postId,
@@ -109,6 +169,7 @@ async function softDeletePost(postId: string): Promise<PostResponse> {
 const postService = {
     createPost,
     getPostsByAuthor,
+    getPostsByAuthors,
     getAllPosts,
     getPostById,
     updatePost,

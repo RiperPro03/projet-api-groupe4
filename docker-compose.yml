@@ -273,6 +273,62 @@ services:
     networks:
       - breezy-network
 
+  minio:
+    image: minio/minio
+    container_name: breezy-minio
+    ports:
+      - "9000:9000"   # API S3 (upload/download)
+      - "9001:9001"   # Console web d'administration
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    networks:
+      - breezy-network
+  media-mongodb:
+    image: mongo:8
+    container_name: media-mongodb
+    restart: unless-stopped
+    ports:
+      - "27022:27017"
+    volumes:
+      - media_mongodb_data:/data/db
+    networks:
+      - breezy-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  media-service:
+    build:
+      context: .
+      dockerfile: ./services/media-service/Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3005"
+    environment:
+      PORT: 3005
+      SERVICE_NAME: media-service
+      MONGO_URI: mongodb://media-mongodb:27017/media_db
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: "9000"
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: breezy-media
+      MINIO_PUBLIC_URL: http://localhost:9000
+    depends_on:
+      media-mongodb:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - breezy-network
+
 volumes:
   auth_postgres_data:
   user_postgres_data:
@@ -280,6 +336,8 @@ volumes:
   profile_mongodb_data:
   interaction_mongodb_data:
   post_mongodb_data:
+  minio_data:
+  media_mongodb_data:
 
 networks:
   breezy-network:

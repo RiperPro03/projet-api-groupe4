@@ -305,8 +305,8 @@ services:
 
   media-service:
     build:
-      context: .
-      dockerfile: ./services/media-service/Dockerfile
+      context: ./services/media-service
+      dockerfile: Dockerfile
     restart: unless-stopped
     expose:
       - "3005"

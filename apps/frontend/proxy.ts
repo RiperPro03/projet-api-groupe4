@@ -118,10 +118,6 @@ export async function proxy(request: NextRequest) {
   const refreshToken = request.cookies.get(REFRESH_TOKEN_KEY)?.value;
 
   if (accessToken) {
-    if (isAuthRoute) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
-
     return NextResponse.next();
   }
 

@@ -3,13 +3,17 @@ import type { RequestHandler } from "express";
 import {
   createProfileSchema,
   profileParamsSchema,
+  profileSearchQuerySchema,
+  profileUsernameParamsSchema,
   updateProfileSchema,
 } from "../models/user-info.model";
 import {
   createProfile,
   deleteProfile,
   getProfileById,
+  getProfileByUsername,
   getProfiles,
+  searchProfilesByUsername,
   updateProfile,
 } from "../services/profile.service";
 
@@ -61,6 +65,42 @@ export const getProfileByIdController: RequestHandler = async (
     return res.status(200).json({
       status: "success",
       data: profile,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const getProfileByUsernameController: RequestHandler = async (
+  req,
+  res,
+  next,
+) => {
+  try {
+    const { username } = profileUsernameParamsSchema.parse(req.params);
+    const profile = await getProfileByUsername(username);
+
+    return res.status(200).json({
+      status: "success",
+      data: profile,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const searchProfilesByUsernameController: RequestHandler = async (
+  req,
+  res,
+  next,
+) => {
+  try {
+    const { username } = profileSearchQuerySchema.parse(req.query);
+    const profiles = await searchProfilesByUsername(username);
+
+    return res.status(200).json({
+      status: "success",
+      data: profiles,
     });
   } catch (error) {
     return next(error);

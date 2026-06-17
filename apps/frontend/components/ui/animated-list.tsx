@@ -28,10 +28,17 @@ export function AnimatedListItem({ children }: { children: React.ReactNode }) {
 export interface AnimatedListProps extends ComponentPropsWithoutRef<"div"> {
   children: React.ReactNode
   delay?: number
+  reverseOrder?: boolean
 }
 
 export const AnimatedList = React.memo(
-  ({ children, className, delay = 1000, ...props }: AnimatedListProps) => {
+  ({
+    children,
+    className,
+    delay = 1000,
+    reverseOrder = true,
+    ...props
+  }: AnimatedListProps) => {
     const [index, setIndex] = useState(0)
     const childrenArray = useMemo(
       () => React.Children.toArray(children),
@@ -40,6 +47,11 @@ export const AnimatedList = React.memo(
 
     useEffect(() => {
       let timeout: ReturnType<typeof setTimeout> | null = null
+
+      if (delay <= 0) {
+        setIndex(Math.max(childrenArray.length - 1, 0))
+        return
+      }
 
       if (index < childrenArray.length - 1) {
         timeout = setTimeout(() => {
@@ -55,9 +67,10 @@ export const AnimatedList = React.memo(
     }, [index, delay, childrenArray.length])
 
     const itemsToShow = useMemo(() => {
-      const result = childrenArray.slice(0, index + 1).reverse()
-      return result
-    }, [index, childrenArray])
+      const result = childrenArray.slice(0, index + 1)
+
+      return reverseOrder ? result.reverse() : result
+    }, [index, childrenArray, reverseOrder])
 
     return (
       <div

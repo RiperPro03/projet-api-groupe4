@@ -75,13 +75,16 @@ export function Particles({
     function resize() {
       const bounds = container.getBoundingClientRect();
       const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      const rootFontSize = Number.parseFloat(
+        window.getComputedStyle(document.documentElement).fontSize,
+      );
 
       width = bounds.width;
       height = bounds.height;
       canvas.width = width * pixelRatio;
       canvas.height = height * pixelRatio;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
+      canvas.style.width = `${width / rootFontSize}rem`;
+      canvas.style.height = `${height / rootFontSize}rem`;
       canvasContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
       particles = Array.from({ length: quantity }, createParticle);
     }

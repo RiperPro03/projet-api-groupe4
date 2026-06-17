@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { FiCalendar } from "react-icons/fi";
+import ProfileActivityTabs from "@/components/profil/ProfileActivityTabs";
 import ProfileSettingsMenu from "@/components/profil/ProfileSettingsMenu";
 import { Particles } from "@/components/ui/particles";
 import { getCurrentUser } from "@/lib/current-user";
@@ -71,6 +72,12 @@ export default async function ProfilePage() {
           <FiCalendar aria-hidden="true" />
           A rejoint Breezyl en {joinedAt}
         </p>
+
+        <div className="mt-8">
+          <ProfileActivityTabs
+            profileUserId={profile?.id_user ?? currentUser.user?.id_user ?? auth.id}
+          />
+        </div>
       </div>
     </section>
   );

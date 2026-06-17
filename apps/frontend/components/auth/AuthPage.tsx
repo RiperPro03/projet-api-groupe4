@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState, type ChangeEventHandler, type FormEvent } from "react";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { loginAction, registerAction } from "@/app/auth/actions";
-import { persistAuthTokens } from "@/lib/auth-token-storage";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { Meteors } from "@/components/ui/meteors";
@@ -60,15 +59,15 @@ function Field({
       <div
         className={`group relative h-14 rounded-xl border transition-shadow focus-within:border-transparent lg:h-14 2xl:h-16 ${
           error
-            ? "border-red-500 focus-within:shadow-[0_0_20px_rgba(239,68,68,0.35)]"
-            : "border-[#536471] focus-within:shadow-[0_0_20px_rgba(0,146,62,0.28)]"
+            ? "border-red-500 focus-within:shadow-[0_0_1.25rem_rgba(239,68,68,0.35)]"
+            : "border-[#536471] focus-within:shadow-[0_0_1.25rem_rgba(0,146,62,0.28)]"
         }`}
       >
         <label className="sr-only" htmlFor={id}>
           {label}
         </label>
         <ShineBorder
-          borderWidth={2}
+          borderWidth="0.125rem"
           duration={15}
           shineColor={
             error
@@ -100,8 +99,8 @@ function Field({
                 ? "Masquer le mot de passe"
                 : "Afficher le mot de passe"
             }
-            aria-pressed={isPasswordVisible}
-            onClick={() => setIsPasswordVisible((visible) => !visible)}
+          aria-pressed={isPasswordVisible}
+          onClick={() => setIsPasswordVisible((visible) => !visible)}
             className="absolute inset-y-0 right-0 z-30 flex w-14 items-center justify-center rounded-r-[inherit] text-xl text-muted-foreground transition-colors hover:text-breezy-green focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-breezy-yellow"
           >
             {isPasswordVisible ? (
@@ -209,11 +208,6 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
         });
         return;
       }
-
-      persistAuthTokens({
-        accessToken: result.data.accessToken,
-        refreshToken: result.data.refreshToken,
-      });
 
       notify({
         tone: "success",

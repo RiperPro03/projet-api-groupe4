@@ -10,6 +10,7 @@ import "@mantine/core/styles.css";
 
 import AppShell from "@/components/AppShell";
 import { NotificationProvider } from "@/components/notifications/NotificationProvider";
+import ReduxProvider from "@/components/providers/ReduxProvider";
 import { getCurrentUser } from "@/lib/current-user";
 
 const geistSans = Geist({
@@ -45,9 +46,11 @@ export default async function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <MantineProvider defaultColorScheme="dark">
-          <NotificationProvider>
-            <AppShell currentUser={currentUser}>{children}</AppShell>
-          </NotificationProvider>
+          <ReduxProvider>
+            <NotificationProvider>
+              <AppShell currentUser={currentUser}>{children}</AppShell>
+            </NotificationProvider>
+          </ReduxProvider>
         </MantineProvider>
       </body>
     </html>

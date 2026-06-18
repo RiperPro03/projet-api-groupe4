@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import axios from "axios";
 import {
   ACCESS_TOKEN_KEY,
   REFRESH_TOKEN_KEY,
@@ -75,6 +76,39 @@ function clearTokenCookies(response: NextResponse) {
   response.cookies.delete(REFRESH_TOKEN_KEY);
 }
 
+function createNextResponseWithRequestTokens(
+  request: NextRequest,
+  tokens: { accessToken?: string; refreshToken?: string },
+) {
+  const requestHeaders = new Headers(request.headers);
+  const cookieValues = new Map<string, string>();
+
+  for (const cookie of request.cookies.getAll()) {
+    cookieValues.set(cookie.name, cookie.value);
+  }
+
+  if (tokens.accessToken) {
+    cookieValues.set(ACCESS_TOKEN_KEY, tokens.accessToken);
+  }
+
+  if (tokens.refreshToken) {
+    cookieValues.set(REFRESH_TOKEN_KEY, tokens.refreshToken);
+  }
+
+  requestHeaders.set(
+    "cookie",
+    Array.from(cookieValues.entries())
+      .map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
+      .join("; "),
+  );
+
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+}
+
 function redirectToLogin(request: NextRequest) {
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = "/login";
@@ -86,24 +120,39 @@ function redirectToLogin(request: NextRequest) {
   return response;
 }
 
-async function refreshAccessToken(request: NextRequest, refreshToken: string) {
+async function verifyAccessToken(request: NextRequest, accessToken: string) {
   try {
-    const response = await fetch(getApiUrl(request, "/auth/refresh-token"), {
-      method: "POST",
+    const response = await axios.get(getApiUrl(request, "/auth/verify"), {
       headers: {
-        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ refreshToken }),
-      cache: "no-store",
+      validateStatus: () => true,
     });
 
-    if (!response.ok) {
+    return response.status >= 200 && response.status < 300;
+  } catch {
+    return false;
+  }
+}
+
+async function refreshAccessToken(request: NextRequest, refreshToken: string) {
+  try {
+    const response = await axios.post<AuthResponse>(
+      getApiUrl(request, "/auth/refresh-token"),
+      { refreshToken },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        validateStatus: () => true,
+      },
+    );
+
+    if (response.status < 200 || response.status >= 300) {
       return null;
     }
 
-    const data = (await response.json()) as AuthResponse;
-
-    return data.data ?? null;
+    return response.data.data ?? null;
   } catch {
     return null;
   }
@@ -117,7 +166,7 @@ export async function proxy(request: NextRequest) {
   const accessToken = request.cookies.get(ACCESS_TOKEN_KEY)?.value;
   const refreshToken = request.cookies.get(REFRESH_TOKEN_KEY)?.value;
 
-  if (accessToken) {
+  if (accessToken && await verifyAccessToken(request, accessToken)) {
     return NextResponse.next();
   }
 
@@ -127,7 +176,10 @@ export async function proxy(request: NextRequest) {
     if (refreshedTokens?.accessToken) {
       const response = isAuthRoute
         ? NextResponse.redirect(new URL("/", request.url))
-        : NextResponse.next();
+        : createNextResponseWithRequestTokens(request, {
+            accessToken: refreshedTokens.accessToken,
+            refreshToken: refreshedTokens.refreshToken ?? refreshToken,
+          });
 
       setTokenCookies(request, response, {
         accessToken: refreshedTokens.accessToken,

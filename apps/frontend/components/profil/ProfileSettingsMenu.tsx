@@ -3,13 +3,16 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { Dropzone } from "@mantine/dropzone";
 import {
   FiEdit3,
   FiEye,
   FiEyeOff,
+  FiImage,
   FiLogOut,
   FiSettings,
   FiShield,
+  FiUpload,
   FiX,
 } from "react-icons/fi";
 import { logoutAction } from "@/app/auth/actions";
@@ -22,6 +25,7 @@ import { useNotifications } from "@/components/notifications/NotificationProvide
 import { RippleButton } from "@/components/ui/ripple-button";
 import { ShineBorder } from "@/components/ui/shine-border";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { getApiErrorMessage, httpClient } from "@/lib/api/http-client";
 
 type ProfileSettingsMenuProps = {
   profile: UpdateProfilePayload;
@@ -32,6 +36,19 @@ const fieldClassName =
 
 const fieldContainerClassName =
   "group relative rounded-xl border border-input bg-background transition-shadow focus-within:border-transparent focus-within:shadow-[0_0_1.25rem_rgba(0,146,62,0.28)]";
+
+const avatarMimeTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const avatarMaxSize = 5 * 1024 * 1024;
+
+type PresignedUrlResponse = {
+  status: "success";
+  data: {
+    uploadUrl: string;
+    objectKey: string;
+    publicUrl: string;
+    expiresIn: number;
+  };
+};
 
 type PasswordFieldProps = {
   id: string;
@@ -92,6 +109,75 @@ function PasswordField({
   );
 }
 
+function getMediaObjectKeyFromUrl(url: string) {
+  if (!url) {
+    return null;
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+    const bucketSegment = "/breezy-media/";
+    const bucketIndex = parsedUrl.pathname.indexOf(bucketSegment);
+
+    if (bucketIndex < 0) {
+      return null;
+    }
+
+    const objectKey = parsedUrl.pathname.slice(bucketIndex + bucketSegment.length);
+
+    return objectKey ? decodeURIComponent(objectKey) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function uploadProfileImage(file: File) {
+  const presignedResponse = await httpClient.post<PresignedUrlResponse>(
+    "/media/presigned-url",
+    {
+      filename: file.name,
+      mimeType: file.type,
+      size: file.size,
+      alt: "Photo de profil",
+      usage: "profile",
+    },
+  );
+
+  await fetch(presignedResponse.data.data.uploadUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": file.type,
+    },
+    body: file,
+  }).then((response) => {
+    if (!response.ok) {
+      throw new Error("Impossible d'envoyer l'image vers le bucket.");
+    }
+  });
+
+  return presignedResponse.data.data.publicUrl;
+}
+
+async function deletePreviousProfileImage(url: string) {
+  const objectKey = getMediaObjectKeyFromUrl(url);
+
+  if (!objectKey) {
+    return;
+  }
+
+  await httpClient.delete(`/media/${encodeURIComponent(objectKey)}`).catch(() => undefined);
+}
+
+function getProfileUpdateErrorMessage(error: unknown) {
+  const apiErrorMessage = getApiErrorMessage(error);
+
+  if (apiErrorMessage !== "Une erreur inattendue est survenue.") {
+    return apiErrorMessage;
+  }
+
+  return error instanceof Error ? error.message : apiErrorMessage;
+}
+
 export default function ProfileSettingsMenu({
   profile,
 }: ProfileSettingsMenuProps) {
@@ -105,6 +191,8 @@ export default function ProfileSettingsMenu({
   const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [form, setForm] = useState(profile);
+  const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -151,8 +239,18 @@ export default function ProfileSettingsMenu({
     };
   }, [isEditorOpen, isSecurityOpen]);
 
+  useEffect(() => {
+    return () => {
+      if (avatarPreview) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+    };
+  }, [avatarPreview]);
+
   function openEditor() {
     setForm(profile);
+    setSelectedAvatar(null);
+    setAvatarPreview(null);
     setIsMenuOpen(false);
     setIsEditorOpen(true);
   }
@@ -174,6 +272,15 @@ export default function ProfileSettingsMenu({
     }));
   }
 
+  function updateSelectedAvatar(file: File) {
+    if (avatarPreview) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+
+    setSelectedAvatar(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  }
+
   async function handleProfileUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -184,7 +291,19 @@ export default function ProfileSettingsMenu({
     setIsSaving(true);
 
     try {
-      const result = await updateCurrentProfileAction(form);
+      let nextForm = form;
+      const previousPhotoUrl = profile.url_photo;
+
+      if (selectedAvatar) {
+        const publicUrl = await uploadProfileImage(selectedAvatar);
+        nextForm = {
+          ...form,
+          url_photo: publicUrl,
+        };
+        setForm(nextForm);
+      }
+
+      const result = await updateCurrentProfileAction(nextForm);
 
       if (result.status === "error") {
         notify({
@@ -195,18 +314,24 @@ export default function ProfileSettingsMenu({
         return;
       }
 
+      if (selectedAvatar && previousPhotoUrl && previousPhotoUrl !== nextForm.url_photo) {
+        await deletePreviousProfileImage(previousPhotoUrl);
+      }
+
       notify({
         tone: "success",
         title: "Profil modifie",
         description: "Vos informations ont ete mises a jour.",
       });
       setIsEditorOpen(false);
+      setSelectedAvatar(null);
+      setAvatarPreview(null);
       router.refresh();
-    } catch {
+    } catch (error) {
       notify({
         tone: "error",
         title: "Modification impossible",
-        description: "Une erreur inattendue est survenue.",
+        description: getProfileUpdateErrorMessage(error),
       });
     } finally {
       setIsSaving(false);
@@ -434,26 +559,59 @@ export default function ProfileSettingsMenu({
                 </div>
               </label>
 
-              <label className="block">
+              <div className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground/75">
-                  URL de la photo
+                  Photo de profil
                 </span>
-                <div className={fieldContainerClassName}>
-                  <ShineBorder
-                    borderWidth="0.125rem"
-                    duration={15}
-                    shineColor={["#00923e", "#f8c100", "#00923e"]}
-                    className="z-20 opacity-0 transition-opacity group-focus-within:opacity-100"
-                  />
-                  <input
-                    type="url"
-                    value={form.url_photo}
-                    onChange={(event) => updateField("url_photo", event.target.value)}
-                    className={fieldClassName}
-                    placeholder="https://exemple.com/photo.jpg"
-                  />
-                </div>
-              </label>
+                <Dropzone
+                  accept={avatarMimeTypes}
+                  maxFiles={1}
+                  maxSize={avatarMaxSize}
+                  multiple={false}
+                  disabled={isSaving}
+                  onDrop={(files) => {
+                    const [file] = files;
+
+                    if (file) {
+                      updateSelectedAvatar(file);
+                    }
+                  }}
+                  onReject={() => {
+                    notify({
+                      tone: "error",
+                      title: "Image refusee",
+                      description: "Choisissez une image JPG, PNG, GIF ou WebP de 5 Mo maximum.",
+                    });
+                  }}
+                  className="rounded-xl border border-dashed border-input bg-background p-0 transition-colors hover:border-breezy-green"
+                >
+                  <div className="flex min-h-36 items-center gap-4 p-4">
+                    <div
+                      className="flex size-20 shrink-0 items-center justify-center rounded-full bg-breezy-green bg-cover bg-center text-2xl font-bold text-black"
+                      style={
+                        avatarPreview || form.url_photo
+                          ? { backgroundImage: `url(${avatarPreview ?? form.url_photo})` }
+                          : undefined
+                      }
+                      aria-hidden="true"
+                    >
+                      {!avatarPreview && !form.url_photo && <FiImage aria-hidden="true" />}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <FiUpload className="shrink-0 text-breezy-green" aria-hidden="true" />
+                        <span>
+                          {selectedAvatar ? selectedAvatar.name : "Deposer une image"}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        JPG, PNG, GIF ou WebP. 5 Mo maximum.
+                      </p>
+                    </div>
+                  </div>
+                </Dropzone>
+              </div>
 
               <div className="flex justify-end gap-3 pt-3">
                 <RippleButton

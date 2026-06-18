@@ -1,14 +1,26 @@
 import { v4 as uuidv4 } from "uuid";
-import { minioClient } from "../config/minio";
+import {
+    buildPublicObjectUrl,
+    minioClient,
+    publicMinioClient,
+    toBrowserMinioUrl,
+} from "../config/minio";
 import { env } from "../config/env";
 import { Media } from "../models/media.model";
 import type {
+    MediaUsage,
     PresignedUrlInput,
     PresignedUrlResponse,
     MediaResponse,
-} from "../models/media.types";
+} from "../types/media.type";
 
 const PRESIGNED_EXPIRY = 5 * 60; // 5 minutes en secondes
+const usageFolders: Record<MediaUsage, string> = {
+    profile: "profiles",
+    post: "posts",
+    comment: "comments",
+    general: "general",
+};
 
 // Détermine le type (image/video/file) depuis le mimeType
 function resolveType(mimeType: string): "image" | "video" | "file" {
@@ -25,6 +37,8 @@ function sanitizeMedia(media: InstanceType<typeof Media>): MediaResponse {
         mimeType: media.mimeType,
         size: media.size,
         originalName: media.originalName,
+        ownerId: media.ownerId,
+        usage: media.usage,
         alt: media.alt,
         type: media.type,
         bucket: media.bucket,
@@ -40,18 +54,19 @@ async function generatePresignedUrl(
     data: PresignedUrlInput
 ): Promise<PresignedUrlResponse> {
     // Génère un nom de fichier unique pour éviter les collisions
-    const ext = data.filename.split(".").pop() ?? "bin";
-    const objectKey = `${uuidv4()}.${ext}`;
+    const rawExt = data.filename.split(".").pop() ?? "bin";
+    const ext = rawExt.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "bin";
+    const objectKey = `${usageFolders[data.usage]}/${data.ownerId}/${uuidv4()}.${ext}`;
     const bucket = env.minio.bucket;
 
     // Génère l'URL signée (valable PRESIGNED_EXPIRY secondes)
-    const uploadUrl = await minioClient.presignedPutObject(
+    const uploadUrl = await publicMinioClient.presignedPutObject(
         bucket,
         objectKey,
         PRESIGNED_EXPIRY
     );
 
-    const publicUrl = `${env.minio.publicUrl}/${bucket}/${objectKey}`;
+    const publicUrl = buildPublicObjectUrl(bucket, objectKey);
 
     // Sauvegarde les métadonnées en MongoDB dès la génération
     // (le fichier n'est pas encore uploadé mais on connaît déjà ses infos)
@@ -60,6 +75,8 @@ async function generatePresignedUrl(
         mimeType: data.mimeType,
         size: data.size,
         originalName: data.filename,
+        ownerId: data.ownerId,
+        usage: data.usage,
         alt: data.alt ?? "",
         type: resolveType(data.mimeType),
         bucket,
@@ -67,7 +84,7 @@ async function generatePresignedUrl(
     });
 
     return {
-        uploadUrl,
+        uploadUrl: toBrowserMinioUrl(uploadUrl),
         objectKey,
         publicUrl,
         expiresIn: PRESIGNED_EXPIRY,
@@ -86,11 +103,15 @@ async function getMediaByKey(objectKey: string): Promise<MediaResponse> {
 }
 
 // Supprime un fichier de MinIO ET ses métadonnées de MongoDB
-async function deleteMedia(objectKey: string): Promise<void> {
+async function deleteMedia(objectKey: string, ownerId?: string): Promise<void> {
     const media = await Media.findOne({ objectKey });
 
     if (!media) {
         throw new Error("MEDIA_NOT_FOUND");
+    }
+
+    if (ownerId && media.ownerId !== ownerId) {
+        throw new Error("MEDIA_FORBIDDEN");
     }
 
     // Supprime le fichier binaire dans MinIO

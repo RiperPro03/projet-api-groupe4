@@ -25,7 +25,7 @@ const ALLOWED_MIME_TYPES = [
 
 // Valide le body de POST /media/presigned-url
 function validatePresignedUrl(req: Request, res: Response, next: NextFunction) {
-    const { filename, mimeType, size } = req.body;
+    const { filename, mimeType, size, usage } = req.body;
 
     if (!filename || typeof filename !== "string") {
         return res.status(400).json({
@@ -54,6 +54,16 @@ function validatePresignedUrl(req: Request, res: Response, next: NextFunction) {
         return res.status(400).json({
             status: "error",
             message: "File size cannot exceed 100MB",
+        });
+    }
+
+    if (
+        usage !== undefined &&
+        !["profile", "post", "comment", "general"].includes(usage)
+    ) {
+        return res.status(400).json({
+            status: "error",
+            message: "usage must be one of: profile, post, comment, general",
         });
     }
 

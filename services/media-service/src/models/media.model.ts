@@ -1,15 +1,17 @@
 import { Schema, model, Document } from "mongoose";
+import type { MediaUsage } from "../types/media.type";
 
-// Correspond à la table media du MCD
 export interface IMedia extends Document {
-    objectKey: string;      // clé unique dans MinIO (ex: uuid.jpg)
-    mimeType: string;       // image/jpeg, video/mp4, etc.
-    size: number;           // taille en octets
-    originalName: string;   // nom original du fichier
-    alt: string;            // texte alternatif (accessibilité)
-    type: string;           // "image" | "video" | "file"
-    bucket: string;         // nom du bucket MinIO
-    url: string;            // URL publique d'accès au fichier
+    objectKey: string;
+    mimeType: string;
+    size: number;
+    originalName: string;
+    ownerId: string;
+    usage: MediaUsage;
+    alt: string;
+    type: "image" | "video" | "file";
+    bucket: string;
+    url: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -34,6 +36,17 @@ const mediaSchema = new Schema<IMedia>(
             type: String,
             required: true,
         },
+        ownerId: {
+            type: String,
+            required: true,
+            index: true,
+        },
+        usage: {
+            type: String,
+            enum: ["profile", "post", "comment", "general"],
+            required: true,
+            index: true,
+        },
         alt: {
             type: String,
             default: "",
@@ -52,7 +65,7 @@ const mediaSchema = new Schema<IMedia>(
             required: true,
         },
     },
-    { timestamps: true }
+    { timestamps: true },
 );
 
 export const Media = model<IMedia>("Media", mediaSchema);

@@ -1,16 +1,42 @@
 import type { Request, Response } from "express";
 import mediaService from "../services/media.service";
+import type { MediaUsage } from "../types/media.type";
+
+const mediaUsages: MediaUsage[] = ["profile", "post", "comment", "general"];
+
+function getAuthenticatedOwnerId(req: Request): string | null {
+    const ownerId = req.header("x-user-id");
+
+    return ownerId && ownerId.trim().length > 0 ? ownerId.trim() : null;
+}
+
+function resolveMediaUsage(value: unknown): MediaUsage {
+    return typeof value === "string" && mediaUsages.includes(value as MediaUsage)
+        ? value as MediaUsage
+        : "general";
+}
 
 // POST /media/presigned-url — Génère une URL d'upload temporaire
 async function getPresignedUrl(req: Request, res: Response) {
     try {
-        const { filename, mimeType, size, alt } = req.body;
+        const ownerId = getAuthenticatedOwnerId(req);
+
+        if (!ownerId) {
+            return res.status(401).json({
+                status: "error",
+                message: "Missing authenticated user",
+            });
+        }
+
+        const { filename, mimeType, size, alt, usage } = req.body;
 
         const result = await mediaService.generatePresignedUrl({
             filename,
             mimeType,
             size,
             alt,
+            ownerId,
+            usage: resolveMediaUsage(usage),
         });
 
         return res.status(201).json({
@@ -28,7 +54,7 @@ async function getPresignedUrl(req: Request, res: Response) {
 }
 
 // GET /media/:objectKey — Récupère les métadonnées d'un fichier
-async function getMedia(req: Request, res: Response) {
+async function getMedia(req: Request<{ objectKey: string }>, res: Response) {
     try {
         const media = await mediaService.getMediaByKey(req.params.objectKey);
 
@@ -53,9 +79,18 @@ async function getMedia(req: Request, res: Response) {
 }
 
 // DELETE /media/:objectKey — Supprime un fichier (MinIO + MongoDB)
-async function deleteMedia(req: Request, res: Response) {
+async function deleteMedia(req: Request<{ objectKey: string }>, res: Response) {
     try {
-        await mediaService.deleteMedia(req.params.objectKey);
+        const ownerId = getAuthenticatedOwnerId(req);
+
+        if (!ownerId) {
+            return res.status(401).json({
+                status: "error",
+                message: "Missing authenticated user",
+            });
+        }
+
+        await mediaService.deleteMedia(req.params.objectKey, ownerId);
 
         return res.status(200).json({
             status: "success",
@@ -66,6 +101,12 @@ async function deleteMedia(req: Request, res: Response) {
             return res.status(404).json({
                 status: "error",
                 message: "Media not found",
+            });
+        }
+        if (error instanceof Error && error.message === "MEDIA_FORBIDDEN") {
+            return res.status(403).json({
+                status: "error",
+                message: "Forbidden",
             });
         }
         console.error(error);

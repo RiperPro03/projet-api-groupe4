@@ -21,6 +21,11 @@ export const servicesConfig = {
     gatewayPrefix: "/posts",
     internalBasePath: "/posts",
   },
+  media: {
+    serviceName: "media-service",
+    gatewayPrefix: "/media",
+    internalBasePath: "/media",
+  },
   follows: {
     serviceName: "follow-service",
     gatewayPrefix: "/follows",

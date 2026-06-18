@@ -1,4 +1,5 @@
 import axios from "axios";
+import type { AxiosRequestConfig } from "axios";
 
 export type ApiErrorBody = {
   message?: string;
@@ -13,18 +14,46 @@ export const httpClient = axios.create({
   },
 });
 
+let refreshPromise: Promise<boolean> | null = null;
+const sessionClient = axios.create({
+  withCredentials: true,
+});
+
+async function refreshSession() {
+  refreshPromise ??= sessionClient
+    .post("/api/auth/refresh-token", undefined, {
+      validateStatus: () => true,
+    })
+    .then((response) => response.status >= 200 && response.status < 300)
+    .catch(() => false)
+    .finally(() => {
+      refreshPromise = null;
+    });
+
+  return refreshPromise;
+}
+
 httpClient.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const originalConfig = error.config as
+      | (AxiosRequestConfig & { _retry?: boolean })
+      | undefined;
+
     if (
       axios.isAxiosError(error) &&
       error.response?.status === 401 &&
-      typeof window !== "undefined"
+      typeof window !== "undefined" &&
+      originalConfig &&
+      !originalConfig._retry
     ) {
-      await fetch("/api/auth/session", {
-        method: "DELETE",
-        cache: "no-store",
-      }).catch(() => undefined);
+      originalConfig._retry = true;
+
+      if (await refreshSession()) {
+        return httpClient.request(originalConfig);
+      }
+
+      await sessionClient.delete("/api/auth/session").catch(() => undefined);
 
       if (!window.location.pathname.startsWith("/login")) {
         const redirect = `${window.location.pathname}${window.location.search}`;

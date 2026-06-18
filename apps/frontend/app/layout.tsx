@@ -7,6 +7,7 @@ import {
   mantineHtmlProps,
 } from "@mantine/core";
 import "@mantine/core/styles.css";
+import "@mantine/dropzone/styles.css";
 
 import AppShell from "@/components/AppShell";
 import { NotificationProvider } from "@/components/notifications/NotificationProvider";

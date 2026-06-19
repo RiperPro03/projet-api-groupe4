@@ -3,7 +3,12 @@ import type { NextFunction, Request, Response } from "express";
 
 import { registerController } from "../controllers/register.controller";
 import { authMiddleware, optionalAuthMiddleware } from "../middlewares/auth.middleware";
-import { adminRoles, allowVisitorOrRoles } from "../middlewares/rbac.middleware";
+import {
+  adminRoles,
+  allowVisitorOrRoles,
+  requireParamOwnerOrRoles,
+  requireRoles,
+} from "../middlewares/rbac.middleware";
 import { buildServiceUrl } from "../config/services";
 import { createForwardHandler, requestService } from "../utils/http-client";
 
@@ -100,6 +105,10 @@ router.delete("/session", (_req, res) => {
   res.status(200).json({ status: "success" });
 });
 router.use(authMiddleware);
+router.get("/me", forwardAuthRequest);
+router.get("/verify", forwardAuthRequest);
+router.get("/", requireRoles(adminRoles), forwardAuthRequest);
+router.get("/:id", requireParamOwnerOrRoles({ roles: adminRoles, ownerParam: "id" }), forwardAuthRequest);
 router.use(forwardAuthRequest);
 
 export default router;

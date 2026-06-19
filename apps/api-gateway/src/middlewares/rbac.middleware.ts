@@ -12,7 +12,9 @@ const forbiddenPayload = {
 
 type AccessRule = {
   roles: readonly UserRole[];
+  ownerBodyField?: string;
   ownerQueryParam?: string;
+  ownerParam?: string;
 };
 
 type PostResponse = {
@@ -75,6 +77,45 @@ export const requireOwnerOrRoles =
     return res.status(403).json(forbiddenPayload);
   };
 
+export const requireParamOwnerOrRoles =
+  ({ roles, ownerParam }: AccessRule) =>
+  (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const role = req.authUser?.role;
+
+    if (role && roles.includes(role as UserRole)) {
+      return next();
+    }
+
+    if (ownerParam && req.authUser?.id) {
+      const ownerId = getRouteValue(req.params[ownerParam]);
+
+      if (ownerId === req.authUser.id) {
+        return next();
+      }
+    }
+
+    return res.status(403).json(forbiddenPayload);
+  };
+
+export const requireBodyOwnerOrRoles =
+  ({ roles, ownerBodyField }: AccessRule) =>
+  (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const role = req.authUser?.role;
+
+    if (role && roles.includes(role as UserRole)) {
+      return next();
+    }
+
+    if (ownerBodyField && req.authUser?.id) {
+      const ownerId = getRouteValue(req.body?.[ownerBodyField]);
+
+      if (ownerId === req.authUser.id) {
+        return next();
+      }
+    }
+
+    return res.status(403).json(forbiddenPayload);
+  };
 export const requirePostOwnerOrRoles =
   (roles: readonly UserRole[]) =>
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

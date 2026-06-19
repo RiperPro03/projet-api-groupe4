@@ -9,10 +9,12 @@ import { fetchUserPosts } from "@/lib/api/post.service";
 
 type ProfileActivityTabsProps = {
   profileUserId: string;
+  isOwnProfile?: boolean;
 };
 
 export default function ProfileActivityTabs({
   profileUserId,
+  isOwnProfile = false,
 }: ProfileActivityTabsProps) {
   const fetchPosts = useMemo(() => {
     return fetchUserPosts(profileUserId);
@@ -30,7 +32,7 @@ export default function ProfileActivityTabs({
       </Tabs.List>
 
       <Tabs.Panel value="posts" pt="md">
-        <PostList fetchPosts={fetchPosts} title="Posts du profil" />
+        <PostList fetchPosts={fetchPosts} title="Posts du profil" showCreateButton={isOwnProfile} />
       </Tabs.Panel>
 
       <Tabs.Panel value="comments" pt="md">

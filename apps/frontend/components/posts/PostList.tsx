@@ -38,6 +38,7 @@ type PostListProps = {
   fetchCommentsForPost?: (postId: string) => Promise<Comment[]>;
   pageSize?: number;
   title?: string;
+  showCreateButton?: boolean;
 };
 
 function PostFeedItem({
@@ -206,6 +207,7 @@ export default function PostList({
   fetchCommentsForPost,
   pageSize = 5,
   title = "Fil d'actualite",
+  showCreateButton = true,
 }: PostListProps) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
@@ -319,15 +321,17 @@ export default function PostList({
         <Text fw={700} style={{ color: "var(--foreground)" }} size="lg">
           {title}
         </Text>
-        <Button
-          leftSection={<FiPlus size={16} />}
-          variant="light"
-          color="green"
-          radius="xl"
-          onClick={() => setIsCreatePostOpen(true)}
-        >
-          Ajouter un post
-        </Button>
+        {showCreateButton && (
+          <Button
+            leftSection={<FiPlus size={16} />}
+            variant="light"
+            color="green"
+            radius="xl"
+            onClick={() => setIsCreatePostOpen(true)}
+          >
+            Ajouter un post
+          </Button>
+        )}
       </Group>
 
       {error && (

@@ -12,7 +12,8 @@ import {
   Text,
   Tooltip,
 } from "@mantine/core";
-import { FiHeart, FiMessageCircle } from "react-icons/fi";
+import type { ReactNode } from "react";
+import { FiHeart, FiMessageCircle, FiTrash2 } from "react-icons/fi";
 import type { Author, Media } from "@/types/post";
 
 type ContentCardProps = {
@@ -28,6 +29,8 @@ type ContentCardProps = {
   isLiked?: boolean;
   onComment?: () => void;
   onLike?: () => void;
+  onDelete?: () => void;
+  isDeleting?: boolean;
 };
 
 const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -91,8 +94,9 @@ function MediaGrid({ media = [] }: { media?: Media[] }) {
       mt="sm"
       style={{
         display: "grid",
-        gridTemplateColumns: media.length === 1 ? "1fr" : "repeat(2, minmax(0, 1fr))",
         gap: 8,
+        gridTemplateColumns: media.length === 1 ? "1fr" : "repeat(2, minmax(0, 1fr))",
+        width: "100%",
       }}
     >
       {media.map((item) => (
@@ -100,10 +104,10 @@ function MediaGrid({ media = [] }: { media?: Media[] }) {
           key={item.id}
           style={{
             aspectRatio: media.length === 1 ? "16 / 10" : "1 / 1",
-            overflow: "hidden",
-            borderRadius: 8,
-            border: "1px solid var(--border)",
             background: "var(--muted)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            overflow: "hidden",
           }}
         >
           {item.type === "image" ? (
@@ -118,12 +122,12 @@ function MediaGrid({ media = [] }: { media?: Media[] }) {
             <video
               controls
               preload="metadata"
-              aria-label={item.alt ?? "Video du contenu"}
+              aria-label={item.alt ?? "Vidéo du contenu"}
               style={{
                 display: "block",
                 height: "100%",
-                width: "100%",
                 objectFit: "cover",
+                width: "100%",
               }}
             >
               <source src={item.url} />
@@ -144,7 +148,7 @@ function ActionButton({
   label: string;
   count?: number;
   onClick?: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <Group gap={6} wrap="nowrap">
@@ -182,6 +186,8 @@ export default function ContentCard({
   isLiked = false,
   onComment,
   onLike,
+  onDelete,
+  isDeleting = false,
 }: ContentCardProps) {
   const discussionCount = type === "post" ? commentsCount : repliesCount;
   const initials = author.name
@@ -190,6 +196,50 @@ export default function ContentCard({
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  const shouldUseFullWidthBody = type === "post" && !isReply;
+
+  const metaContent = (
+    <Group gap={6} wrap="wrap">
+      <Text fw={700} style={{ color: "var(--foreground)" }} size="sm">
+        {author.name}
+      </Text>
+      <Text style={{ color: "var(--muted-foreground)" }} size="sm">
+        @{author.username}
+      </Text>
+      <Text style={{ color: "var(--muted-foreground)" }} size="sm">
+        &middot;
+      </Text>
+      <Text style={{ color: "var(--muted-foreground)" }} size="sm">
+        {formatDate(createdAt)}
+      </Text>
+    </Group>
+  );
+
+  const bodyContent = (
+    <>
+      <LinkifiedText text={content} />
+      <MediaGrid media={media} />
+
+      <Group gap="xl" mt={4}>
+        <ActionButton
+          label={type === "post" ? "Commenter" : "Répondre"}
+          count={discussionCount}
+          onClick={onComment}
+        >
+          <FiMessageCircle size={18} />
+        </ActionButton>
+        <ActionButton
+          label={isLiked ? "Retirer le like" : "Aimer"}
+          count={likesCount}
+          onClick={onLike}
+        >
+          <Box c={isLiked ? "green.4" : undefined} component="span" lh={0}>
+            <FiHeart size={18} />
+          </Box>
+        </ActionButton>
+      </Group>
+    </>
+  );
 
   return (
     <Card
@@ -199,49 +249,65 @@ export default function ContentCard({
       bg="var(--card)"
       style={{
         borderColor: isReply ? "rgba(0, 146, 62, 0.28)" : "var(--border)",
+        position: "relative",
         width: "100%",
       }}
     >
-      <Group align="flex-start" gap="sm" wrap="nowrap">
-        <Avatar src={author.avatarUrl} alt={author.name} radius="xl" size={44}>
-          {initials}
-        </Avatar>
+      {onDelete && (
+        <Tooltip label="Supprimer le post">
+          <ActionIcon
+            aria-label="Supprimer le post"
+            color="red"
+            disabled={isDeleting}
+            loading={isDeleting}
+            onClick={onDelete}
+            radius="xl"
+            size="sm"
+            variant="subtle"
+            style={{
+              position: "absolute",
+              right: 12,
+              top: 12,
+            }}
+          >
+            <FiTrash2 size={16} />
+          </ActionIcon>
+        </Tooltip>
+      )}
 
-        <Stack gap={8} flex={1} style={{ minWidth: 0 }}>
-          <Group gap={6} wrap="wrap">
-            <Text fw={700} style={{ color: "var(--foreground)" }} size="sm">
-              {author.name}
-            </Text>
-            <Text style={{ color: "var(--muted-foreground)" }} size="sm">
-              @{author.username}
-            </Text>
-            <Text style={{ color: "var(--muted-foreground)" }} size="sm">
-              ·
-            </Text>
-            <Text style={{ color: "var(--muted-foreground)" }} size="sm">
-              {formatDate(createdAt)}
-            </Text>
+      {shouldUseFullWidthBody ? (
+        <Stack gap={10}>
+          <Group
+            align="flex-start"
+            gap="sm"
+            wrap="nowrap"
+            style={{ paddingRight: onDelete ? 36 : undefined }}
+          >
+            <Avatar src={author.avatarUrl} alt={author.name} radius="xl" size={44}>
+              {initials}
+            </Avatar>
+
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              {metaContent}
+            </Box>
           </Group>
 
-          <LinkifiedText text={content} />
-          <MediaGrid media={media} />
-
-          <Group gap="xl" mt={4}>
-            <ActionButton
-              label={type === "post" ? "Commenter" : "Repondre"}
-              count={discussionCount}
-              onClick={onComment}
-            >
-              <FiMessageCircle size={18} />
-            </ActionButton>
-            <ActionButton label={isLiked ? "Retirer le like" : "Aimer"} count={likesCount} onClick={onLike}>
-              <Box c={isLiked ? "green.4" : undefined} component="span" lh={0}>
-              <FiHeart size={18} />
-              </Box>
-            </ActionButton>
-          </Group>
+          <Stack gap={8}>
+            {bodyContent}
+          </Stack>
         </Stack>
-      </Group>
+      ) : (
+        <Group align="flex-start" gap="sm" wrap="nowrap">
+          <Avatar src={author.avatarUrl} alt={author.name} radius="xl" size={44}>
+            {initials}
+          </Avatar>
+
+          <Stack gap={8} style={{ flex: 1, minWidth: 0 }}>
+            {metaContent}
+            {bodyContent}
+          </Stack>
+        </Group>
+      )}
     </Card>
   );
 }

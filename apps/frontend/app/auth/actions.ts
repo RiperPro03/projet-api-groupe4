@@ -149,7 +149,7 @@ export async function registerAction(
 
     return {
       status: "error",
-      message: data?.message ?? "Creation du compte impossible.",
+      message: data?.message ?? "Création du compte impossible.",
     };
   }
 

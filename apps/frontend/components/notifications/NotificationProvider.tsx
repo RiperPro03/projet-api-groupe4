@@ -17,6 +17,7 @@ import {
 
 type NotifyOptions = {
   duration?: number | null;
+  replaceId?: string;
 };
 
 type NotifyInput = {
@@ -38,9 +39,9 @@ function createNotification({
   tone,
   title,
   description,
-}: NotifyInput): AppNotification {
+}: NotifyInput, id?: string): AppNotification {
   return {
-    id: `${tone}-${Date.now()}-${crypto.randomUUID()}`,
+    id: id ?? `${tone}-${Date.now()}-${crypto.randomUUID()}`,
     title,
     description,
     tone,
@@ -58,10 +59,28 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const notify = useCallback(
     (notification: NotifyInput, options?: NotifyOptions) => {
-      const nextNotification = createNotification(notification);
+      const nextNotification = createNotification(notification, options?.replaceId);
 
-      setNotifications([nextNotification]);
-      setAutoCloseDelay(options?.duration === undefined ? 4000 : options.duration);
+      setNotifications((currentNotifications) => {
+        if (!options?.replaceId) {
+          return [nextNotification];
+        }
+
+        const hasNotificationToReplace = currentNotifications.some(
+          (currentNotification) => currentNotification.id === options.replaceId,
+        );
+
+        if (!hasNotificationToReplace) {
+          return [nextNotification];
+        }
+
+        return currentNotifications.map((currentNotification) =>
+          currentNotification.id === options.replaceId
+            ? nextNotification
+            : currentNotification,
+        );
+      });
+      setAutoCloseDelay(options?.duration === undefined ? 2500 : options.duration);
 
       return nextNotification.id;
     },

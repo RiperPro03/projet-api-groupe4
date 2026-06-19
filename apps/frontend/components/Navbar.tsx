@@ -27,7 +27,6 @@ export default function Navbar({
         { href: "/", label: "Accueil", icon: FiHome },
         { href: "/search", label: "Recherche", icon: FiSearch },
         { href: "/notif", label: "Notifications", icon: FiBell },
-        { href: "/msg", label: "Messages", icon: FiMail },
         { href: "/profile", label: "Profil", icon: FiUser },
     ];
 

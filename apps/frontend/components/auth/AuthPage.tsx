@@ -172,17 +172,17 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
       notify({
         tone: "error",
         title: "Formulaire incomplet",
-        description: "Corrige les champs indiques avant de continuer.",
+        description: "Corrige les champs indiqués avant de continuer.",
       });
       return;
     }
 
     setIsSubmitting(true);
-    notify(
+    const authNotificationId = notify(
       {
         tone: "loading",
-        title: isLogin ? "Connexion en cours" : "Creation du compte",
-        description: "La requete est envoyee au service d'authentification.",
+        title: isLogin ? "Connexion en cours" : "Création du compte",
+        description: "La requête est envoyée au service d'authentification.",
       },
       { duration: null },
     );
@@ -201,19 +201,25 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
 
       if (result.status === "error") {
         setSubmitError(result.message);
-        notify({
-          tone: "error",
-          title: "Authentification impossible",
-          description: result.message,
-        });
+        notify(
+          {
+            tone: "error",
+            title: "Authentification impossible",
+            description: result.message,
+          },
+          { replaceId: authNotificationId },
+        );
         return;
       }
 
-      notify({
-        tone: "success",
-        title: isLogin ? "Connexion reussie" : "Compte cree",
-        description: "Redirection vers Breezyl.",
-      });
+      notify(
+        {
+          tone: "success",
+          title: isLogin ? "Connexion réussie" : "Compte créé",
+          description: "Redirection vers Breezyl.",
+        },
+        { replaceId: authNotificationId },
+      );
 
       window.setTimeout(() => {
         router.push("/");
@@ -226,11 +232,14 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
           : "Une erreur inattendue est survenue.";
 
       setSubmitError(message);
-      notify({
-        tone: "error",
-        title: "Authentification impossible",
-        description: message,
-      });
+      notify(
+        {
+          tone: "error",
+          title: "Authentification impossible",
+          description: message,
+        },
+        { replaceId: authNotificationId },
+      );
     } finally {
       setIsSubmitting(false);
     }

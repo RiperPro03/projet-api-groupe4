@@ -39,6 +39,7 @@ async function createPost(req: Request, res: Response) {
         const post = await postService.createPost(req.body.authorId, {
             content: req.body.content,
             tags: req.body.tags,
+            media: req.body.media,
         });
 
         return res.status(201).json({
@@ -161,6 +162,7 @@ async function updatePost(req: Request, res: Response) {
         const post = await postService.updatePost(postId, {
             content: req.body.content,
             tags: req.body.tags,
+            media: req.body.media,
         });
 
         return res.status(200).json({
@@ -215,7 +217,8 @@ async function softDeletePost(req: Request, res: Response) {
             });
         }
 
-        const post = await postService.softDeletePost(postId);
+        const requesterId = req.header("x-user-id");
+        const post = await postService.softDeletePost(postId, requesterId);
 
         return res.status(200).json({
             status: "success",
@@ -227,6 +230,12 @@ async function softDeletePost(req: Request, res: Response) {
             return res.status(404).json({
                 status: "error",
                 message: "Post not found",
+            });
+        }
+        if (error instanceof Error && error.message === "POST_FORBIDDEN") {
+            return res.status(403).json({
+                status: "error",
+                message: "Forbidden",
             });
         }
         console.error(error);

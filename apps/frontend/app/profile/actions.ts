@@ -107,14 +107,14 @@ export async function updatePasswordAction(
   if (payload.newPassword.length < 8) {
     return {
       status: "error",
-      message: "Le nouveau mot de passe doit contenir au moins 8 caracteres.",
+      message: "Le nouveau mot de passe doit contenir au moins 8 caractères.",
     };
   }
 
   if (payload.currentPassword === payload.newPassword) {
     return {
       status: "error",
-      message: "Le nouveau mot de passe doit etre different de l'ancien.",
+      message: "Le nouveau mot de passe doit être différent de l'ancien.",
     };
   }
 
@@ -124,7 +124,7 @@ export async function updatePasswordAction(
   if (!accessToken) {
     return {
       status: "error",
-      message: "Votre session a expire. Reconnectez-vous.",
+      message: "Votre session a expiré. Reconnectez-vous.",
     };
   }
 

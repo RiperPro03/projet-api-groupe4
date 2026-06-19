@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import { authMiddleware } from "../middlewares/auth.middleware";
+import { authenticatedRoles, requireRoles } from "../middlewares/rbac.middleware";
 import { createForwardHandler } from "../utils/http-client";
 
 const router = Router();
@@ -8,6 +9,7 @@ const forwardFollowRequest = createForwardHandler("follows");
 
 router.all("/health", forwardFollowRequest);
 router.use(authMiddleware);
+router.use(requireRoles(authenticatedRoles));
 router.use(forwardFollowRequest);
 
 export default router;

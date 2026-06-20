@@ -7,6 +7,7 @@ import ContentCard from "@/components/feed/ContentCard";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { isApiStatusCode } from "@/lib/api/http-client";
 import { likeComment, unlikeComment } from "@/lib/api/interaction.service";
+import { resolveCurrentUserId } from "@/lib/current-user.shared";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   hydrateLike,
@@ -96,10 +97,7 @@ function ThreadNode({
     }
 
     const currentUser = await getCurrentUserFromApi();
-    const userId =
-      currentUser.profile?.id_user ??
-      currentUser.user?.id_user ??
-      currentUser.auth.id;
+    const userId = resolveCurrentUserId(currentUser);
 
     setIsLikePending(true);
 

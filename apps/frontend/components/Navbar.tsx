@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiBell, FiHome, FiMail, FiSearch, FiUser } from "react-icons/fi";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { ThemedLogo } from "@/components/branding/ThemedLogo";
-import type { CurrentUser } from "@/lib/current-user";
+import { getUnreadCount } from "@/lib/api/notification.service";
+import { resolveCurrentUserId, type CurrentUser } from "@/lib/current-user.shared";
 
 export default function Navbar({
     currentUser,
@@ -15,6 +16,7 @@ export default function Navbar({
 }) {
     const pathname = usePathname();
     const [logoAnimationKey, setLogoAnimationKey] = useState(0);
+    const [unreadCount, setUnreadCount] = useState(0);
     const profileName =
         currentUser?.profile?.nickname ||
         currentUser?.profile?.username ||
@@ -22,6 +24,33 @@ export default function Navbar({
         "";
     const profileInitials = profileName.slice(0, 2).toUpperCase();
     const profilePhoto = currentUser?.profile?.url_photo;
+
+    useEffect(() => {
+        if (!currentUser) {
+            return;
+        }
+
+        let isMounted = true;
+        const recipientId = resolveCurrentUserId(currentUser);
+
+        getUnreadCount(recipientId)
+            .then((count) => {
+                if (isMounted) {
+                    setUnreadCount(count);
+                }
+            })
+            .catch(() => {
+                if (isMounted) {
+                    setUnreadCount(0);
+                }
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [currentUser, pathname]);
+
+    const displayedUnreadCount = currentUser ? unreadCount : 0;
 
     const links = [
         { href: "/", label: "Accueil", icon: FiHome },
@@ -77,7 +106,7 @@ export default function Navbar({
                                     : "text-foreground hover:text-breezy-yellow"
                             }`}
                         >
-                            <span className="flex w-6 shrink-0 justify-center">
+                            <span className="relative flex w-6 shrink-0 justify-center">
                                 {href === "/profile" && currentUser ? (
                                     <span
                                         className="flex size-8 shrink-0 items-center justify-center rounded-full bg-breezy-green bg-cover bg-center text-xs font-bold text-black"
@@ -91,7 +120,14 @@ export default function Navbar({
                                         {!profilePhoto && profileInitials}
                                     </span>
                                 ) : (
-                                    <Icon className="h-6 w-6" aria-hidden="true" />
+                                    <>
+                                        <Icon className="h-6 w-6" aria-hidden="true" />
+                                        {href === "/notif" && displayedUnreadCount > 0 && (
+                                            <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-breezy-green px-1 text-[10px] font-bold leading-4 text-black">
+                                                {displayedUnreadCount > 99 ? "99+" : displayedUnreadCount}
+                                            </span>
+                                        )}
+                                    </>
                                 )}
                             </span>
                             <span className="ml-5 hidden whitespace-nowrap opacity-0 transition-opacity duration-300 md:inline group-hover:opacity-100">

@@ -4,7 +4,7 @@ import { FiCalendar } from "react-icons/fi";
 import ProfileActivityTabs from "@/components/profil/ProfileActivityTabs";
 import ProfileSettingsMenu from "@/components/profil/ProfileSettingsMenu";
 import { Particles } from "@/components/ui/particles";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, resolveCurrentUserId } from "@/lib/current-user";
 
 export const metadata: Metadata = {
   title: "Mon profil",
@@ -75,7 +75,7 @@ export default async function ProfilePage() {
 
         <div className="mt-8">
           <ProfileActivityTabs
-            profileUserId={profile?.id_user ?? currentUser.user?.id_user ?? auth.id}
+            profileUserId={resolveCurrentUserId(currentUser)}
           />
         </div>
       </div>

@@ -2,13 +2,12 @@
 
 import { Alert, Group, Loader } from "@mantine/core";
 import { useEffect, useMemo, useState } from "react";
-import PostList from "@/components/posts/PostList";
-import { fetchPostComments } from "@/lib/api/comment.service";
+import InboxNotificationList from "@/components/notifications/InboxNotificationList";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
-import { fetchFeedPosts } from "@/lib/api/post.service";
+import { fetchUserNotifications } from "@/lib/api/notification.service";
 import { resolveCurrentUserId } from "@/lib/current-user.shared";
 
-export default function FeedList() {
+export default function NotificationInbox() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +39,8 @@ export default function FeedList() {
     };
   }, []);
 
-  const fetchPosts = useMemo(() => {
-    return userId ? fetchFeedPosts(userId) : null;
+  const fetchNotifications = useMemo(() => {
+    return userId ? fetchUserNotifications(userId) : null;
   }, [userId]);
 
   if (isLoadingUser) {
@@ -52,7 +51,7 @@ export default function FeedList() {
     );
   }
 
-  if (error || !fetchPosts) {
+  if (error || !fetchNotifications || !userId) {
     return (
       <Alert color="red" variant="light">
         {error ?? "Utilisateur introuvable."}
@@ -61,10 +60,9 @@ export default function FeedList() {
   }
 
   return (
-    <PostList
-      fetchPosts={fetchPosts}
-      fetchUpdatedPosts={fetchPosts}
-      fetchCommentsForPost={fetchPostComments}
+    <InboxNotificationList
+      fetchNotifications={fetchNotifications}
+      recipientId={userId}
     />
   );
 }

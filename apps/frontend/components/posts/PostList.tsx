@@ -287,7 +287,7 @@ export default function PostList({
           <Textarea
             value={postContent}
             onChange={(event) => setPostContent(event.currentTarget.value)}
-            placeholder="Quoi de neuf ?"
+            placeholder="Quoi de neuf ? Utilisez @username pour mentionner quelqu'un."
             autosize
             minRows={4}
             maxRows={10}

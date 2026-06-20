@@ -10,7 +10,7 @@ type CommentComposerProps = {
 };
 
 export default function CommentComposer({
-  placeholder = "Ecrire un commentaire...",
+  placeholder = "Ecrire un commentaire... Utilisez @username pour mentionner quelqu'un.",
   onSubmit,
 }: CommentComposerProps) {
   const [content, setContent] = useState("");

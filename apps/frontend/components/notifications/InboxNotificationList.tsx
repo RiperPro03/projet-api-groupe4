@@ -1,10 +1,15 @@
 "use client";
 
-import { Alert, Button, Group, Loader, Stack, Text } from "@mantine/core";
-import { useEffect, useRef, useState } from "react";
+import { Alert, Button, Group, Loader, Stack, Tabs, Text } from "@mantine/core";
+import { useEffect, useMemo, useRef, useState } from "react";
 import InboxNotificationItem from "@/components/notifications/InboxNotificationItem";
 import { AnimatedList } from "@/components/ui/animated-list";
 import { useNotificationList } from "@/hooks/useNotificationList";
+import {
+  getEmptyFilterMessage,
+  matchesNotificationFilter,
+  type NotificationFilter,
+} from "@/lib/notification-labels";
 import type { FetchNotificationPage } from "@/types/notification";
 
 type InboxNotificationListProps = {
@@ -20,6 +25,7 @@ export default function InboxNotificationList({
 }: InboxNotificationListProps) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
+  const [filter, setFilter] = useState<NotificationFilter>("all");
   const {
     notifications,
     isLoading,
@@ -35,6 +41,11 @@ export default function InboxNotificationList({
     recipientId,
     pageSize,
   });
+
+  const visibleNotifications = useMemo(
+    () => notifications.filter((notification) => matchesNotificationFilter(notification, filter)),
+    [notifications, filter]
+  );
 
   useEffect(() => {
     const element = loadMoreRef.current;
@@ -82,6 +93,10 @@ export default function InboxNotificationList({
   }
 
   const hasUnread = notifications.some((notification) => !notification.isRead);
+  const emptyMessage =
+    notifications.length === 0
+      ? getEmptyFilterMessage("all")
+      : getEmptyFilterMessage(filter);
 
   return (
     <Stack gap="md">
@@ -103,19 +118,32 @@ export default function InboxNotificationList({
         )}
       </Group>
 
+      <Tabs
+        value={filter}
+        onChange={(value) => setFilter((value as NotificationFilter) ?? "all")}
+        color="green"
+        keepMounted={false}
+      >
+        <Tabs.List grow>
+          <Tabs.Tab value="all">Toutes</Tabs.Tab>
+          <Tabs.Tab value="like">J&apos;aime</Tabs.Tab>
+          <Tabs.Tab value="mention">Mentions</Tabs.Tab>
+        </Tabs.List>
+      </Tabs>
+
       {error && (
         <Alert color="red" variant="light">
           {error}
         </Alert>
       )}
 
-      {notifications.length === 0 ? (
+      {visibleNotifications.length === 0 ? (
         <Text style={{ color: "var(--muted-foreground)" }} ta="center" py="xl">
-          Aucune notification pour le moment.
+          {emptyMessage}
         </Text>
       ) : (
         <AnimatedList delay={0} reverseOrder={false} className="gap-3">
-          {notifications.map((notification) => (
+          {visibleNotifications.map((notification) => (
             <InboxNotificationItem
               key={notification.id}
               notification={notification}

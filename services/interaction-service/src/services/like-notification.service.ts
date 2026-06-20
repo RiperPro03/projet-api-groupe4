@@ -1,11 +1,18 @@
 import { createLikeNotification } from "../clients/notification.client.js";
 import { getPostAuthorId } from "../clients/post.client.js";
+import { env } from "../config/env.js";
 import { Comment } from "../models/comment.model.js";
+
+function shouldSkipSelfLike(authorId: string, actorId: string): boolean {
+  return (
+    !env.debugAllowSelfLikeNotifications && authorId === actorId
+  );
+}
 
 async function notifyPostLike(actorId: string, postId: string): Promise<void> {
   const authorId = await getPostAuthorId(postId);
 
-  if (!authorId || authorId === actorId) {
+  if (!authorId || shouldSkipSelfLike(authorId, actorId)) {
     return;
   }
 
@@ -23,7 +30,7 @@ async function notifyCommentLike(
 ): Promise<void> {
   const comment = await Comment.findById(commentId).select("authorId").lean();
 
-  if (!comment?.authorId || comment.authorId === actorId) {
+  if (!comment?.authorId || shouldSkipSelfLike(comment.authorId, actorId)) {
     return;
   }
 

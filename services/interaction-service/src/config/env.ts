@@ -9,4 +9,8 @@ export const env = {
   notificationServiceUrl: (
     process.env.NOTIFICATION_SERVICE_URL || "http://localhost:3008"
   ).replace(/\/+$/, ""),
+  /** Debug only — set DEBUG_ALLOW_SELF_LIKE_NOTIFICATIONS=true to test inbox solo. */
+  debugAllowSelfLikeNotifications:
+    process.env.DEBUG_ALLOW_SELF_LIKE_NOTIFICATIONS === "true" ||
+    process.env.DEBUG_ALLOW_SELF_LIKE_NOTIFICATIONS === "1",
 };

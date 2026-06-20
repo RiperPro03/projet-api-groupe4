@@ -61,7 +61,7 @@ Collection MongoDB `notifications` :
 |-------|------|-------------|
 | `recipientId` | string | Utilisateur qui reçoit la notification |
 | `actorId` | string | Utilisateur à l'origine de l'action |
-| `type` | `"like"` | Type d'événement (Fx15) |
+| `type` | `"like"` \| `"mention"` | Type d'événement (Fx15 / Fx14) |
 | `resourceType` | `"post"` \| `"comment"` | Nature de la cible likée |
 | `resourceId` | string | ID du post ou du commentaire |
 | `message` | string | Message affichable, généré côté service |
@@ -142,6 +142,57 @@ DELETE /api/notifications/notifications/:id
 
 ---
 
+## Fx14 — flux producteur (mentions)
+
+Les producteurs Fx14 sont **`post-service`** (mention dans un post) et **`interaction-service`** (mention dans un commentaire).
+
+```txt
+POST /posts ou POST /comments
+    ↓
+contenu analysé (@username)
+    ↓
+GET /profiles/username/:username (profile-service)
+    ↓
+pour chaque id_user mentionné (≠ auteur)
+    POST /notifications { type: "mention", ... }
+```
+
+### Exemple body — mention post
+
+```json
+{
+  "recipientId": "user-b",
+  "actorId": "user-a",
+  "type": "mention",
+  "resourceType": "post",
+  "resourceId": "post-123"
+}
+```
+
+Messages générés :
+
+- post : `"Un utilisateur vous a mentionné dans un post"`
+- comment : `"Un utilisateur vous a mentionné dans un commentaire"`
+
+Règles :
+
+- parse `@username` via regex `/@([a-zA-Z0-9_]+)/g` ;
+- pas de **self-mention** ;
+- username inconnu → skip silencieux ;
+- `@alice @alice` → une seule notification (dédup) ;
+- création post/comment **non bloquée** si notification-service indisponible (fire-and-forget) ;
+- pas de notification à l'édition en v1.
+
+Variables producteurs :
+
+```env
+# post-service et interaction-service
+PROFILE_SERVICE_URL=http://profile-service:3006
+NOTIFICATION_SERVICE_URL=http://notification-service:3008
+```
+
+---
+
 ## Fx15 — flux producteur (likes)
 
 Le `interaction-service` appelle ce service **après un like réussi** :
@@ -195,7 +246,7 @@ Le frontend Next.js consomme ce service **via l'API Gateway** (`NEXT_PUBLIC_API_
 | Composant | Rôle |
 |-----------|------|
 | `NotificationProvider` + `NotificationList` | **Toasts UI** (succès / erreur après login, profil, etc.) — **sans lien** avec ce microservice |
-| `NotificationInbox` + composants `Inbox*` | **Inbox utilisateur** Fx15 — consomme l'API notifications |
+| `NotificationInbox` + composants `Inbox*` | **Inbox utilisateur** Fx14/Fx15 — consomme l'API notifications |
 
 Ne pas confondre les deux : l'inbox est une feature distincte des toasts éphémères.
 
@@ -256,7 +307,8 @@ Paramètres de liste utilisés par le front :
 | Cas | Comportement |
 |-----|--------------|
 | Like **post** | Clic → marque lu + navigation vers `/posts/{resourceId}` |
-| Like **commentaire** | Clic → marque lu uniquement (pas de deep link : le backend ne fournit pas `postId`) |
+| Mention **post** | Clic → marque lu + navigation vers `/posts/{resourceId}` |
+| Like / mention **commentaire** | Clic → marque lu uniquement (pas de deep link v1) |
 | Non lue | Fond accent + point vert |
 | Infinite scroll | Chargement suivant via `cursor` / `hasMore` |
 | Temps réel | Non — refresh au chargement de page et au retour navbar (pas de SSE en v1) |
@@ -365,7 +417,8 @@ Les tests **mockent Mongoose** : pas besoin de MongoDB pour `pnpm test`.
 Cas couverts :
 
 - création like post / comment ;
-- validation des champs et refus self-like ;
+- création mention post / comment ;
+- validation des champs et refus self-like / self-mention ;
 - liste, compteur non lues, marquer lu, supprimer ;
 - codes HTTP et middleware d'erreurs.
 
@@ -375,7 +428,6 @@ Cas couverts :
 
 | Évolution | Description |
 |-----------|-------------|
-| Fx14 | Notifications de mentions depuis `post-service` |
 | Fx16 | Notifications de nouveaux followers depuis `follow-service` |
 | Auth JWT | `recipientId` pris du token sur les routes de lecture (aujourd'hui passé en query par le front) |
 | SSE | Push temps réel vers le frontend (badge + inbox sans refresh) |
@@ -388,9 +440,10 @@ Cas couverts :
 
 | Service | Interaction |
 |---------|-------------|
-| **interaction-service** | Producteur Fx15 — `POST /notifications` après un like |
-| **post-service** | (indirect) Fournit `authorId` à interaction-service |
-| **frontend** | Consommateur Fx15 — inbox `/notif`, badge navbar, client `notification.service.ts` |
+| **interaction-service** | Producteur Fx15 (likes) + Fx14 (mentions commentaire) |
+| **post-service** | Producteur Fx14 (mentions post) ; (indirect Fx15) fournit `authorId` |
+| **profile-service** | Résolution `@username` → `id_user` pour Fx14 |
+| **frontend** | Consommateur Fx14/Fx15 — inbox `/notif`, badge navbar |
 | **api-gateway** | Point d'entrée `/api/notifications` + auth JWT sur les routes de lecture |
 
 Ce service **n'appelle aucun autre microservice** en v1.

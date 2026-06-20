@@ -271,6 +271,7 @@ services:
       MONGO_URI: mongodb://interaction-mongodb:27017/interaction_db
       POST_SERVICE_URL: http://post-service:3003
       NOTIFICATION_SERVICE_URL: http://notification-service:3008
+      PROFILE_SERVICE_URL: http://profile-service:3006
     depends_on:
       interaction-mongodb:
         condition: service_healthy
@@ -309,6 +310,8 @@ services:
       PORT: 3003
       MONGO_URI: mongodb://post-mongodb:27017/post_db
       SERVICE_NAME: post-service
+      NOTIFICATION_SERVICE_URL: http://notification-service:3008
+      PROFILE_SERVICE_URL: http://profile-service:3006
     depends_on:
       post-mongodb:
         condition: service_healthy

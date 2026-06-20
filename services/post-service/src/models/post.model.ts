@@ -6,6 +6,7 @@ export interface IPost extends Document {
     authorId: string;       // ID de l'utilisateur venant du JWT (pas de FK Mongo)
     content: string;        // Texte du post, max 280 caractères — Fx3
     tags: string[];         // Tags associés — prévu pour Fx12
+    mentions: string[];     // IDs utilisateurs mentionnés — Fx14
     createdAt: Date;
     updatedAt: Date;
     deletedAt?: Date | null; // Pour le soft-delete
@@ -26,6 +27,10 @@ const postSchema = new Schema<IPost>(
             trim: true,
         },
         tags: {
+            type: [String],
+            default: [],
+        },
+        mentions: {
             type: [String],
             default: [],
         },

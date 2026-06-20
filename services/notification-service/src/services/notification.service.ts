@@ -18,10 +18,7 @@ export class NotificationError extends Error {
   }
 }
 
-const LIKE_RESOURCE_TYPES = new Set<NotificationResourceType>([
-  "post",
-  "comment",
-]);
+const RESOURCE_TYPES = new Set<NotificationResourceType>(["post", "comment"]);
 
 function requireNonEmpty(value: string | undefined | null, fieldName: string) {
   const resolvedValue = typeof value === "string" ? value.trim() : "";
@@ -33,12 +30,23 @@ function requireNonEmpty(value: string | undefined | null, fieldName: string) {
   return resolvedValue;
 }
 
-function buildLikeMessage(resourceType: NotificationResourceType): string {
-  if (resourceType === "post") {
-    return "Un utilisateur a aimé votre post";
+function buildMessage(
+  type: NotificationType,
+  resourceType: NotificationResourceType
+): string {
+  if (type === "like") {
+    if (resourceType === "post") {
+      return "Un utilisateur a aimé votre post";
+    }
+
+    return "Un utilisateur a aimé votre commentaire";
   }
 
-  return "Un utilisateur a aimé votre commentaire";
+  if (resourceType === "post") {
+    return "Un utilisateur vous a mentionné dans un post";
+  }
+
+  return "Un utilisateur vous a mentionné dans un commentaire";
 }
 
 function mapNotification(notification: {
@@ -70,38 +78,44 @@ function mapNotification(notification: {
 function validateCreateInput(input: CreateNotificationInput) {
   const recipientId = requireNonEmpty(input.recipientId, "recipientId");
   const actorId = requireNonEmpty(input.actorId, "actorId");
-  const type = requireNonEmpty(input.type, "type");
+  const type = requireNonEmpty(input.type, "type") as NotificationType;
   const resourceType = requireNonEmpty(
     input.resourceType,
     "resourceType"
   ) as NotificationResourceType;
   const resourceId = requireNonEmpty(input.resourceId, "resourceId");
 
-  if (type !== "like") {
-    throw new NotificationError("type doit être like", 400);
+  if (type !== "like" && type !== "mention") {
+    throw new NotificationError("type doit être like ou mention", 400);
   }
 
-  if (!LIKE_RESOURCE_TYPES.has(resourceType)) {
+  if (!RESOURCE_TYPES.has(resourceType)) {
     throw new NotificationError(
       "resourceType doit être post ou comment",
       400
     );
   }
 
-  if (
-    recipientId === actorId &&
-    !env.debugAllowSelfLikeNotifications
-  ) {
-    throw new NotificationError(
-      "recipientId et actorId ne peuvent pas être identiques",
-      400
-    );
+  if (recipientId === actorId) {
+    if (type === "mention") {
+      throw new NotificationError(
+        "recipientId et actorId ne peuvent pas être identiques",
+        400
+      );
+    }
+
+    if (!env.debugAllowSelfLikeNotifications) {
+      throw new NotificationError(
+        "recipientId et actorId ne peuvent pas être identiques",
+        400
+      );
+    }
   }
 
   return {
     recipientId,
     actorId,
-    type: "like" as const,
+    type,
     resourceType,
     resourceId,
   };
@@ -114,7 +128,7 @@ export async function createNotification(
 
   const notification = await Notification.create({
     ...validatedInput,
-    message: buildLikeMessage(validatedInput.resourceType),
+    message: buildMessage(validatedInput.type, validatedInput.resourceType),
     isRead: false,
     readAt: null,
   });

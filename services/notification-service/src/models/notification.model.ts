@@ -16,7 +16,7 @@ const notificationSchema = new Schema(
     type: {
       type: String,
       required: true,
-      enum: ["like"],
+      enum: ["like", "mention"],
     },
     resourceType: {
       type: String,

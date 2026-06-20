@@ -1,4 +1,4 @@
-export type NotificationType = "like";
+export type NotificationType = "like" | "mention";
 
 export type NotificationResourceType = "post" | "comment";
 

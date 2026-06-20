@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ActionIcon, Card, Group, Text } from "@mantine/core";
-import { FiHeart, FiTrash2 } from "react-icons/fi";
+import { FiAtSign, FiHeart, FiTrash2 } from "react-icons/fi";
 import type { UserNotification } from "@/types/notification";
 
 type InboxNotificationItemProps = {
@@ -25,8 +25,10 @@ export default function InboxNotificationItem({
   onMarkAsRead,
   onDelete,
 }: InboxNotificationItemProps) {
-  const isPostLike =
-    notification.type === "like" && notification.resourceType === "post";
+  const isPostLink =
+    notification.resourceType === "post" &&
+    (notification.type === "like" || notification.type === "mention");
+  const Icon = notification.type === "mention" ? FiAtSign : FiHeart;
 
   async function handleClick() {
     if (!notification.isRead) {
@@ -65,7 +67,7 @@ export default function InboxNotificationItem({
         <div
           className={`flex size-10 shrink-0 items-center justify-center rounded-lg bg-breezy-green/15 text-breezy-green ${notification.isRead ? "ml-0" : ""}`}
         >
-          <FiHeart className="size-5" aria-hidden="true" />
+          <Icon className="size-5" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
           <Text size="sm" fw={notification.isRead ? 500 : 600} lh={1.45}>
@@ -87,7 +89,7 @@ export default function InboxNotificationItem({
     </Card>
   );
 
-  if (isPostLike) {
+  if (isPostLink) {
     return (
       <Link
         href={`/posts/${notification.resourceId}`}

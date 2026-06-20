@@ -20,6 +20,12 @@ vi.mock("../src/models/notification.model.js", () => ({
   },
 }));
 
+vi.mock("../src/config/env.js", () => ({
+  env: {
+    debugAllowSelfLikeNotifications: false,
+  },
+}));
+
 import {
   countUnreadNotifications,
   createNotification,
@@ -31,6 +37,7 @@ import {
 } from "../src/services/notification.service.js";
 import {
   createLikeNotificationInput,
+  createMentionNotificationInput,
   createNotificationDocument,
 } from "./helpers/notification.mock.js";
 
@@ -111,7 +118,7 @@ describe("notification.service", () => {
         )
       ).rejects.toMatchObject({
         statusCode: 400,
-        message: "type doit être like",
+        message: "type doit être like ou mention",
       });
     });
 
@@ -125,6 +132,63 @@ describe("notification.service", () => {
       ).rejects.toMatchObject({
         statusCode: 400,
         message: "resourceType doit être post ou comment",
+      });
+    });
+
+    it("crée une notification de mention sur un post", async () => {
+      const document = createNotificationDocument({
+        type: "mention",
+        message: "Un utilisateur vous a mentionné dans un post",
+      });
+      notificationMocks.create.mockResolvedValue(document);
+
+      const result = await createNotification(createMentionNotificationInput());
+
+      expect(result.message).toBe("Un utilisateur vous a mentionné dans un post");
+      expect(notificationMocks.create).toHaveBeenCalledWith({
+        recipientId: "user-b",
+        actorId: "user-a",
+        type: "mention",
+        resourceType: "post",
+        resourceId: "post-123",
+        message: "Un utilisateur vous a mentionné dans un post",
+        isRead: false,
+        readAt: null,
+      });
+    });
+
+    it("crée une notification de mention sur un commentaire", async () => {
+      const document = createNotificationDocument({
+        type: "mention",
+        resourceType: "comment",
+        resourceId: "comment-123",
+        message: "Un utilisateur vous a mentionné dans un commentaire",
+      });
+      notificationMocks.create.mockResolvedValue(document);
+
+      const result = await createNotification(
+        createMentionNotificationInput({
+          resourceType: "comment",
+          resourceId: "comment-123",
+        })
+      );
+
+      expect(result.message).toBe(
+        "Un utilisateur vous a mentionné dans un commentaire"
+      );
+    });
+
+    it("refuse une self-mention", async () => {
+      await expect(
+        createNotification(
+          createMentionNotificationInput({
+            recipientId: "user-a",
+            actorId: "user-a",
+          })
+        )
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "recipientId et actorId ne peuvent pas être identiques",
       });
     });
   });

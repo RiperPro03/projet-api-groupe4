@@ -21,9 +21,16 @@ vi.mock("../src/models/notification.model.js", () => ({
   },
 }));
 
+vi.mock("../src/config/env.js", () => ({
+  env: {
+    debugAllowSelfLikeNotifications: false,
+  },
+}));
+
 import app from "../src/app.js";
 import {
   createLikeNotificationInput,
+  createMentionNotificationInput,
   createNotificationDocument,
 } from "./helpers/notification.mock.js";
 
@@ -67,6 +74,22 @@ describe("notification API", () => {
       expect(response.body.error).toBe(
         "recipientId et actorId ne peuvent pas être identiques"
       );
+    });
+
+    it("crée une notification de mention", async () => {
+      notificationMocks.create.mockResolvedValue(
+        createNotificationDocument({
+          type: "mention",
+          message: "Un utilisateur vous a mentionné dans un post",
+        })
+      );
+
+      const response = await request(app)
+        .post("/notifications")
+        .send(createMentionNotificationInput());
+
+      expect(response.status).toBe(201);
+      expect(response.body.data.notification.type).toBe("mention");
     });
   });
 

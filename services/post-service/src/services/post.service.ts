@@ -1,4 +1,8 @@
 import { Post } from "../models/post.model";
+import {
+    notifyPostMentionsSafely,
+    resolveMentionedUserIds,
+} from "./mention-notification.service";
 import type {
     CreatePostInput,
     PostPageResponse,
@@ -11,6 +15,7 @@ function sanitizePost(post: InstanceType<typeof Post>): PostResponse {
         authorId: post.authorId,
         content: post.content,
         tags: post.tags,
+        mentions: post.mentions ?? [],
         createdAt: post.createdAt as Date,
         updatedAt: post.updatedAt as Date,
         deletedAt: post.deletedAt,
@@ -22,6 +27,7 @@ function mapLeanPost(post: {
     authorId: string;
     content: string;
     tags?: string[];
+    mentions?: string[];
     createdAt: Date;
     updatedAt: Date;
     deletedAt?: Date | null;
@@ -31,6 +37,7 @@ function mapLeanPost(post: {
         authorId: post.authorId,
         content: post.content,
         tags: post.tags ?? [],
+        mentions: post.mentions ?? [],
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
         deletedAt: post.deletedAt,
@@ -77,11 +84,16 @@ async function createPost(
     authorId: string,
     data: CreatePostInput
 ): Promise<PostResponse> {
+    const content = data.content.trim();
+    const mentions = await resolveMentionedUserIds(content, authorId);
     const post = await Post.create({
         authorId,
-        content: data.content.trim(),
+        content,
         tags: data.tags ?? [],
+        mentions,
     });
+
+    notifyPostMentionsSafely(authorId, String(post._id), content);
 
     return sanitizePost(post);
 }

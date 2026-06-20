@@ -13,6 +13,7 @@ export type PostResponse = {
     authorId: string;
     content: string;
     tags: string[];
+    mentions: string[];
     createdAt: Date;
     updatedAt: Date;
     deletedAt?: Date | null;

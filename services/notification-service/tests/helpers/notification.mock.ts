@@ -3,6 +3,19 @@ import type {
   NotificationResponse,
 } from "../../src/types/notification.types.js";
 
+export function createMentionNotificationInput(
+  overrides: Partial<CreateNotificationInput> = {}
+): CreateNotificationInput {
+  return {
+    recipientId: "user-b",
+    actorId: "user-a",
+    type: "mention",
+    resourceType: "post",
+    resourceId: "post-123",
+    ...overrides,
+  };
+}
+
 export function createLikeNotificationInput(
   overrides: Partial<CreateNotificationInput> = {}
 ): CreateNotificationInput {

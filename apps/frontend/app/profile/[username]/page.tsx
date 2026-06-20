@@ -249,7 +249,7 @@ export default function PublicProfilePage() {
           {isOwnProfile && (
             <Link href="/profile">
               <RippleButton
-                rippleColor="rgba(0,146,62,0.15)"
+                rippleColor="rgb(var(--breezy-green-rgb) / 0.15)"
                 className="mt-1 inline-flex items-center rounded-full border border-border bg-transparent px-5 py-2 text-sm font-semibold text-foreground hover:bg-accent"
               >
                 Modifier le profil

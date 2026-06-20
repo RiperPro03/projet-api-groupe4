@@ -60,7 +60,7 @@ function Field({
         className={`group relative h-14 rounded-xl border transition-shadow focus-within:border-transparent lg:h-14 2xl:h-16 ${
           error
             ? "border-red-500 focus-within:shadow-[0_0_1.25rem_rgba(239,68,68,0.35)]"
-            : "border-[#536471] focus-within:shadow-[0_0_1.25rem_rgba(0,146,62,0.28)]"
+            : "border-input focus-within:shadow-[0_0_1.25rem_rgb(var(--breezy-green-rgb)_/_0.28)]"
         }`}
       >
         <label className="sr-only" htmlFor={id}>
@@ -72,7 +72,11 @@ function Field({
           shineColor={
             error
               ? ["#ef4444", "#f87171", "#ef4444"]
-              : ["#00923e", "#f8c100", "#00923e"]
+              : [
+                  "var(--color-breezy-green)",
+                  "var(--color-breezy-yellow)",
+                  "var(--color-breezy-green)",
+                ]
           }
           className="z-20 opacity-0 transition-opacity group-focus-within:opacity-100"
         />
@@ -362,7 +366,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
                 type="submit"
                 disabled={isSubmitting}
                 rippleColor="#000000"
-                className="h-12 w-full rounded-full border-0 bg-foreground px-5 text-base font-bold text-background shadow-sm transition hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground lg:h-14 lg:bg-breezy-green lg:text-lg lg:text-white lg:shadow-lg lg:shadow-breezy-green/20 lg:hover:bg-[#007f36] lg:focus-visible:outline-breezy-green 2xl:h-16"
+                className="h-12 w-full rounded-full border-0 bg-foreground px-5 text-base font-bold text-background shadow-sm transition hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground lg:h-14 lg:bg-breezy-green lg:text-lg lg:text-white lg:shadow-lg lg:shadow-breezy-green/20 lg:hover:bg-breezy-green/90 lg:focus-visible:outline-breezy-green 2xl:h-16"
               >
                 {isLogin ? "Se connecter" : "Créer le compte"}
               </RippleButton>

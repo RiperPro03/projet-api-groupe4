@@ -248,7 +248,7 @@ export default function ContentCard({
       withBorder
       bg="var(--card)"
       style={{
-        borderColor: isReply ? "rgba(0, 146, 62, 0.28)" : "var(--border)",
+        borderColor: isReply ? "rgb(var(--breezy-green-rgb) / 0.28)" : "var(--border)",
         position: "relative",
         width: "100%",
       }}

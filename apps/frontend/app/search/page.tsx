@@ -11,7 +11,7 @@ import {
 } from "@/lib/api/profile.service";
 
 const fieldContainerClassName =
-  "group relative rounded-xl border border-input bg-background transition-shadow focus-within:border-transparent focus-within:shadow-[0_0_1.25rem_rgba(0,146,62,0.28)]";
+  "group relative overflow-hidden rounded-xl border border-transparent bg-background shadow-lg shadow-black/20 transition-shadow focus-within:shadow-[0_0_1.25rem_rgb(var(--breezy-green-rgb)_/_0.28)]";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState<T>(value);
@@ -96,10 +96,16 @@ export default function SearchPage() {
         {/* Barre de recherche */}
         <div className={`${fieldContainerClassName} mb-6`}>
           <ShineBorder
-            shineColor={["var(--color-breezy-green)", "var(--color-breezy-yellow)"]}
-            duration={8}
+            borderWidth="0.125rem"
+            duration={15}
+            shineColor={[
+              "var(--color-breezy-green)",
+              "var(--color-breezy-yellow)",
+              "var(--color-breezy-green)",
+            ]}
+            className="z-20"
           />
-          <div className="relative flex items-center">
+          <div className="relative z-10 flex items-center rounded-[inherit] bg-background">
             <span className="pointer-events-none absolute left-4 text-muted-foreground">
               <FiSearch className="h-5 w-5" aria-hidden />
             </span>
@@ -110,7 +116,7 @@ export default function SearchPage() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher un utilisateur..."
               aria-label="Rechercher un utilisateur par son nom d'utilisateur"
-              className="w-full rounded-xl bg-background py-3 pl-11 pr-11 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              className="w-full rounded-xl bg-transparent py-3 pl-11 pr-11 text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
             {query && (
               <button
@@ -180,7 +186,7 @@ export default function SearchPage() {
                       p="md"
                       withBorder
                       bg="var(--card)"
-                      className="transition-colors hover:border-[rgba(0,146,62,0.5)] hover:bg-accent"
+                      className="transition-colors hover:border-[rgb(var(--breezy-green-rgb)_/_0.5)] hover:bg-accent"
                       style={{ borderColor: "var(--border)" }}
                     >
                       <Group gap="sm" wrap="nowrap">

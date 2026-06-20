@@ -748,12 +748,16 @@ export default function PostList({
           <ShineBorder
             borderWidth="0.125rem"
             duration={15}
-            shineColor={["#00923e", "#f8c100", "#00923e"]}
+            shineColor={[
+              "var(--color-breezy-green)",
+              "var(--color-breezy-yellow)",
+              "var(--color-breezy-green)",
+            ]}
             className="z-20"
           />
           <RippleButton
             type="button"
-            rippleColor="#00923e"
+            rippleColor="var(--color-breezy-green)"
             onClick={() => setIsCreatePostOpen(true)}
             className={addPostButtonClassName}
           >

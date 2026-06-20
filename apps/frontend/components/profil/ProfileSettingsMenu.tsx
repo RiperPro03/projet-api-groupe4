@@ -35,7 +35,7 @@ const fieldClassName =
   "w-full rounded-[inherit] bg-background px-4 py-3 text-foreground outline-none placeholder:text-muted-foreground";
 
 const fieldContainerClassName =
-  "group relative rounded-xl border border-input bg-background transition-shadow focus-within:border-transparent focus-within:shadow-[0_0_1.25rem_rgba(0,146,62,0.28)]";
+  "group relative rounded-xl border border-input bg-background transition-shadow focus-within:border-transparent focus-within:shadow-[0_0_1.25rem_rgb(var(--breezy-green-rgb)_/_0.28)]";
 
 const avatarMimeTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const avatarMaxSize = 5 * 1024 * 1024;
@@ -80,7 +80,11 @@ function PasswordField({
         <ShineBorder
           borderWidth="0.125rem"
           duration={15}
-          shineColor={["#00923e", "#f8c100", "#00923e"]}
+          shineColor={[
+            "var(--color-breezy-green)",
+            "var(--color-breezy-yellow)",
+            "var(--color-breezy-green)",
+          ]}
           className="z-20 opacity-0 transition-opacity group-focus-within:opacity-100"
         />
         <input
@@ -505,7 +509,11 @@ export default function ProfileSettingsMenu({
                   <ShineBorder
                     borderWidth="0.125rem"
                     duration={15}
-                    shineColor={["#00923e", "#f8c100", "#00923e"]}
+                    shineColor={[
+                      "var(--color-breezy-green)",
+                      "var(--color-breezy-yellow)",
+                      "var(--color-breezy-green)",
+                    ]}
                     className="z-20 opacity-0 transition-opacity group-focus-within:opacity-100"
                   />
                   <input
@@ -527,7 +535,11 @@ export default function ProfileSettingsMenu({
                   <ShineBorder
                     borderWidth="0.125rem"
                     duration={15}
-                    shineColor={["#00923e", "#f8c100", "#00923e"]}
+                    shineColor={[
+                      "var(--color-breezy-green)",
+                      "var(--color-breezy-yellow)",
+                      "var(--color-breezy-green)",
+                    ]}
                     className="z-20 opacity-0 transition-opacity group-focus-within:opacity-100"
                   />
                   <input
@@ -547,7 +559,11 @@ export default function ProfileSettingsMenu({
                   <ShineBorder
                     borderWidth="0.125rem"
                     duration={15}
-                    shineColor={["#00923e", "#f8c100", "#00923e"]}
+                    shineColor={[
+                      "var(--color-breezy-green)",
+                      "var(--color-breezy-yellow)",
+                      "var(--color-breezy-green)",
+                    ]}
                     className="z-20 opacity-0 transition-opacity group-focus-within:opacity-100"
                   />
                   <textarea

@@ -158,8 +158,8 @@ function ThreadNode({
             withBorder
             radius={8}
             p="sm"
-            bg="rgba(0, 146, 62, 0.08)"
-            style={{ borderColor: "rgba(0, 146, 62, 0.32)" }}
+            bg="rgb(var(--breezy-green-rgb) / 0.08)"
+            style={{ borderColor: "rgb(var(--breezy-green-rgb) / 0.32)" }}
           >
             <Group justify="space-between" align="center" mb="xs">
               <Text size="sm" c="green.3" fw={600}>

@@ -5,6 +5,12 @@ type PostServicePost = {
   id: string;
   authorId: string;
   content: string;
+  media?: {
+    id: string;
+    type: "image" | "video";
+    url: string;
+    alt?: string;
+  }[];
   tags?: string[];
   createdAt: string;
   updatedAt?: string;

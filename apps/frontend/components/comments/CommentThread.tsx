@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Box, Button, Group, Paper, Stack, Text } from "@mantine/core";
+import { Box, Group, Paper, Stack, Text } from "@mantine/core";
 import CommentComposer from "@/components/comments/CommentComposer";
 import ContentCard from "@/components/feed/ContentCard";
+import { RippleButton } from "@/components/ui/ripple-button";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { isApiStatusCode } from "@/lib/api/http-client";
 import { likeComment, unlikeComment } from "@/lib/api/interaction.service";
 import { resolveCurrentUserId } from "@/lib/current-user.shared";
+import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   hydrateLike,
@@ -70,6 +72,7 @@ function ThreadNode({
   onCancelReply: () => void;
   onReplySubmit?: (parentComment: Comment, content: string) => void | Promise<void>;
 }) {
+  const { t } = useI18n();
   const visualDepth = Math.min(depth, maxVisualDepth);
   const isReplying = activeReplyId === node.id;
   const dispatch = useAppDispatch();
@@ -155,24 +158,26 @@ function ThreadNode({
             withBorder
             radius={8}
             p="sm"
-            bg="rgba(0, 146, 62, 0.08)"
-            style={{ borderColor: "rgba(0, 146, 62, 0.32)" }}
+            bg="rgb(var(--breezy-green-rgb) / 0.08)"
+            style={{ borderColor: "rgb(var(--breezy-green-rgb) / 0.32)" }}
           >
             <Group justify="space-between" align="center" mb="xs">
               <Text size="sm" c="green.3" fw={600}>
-                Reponse a @{node.author.username}
+                {t("comment.replyTo", { username: node.author.username })}
               </Text>
-              <Button
-                variant="subtle"
-                color="gray"
-                size="compact-sm"
+              <RippleButton
+                type="button"
+                rippleColor="var(--foreground)"
                 onClick={onCancelReply}
+                className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent"
               >
-                Annuler
-              </Button>
+                {t("common.cancel")}
+              </RippleButton>
             </Group>
             <CommentComposer
-              placeholder={`Repondre a @${node.author.username}...`}
+              placeholder={t("comment.replyPlaceholder", {
+                username: node.author.username,
+              })}
               onSubmit={async (content) => {
                 await onReplySubmit?.(node, content);
                 onCancelReply();
@@ -203,13 +208,14 @@ export default function CommentThread({
   maxVisualDepth = 3,
   onReplySubmit,
 }: CommentThreadProps) {
+  const { t } = useI18n();
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const tree = buildCommentTree(comments);
 
   if (tree.length === 0) {
     return (
       <Text style={{ color: "var(--muted-foreground)" }} ta="center" py="xl">
-        Aucun commentaire pour le moment.
+        {t("comment.noComments")}
       </Text>
     );
   }

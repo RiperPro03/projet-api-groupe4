@@ -65,16 +65,20 @@ httpClient.interceptors.response.use(
   }
 );
 
-export function getApiErrorMessage(error: unknown) {
+export function getApiErrorMessage(
+  error: unknown,
+  fallbackMessage = "Une erreur inattendue est survenue.",
+  serverUnreachableMessage = "Impossible de joindre le serveur. Réessayez dans un instant."
+) {
   if (axios.isAxiosError<ApiErrorBody>(error)) {
     return (
       error.response?.data?.message ??
       error.response?.data?.error ??
-      "Impossible de joindre le serveur. Reessayez dans un instant."
+      serverUnreachableMessage
     );
   }
 
-  return "Une erreur inattendue est survenue.";
+  return fallbackMessage;
 }
 
 export function isApiStatusCode(error: unknown, statusCode: number) {

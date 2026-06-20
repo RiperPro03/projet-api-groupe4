@@ -11,6 +11,7 @@ import { isApiStatusCode } from "@/lib/api/http-client";
 import { likePost, unlikePost } from "@/lib/api/interaction.service";
 import { fetchPostById } from "@/lib/api/post.service";
 import { resolveCurrentUserId } from "@/lib/current-user.shared";
+import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   hydrateLike,
@@ -26,6 +27,7 @@ type PostDetailProps = {
 };
 
 export default function PostDetail({ postId }: PostDetailProps) {
+  const { t } = useI18n();
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,7 +70,7 @@ export default function PostDetail({ postId }: PostDetailProps) {
         }
       } catch {
         if (isMounted) {
-          setError("Impossible de charger le detail du post.");
+          setError(t("post.detailLoadError"));
         }
       } finally {
         if (isMounted) {
@@ -82,7 +84,7 @@ export default function PostDetail({ postId }: PostDetailProps) {
     return () => {
       isMounted = false;
     };
-  }, [dispatch, postId]);
+  }, [dispatch, postId, t]);
 
   if (isLoading) {
     return (
@@ -94,7 +96,14 @@ export default function PostDetail({ postId }: PostDetailProps) {
 
   if (error) {
     return (
-      <Alert color="red" variant="light">
+      <Alert
+        variant="light"
+        style={{
+          backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+          borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+          color: "var(--destructive)",
+        }}
+      >
         {error}
       </Alert>
     );
@@ -103,7 +112,7 @@ export default function PostDetail({ postId }: PostDetailProps) {
   if (!post) {
     return (
       <Text c="gray.5" ta="center" py="xl">
-        Post introuvable.
+        {t("post.notFound")}
       </Text>
     );
   }

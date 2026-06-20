@@ -15,7 +15,7 @@ function sanitizePost(post: InstanceType<typeof Post>): PostResponse {
         authorId: post.authorId,
         content: post.content,
         tags: post.tags,
-        mentions: post.mentions ?? [],
+        media: post.media ?? [],
         createdAt: post.createdAt as Date,
         updatedAt: post.updatedAt as Date,
         deletedAt: post.deletedAt,
@@ -27,7 +27,7 @@ function mapLeanPost(post: {
     authorId: string;
     content: string;
     tags?: string[];
-    mentions?: string[];
+    media?: PostResponse["media"];
     createdAt: Date;
     updatedAt: Date;
     deletedAt?: Date | null;
@@ -37,7 +37,7 @@ function mapLeanPost(post: {
         authorId: post.authorId,
         content: post.content,
         tags: post.tags ?? [],
-        mentions: post.mentions ?? [],
+        media: post.media ?? [],
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
         deletedAt: post.deletedAt,
@@ -90,7 +90,7 @@ async function createPost(
         authorId,
         content,
         tags: data.tags ?? [],
-        mentions,
+        media: data.media ?? [],
     });
 
     notifyPostMentionsSafely(authorId, String(post._id), content);
@@ -146,7 +146,7 @@ async function updatePost(
 ): Promise<PostResponse> {
     const post = await Post.findByIdAndUpdate(
         postId,
-        { content: data.content, tags: data.tags },
+        { content: data.content, tags: data.tags, media: data.media },
         { returnDocument: "after", runValidators: true }
     );
 
@@ -164,16 +164,22 @@ async function getAllPosts(
     return findPostPage({}, limit, cursor);
 }
 
-async function softDeletePost(postId: string): Promise<PostResponse> {
-    const post = await Post.findByIdAndUpdate(
-        postId,
-        { deletedAt: new Date() },
-        { returnDocument: "after" }
-    );
+async function softDeletePost(
+    postId: string,
+    requesterId?: string | null
+): Promise<PostResponse> {
+    const post = await Post.findById(postId);
 
-    if (!post) {
+    if (!post || post.deletedAt) {
         throw new Error("POST_NOT_FOUND");
     }
+
+    if (requesterId && post.authorId !== requesterId) {
+        throw new Error("POST_FORBIDDEN");
+    }
+
+    post.deletedAt = new Date();
+    await post.save();
 
     return sanitizePost(post);
 }

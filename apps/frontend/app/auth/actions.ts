@@ -5,6 +5,7 @@ import {
   ACCESS_TOKEN_KEY,
   REFRESH_TOKEN_KEY,
 } from "@/lib/auth-token-storage";
+import { getServerI18n } from "@/lib/i18n/server";
 
 const TOKEN_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
@@ -47,13 +48,16 @@ function getApiUrl(path: string) {
   return `${baseUrl.replace(/\/$/, "")}${path}`;
 }
 
-async function readAuthResponse(response: Response) {
+async function readAuthResponse(
+  response: Response,
+  t: (key: string, params?: Record<string, string | number>) => string,
+) {
   const data = (await response.json().catch(() => null)) as AuthResponse | null;
 
   if (!response.ok) {
     return {
       ok: false as const,
-      message: data?.message ?? "Authentification impossible.",
+      message: data?.message ?? t("auth.authErrorTitle"),
     };
   }
 
@@ -63,7 +67,7 @@ async function readAuthResponse(response: Response) {
   if (!accessToken || !refreshToken) {
     return {
       ok: false as const,
-      message: "Les tokens de session sont manquants.",
+      message: t("common.unknownError"),
     };
   }
 
@@ -101,6 +105,7 @@ async function createHttpOnlySession(tokens: {
 }
 
 async function requestLogin(payload: AuthPayload): Promise<AuthActionResult> {
+  const { t } = await getServerI18n();
   const response = await fetch(getApiUrl("/auth/login"), {
     method: "POST",
     headers: {
@@ -109,7 +114,7 @@ async function requestLogin(payload: AuthPayload): Promise<AuthActionResult> {
     body: JSON.stringify(payload),
     cache: "no-store",
   });
-  const result = await readAuthResponse(response);
+  const result = await readAuthResponse(response, t);
 
   if (!result.ok) {
     return {
@@ -135,6 +140,7 @@ export async function loginAction(
 export async function registerAction(
   payload: RegisterPayload,
 ): Promise<AuthActionResult> {
+  const { t } = await getServerI18n();
   const response = await fetch(getApiUrl("/auth/register"), {
     method: "POST",
     headers: {
@@ -149,7 +155,7 @@ export async function registerAction(
 
     return {
       status: "error",
-      message: data?.message ?? "Creation du compte impossible.",
+      message: data?.message ?? t("auth.authErrorTitle"),
     };
   }
 

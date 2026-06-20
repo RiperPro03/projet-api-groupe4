@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { ACCESS_TOKEN_KEY } from "@/lib/auth-token-storage";
 import type { CurrentUser } from "@/lib/current-user.shared";
+import { getServerI18n } from "@/lib/i18n/server";
 
 export type { CurrentUser } from "@/lib/current-user.shared";
 export { resolveCurrentUserId } from "@/lib/current-user.shared";
@@ -39,7 +40,9 @@ export async function getCurrentUser() {
   }
 
   if (!response.ok) {
-    throw new Error("Impossible de charger le profil de l'utilisateur.");
+    const { t } = await getServerI18n();
+
+    throw new Error(t("api.currentUserLoadError"));
   }
 
   const result = (await response.json()) as CurrentUserResponse;

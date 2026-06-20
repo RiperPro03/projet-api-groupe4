@@ -48,12 +48,15 @@ function validatePresignedUrl(req: Request, res: Response, next: NextFunction) {
         });
     }
 
-    // Limite à 100 Mo
-    const MAX_SIZE = 100 * 1024 * 1024;
-    if (size > MAX_SIZE) {
+    // Limite selon le type de fichier.
+    const isVideo = typeof mimeType === "string" && mimeType.startsWith("video/");
+    const maxSize = isVideo ? 10000 * 1024 * 1024 : 100 * 1024 * 1024;
+    const maxSizeLabel = isVideo ? "10GB" : "100MB";
+
+    if (size > maxSize) {
         return res.status(400).json({
             status: "error",
-            message: "File size cannot exceed 100MB",
+            message: `File size cannot exceed ${maxSizeLabel}`,
         });
     }
 

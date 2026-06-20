@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Avatar, Button, Group, Paper, Textarea } from "@mantine/core";
+import { Avatar, Group, Paper, Textarea } from "@mantine/core";
 import { FiSend } from "react-icons/fi";
+import { RippleButton } from "@/components/ui/ripple-button";
 
 type CommentComposerProps = {
   placeholder?: string;
@@ -10,7 +11,7 @@ type CommentComposerProps = {
 };
 
 export default function CommentComposer({
-  placeholder = "Ecrire un commentaire...",
+  placeholder = "Écrire un commentaire...",
   onSubmit,
 }: CommentComposerProps) {
   const [content, setContent] = useState("");
@@ -60,18 +61,17 @@ export default function CommentComposer({
           }}
           style={{ flex: 1 }}
         />
-        <Button
+        <RippleButton
           aria-label="Publier le commentaire"
           title="Publier"
-          radius="xl"
-          color="green"
-          px="sm"
-          disabled={!content.trim()}
-          loading={isSubmitting}
+          type="button"
+          rippleColor="#000000"
+          disabled={!content.trim() || isSubmitting}
           onClick={handleSubmit}
+          className="size-10 shrink-0 rounded-full border-0 bg-breezy-green p-0 text-black shadow-lg shadow-breezy-green/20 transition-colors hover:bg-breezy-green/90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <FiSend size={18} />
-        </Button>
+        </RippleButton>
       </Group>
     </Paper>
   );

@@ -98,6 +98,10 @@ export function usePostList({
     });
   }, []);
 
+  const removePost = useCallback((postId: string) => {
+    setPosts((currentPosts) => currentPosts.filter((post) => post.id !== postId));
+  }, []);
+
   const loadMore = useCallback(async () => {
     if (!hasMore || isLoadingMore || !nextCursor) {
       return;
@@ -133,6 +137,7 @@ export function usePostList({
     error,
     refresh,
     prependPost,
+    removePost,
     loadMore,
   };
 }

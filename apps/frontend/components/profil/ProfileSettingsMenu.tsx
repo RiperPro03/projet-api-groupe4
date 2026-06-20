@@ -320,8 +320,8 @@ export default function ProfileSettingsMenu({
 
       notify({
         tone: "success",
-        title: "Profil modifie",
-        description: "Vos informations ont ete mises a jour.",
+        title: "Profil modifié",
+        description: "Vos informations ont été mises à jour.",
       });
       setIsEditorOpen(false);
       setSelectedAvatar(null);
@@ -405,7 +405,7 @@ export default function ProfileSettingsMenu({
     <div ref={menuRef} className="relative">
       <button
         type="button"
-        aria-label="Ouvrir les parametres du profil"
+        aria-label="Ouvrir les paramètres du profil"
         aria-haspopup="menu"
         aria-expanded={isMenuOpen}
         onClick={() => setIsMenuOpen((open) => !open)}
@@ -456,7 +456,7 @@ export default function ProfileSettingsMenu({
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-red-400 disabled:cursor-wait disabled:opacity-60"
           >
             <FiLogOut aria-hidden="true" />
-            {isLoggingOut ? "Deconnexion..." : "Se deconnecter"}
+            {isLoggingOut ? "Déconnexion..." : "Se déconnecter"}
           </button>
         </div>
       )}
@@ -521,7 +521,7 @@ export default function ProfileSettingsMenu({
 
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground/75">
-                  Nom affiche
+                  Nom affiché
                 </span>
                 <div className={fieldContainerClassName}>
                   <ShineBorder
@@ -534,7 +534,7 @@ export default function ProfileSettingsMenu({
                     value={form.nickname}
                     onChange={(event) => updateField("nickname", event.target.value)}
                     className={fieldClassName}
-                    placeholder="Votre nom affiche"
+                    placeholder="Votre nom affiché"
                   />
                 </div>
               </label>
@@ -554,7 +554,7 @@ export default function ProfileSettingsMenu({
                     value={form.bio}
                     onChange={(event) => updateField("bio", event.target.value)}
                     className={`${fieldClassName} block min-h-28 resize-y`}
-                    placeholder="Presentez-vous en quelques mots"
+                    placeholder="Présentez-vous en quelques mots"
                   />
                 </div>
               </label>
@@ -602,7 +602,7 @@ export default function ProfileSettingsMenu({
                       <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                         <FiUpload className="shrink-0 text-breezy-green" aria-hidden="true" />
                         <span>
-                          {selectedAvatar ? selectedAvatar.name : "Deposer une image"}
+                          {selectedAvatar ? selectedAvatar.name : "Déposer une image"}
                         </span>
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
@@ -652,7 +652,7 @@ export default function ProfileSettingsMenu({
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 p-5 md:border-b-0 md:p-8 md:pb-0">
               <div>
                 <h2 id="security-title" className="text-xl font-bold">
-                  Securite
+                  Sécurité
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Modifiez votre mot de passe. Vous devrez ensuite vous reconnecter.

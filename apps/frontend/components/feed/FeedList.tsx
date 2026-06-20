@@ -29,7 +29,7 @@ export default function FeedList() {
       })
       .catch(() => {
         if (isMounted) {
-          setError("Impossible de verifier l'utilisateur connecte.");
+          setError("Impossible de vérifier l'utilisateur connecté.");
         }
       })
       .finally(() => {

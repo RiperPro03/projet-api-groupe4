@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Box, Button, Group, Paper, Stack, Text } from "@mantine/core";
+import { Box, Group, Paper, Stack, Text } from "@mantine/core";
 import CommentComposer from "@/components/comments/CommentComposer";
 import ContentCard from "@/components/feed/ContentCard";
+import { RippleButton } from "@/components/ui/ripple-button";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { isApiStatusCode } from "@/lib/api/http-client";
 import { likeComment, unlikeComment } from "@/lib/api/interaction.service";
@@ -162,19 +163,19 @@ function ThreadNode({
           >
             <Group justify="space-between" align="center" mb="xs">
               <Text size="sm" c="green.3" fw={600}>
-                Reponse a @{node.author.username}
+                Réponse à @{node.author.username}
               </Text>
-              <Button
-                variant="subtle"
-                color="gray"
-                size="compact-sm"
+              <RippleButton
+                type="button"
+                rippleColor="#ffffff"
                 onClick={onCancelReply}
+                className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent"
               >
                 Annuler
-              </Button>
+              </RippleButton>
             </Group>
             <CommentComposer
-              placeholder={`Repondre a @${node.author.username}...`}
+              placeholder={`Répondre à @${node.author.username}...`}
               onSubmit={async (content) => {
                 await onReplySubmit?.(node, content);
                 onCancelReply();

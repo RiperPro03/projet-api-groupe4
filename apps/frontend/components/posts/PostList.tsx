@@ -43,6 +43,7 @@ type PostListProps = {
   fetchCommentsForPost?: (postId: string) => Promise<Comment[]>;
   pageSize?: number;
   title?: string;
+  showCreateButton?: boolean;
 };
 
 const postMediaMimeTypes = [

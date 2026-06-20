@@ -21,8 +21,8 @@ type NotificationListProps = {
 const toneStyles = {
   error: {
     icon: AlertCircle,
-    iconClassName: "bg-red-500/15 text-red-300",
-    borderClassName: "border-red-500/25",
+    iconClassName: "bg-destructive/15 text-destructive",
+    borderClassName: "border-destructive/25",
   },
   loading: {
     icon: LoaderCircle,

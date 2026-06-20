@@ -24,6 +24,7 @@ import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { getApiErrorMessage, httpClient, isApiStatusCode } from "@/lib/api/http-client";
 import { likePost, unlikePost } from "@/lib/api/interaction.service";
 import { createPost, deletePost } from "@/lib/api/post.service";
+import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   hydrateLike,
@@ -61,8 +62,8 @@ const secondaryButtonClassName =
   "rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60";
 const greenButtonClassName =
   "rounded-full border-0 bg-breezy-green px-5 py-2.5 text-sm font-semibold text-black shadow-lg shadow-breezy-green/20 transition-colors hover:bg-breezy-green/90 disabled:cursor-not-allowed disabled:opacity-60";
-const redButtonClassName =
-  "rounded-full border-0 bg-red-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-red-500/20 transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60";
+const destructiveButtonClassName =
+  "rounded-full border-0 bg-destructive px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-destructive/20 transition-colors hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-60";
 const addPostButtonClassName =
   "relative z-10 rounded-full border border-transparent bg-transparent px-5 py-2.5 text-sm font-bold text-foreground shadow-lg shadow-black/20 transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60";
 
@@ -84,7 +85,7 @@ function isPostMediaSizeValid(file: File) {
   return file.size <= (getPostMediaType(file) === "video" ? postVideoMaxSize : postImageMaxSize);
 }
 
-async function uploadPostMedia(file: File): Promise<Media> {
+async function uploadPostMedia(file: File, uploadError: string): Promise<Media> {
   const presignedResponse = await httpClient.post<PresignedUrlResponse>(
     "/media/presigned-url",
     {
@@ -104,7 +105,7 @@ async function uploadPostMedia(file: File): Promise<Media> {
     body: file,
   }).then((response) => {
     if (!response.ok) {
-      throw new Error(`Impossible d'envoyer le fichier vers le bucket. (${response.status})`);
+      throw new Error(`${uploadError} (${response.status})`);
     }
   });
 
@@ -120,14 +121,22 @@ async function deleteUploadedPostMedia(media: Media) {
   await httpClient.delete(`/media/${encodeURIComponent(media.id)}`).catch(() => undefined);
 }
 
-function getCreatePostErrorMessage(error: unknown) {
-  const apiErrorMessage = getApiErrorMessage(error);
+function getCreatePostErrorMessage(
+  error: unknown,
+  fallbackMessage: string,
+  serverUnreachableMessage: string
+) {
+  const apiErrorMessage = getApiErrorMessage(
+    error,
+    fallbackMessage,
+    serverUnreachableMessage
+  );
 
-  if (apiErrorMessage !== "Une erreur inattendue est survenue.") {
+  if (apiErrorMessage !== fallbackMessage) {
     return apiErrorMessage;
   }
 
-  return error instanceof Error ? error.message : apiErrorMessage;
+  return error instanceof Error ? error.message : fallbackMessage;
 }
 
 function PostFeedItem({
@@ -141,6 +150,7 @@ function PostFeedItem({
   currentUserId: string | null;
   onDeletePost: (post: Post) => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [comments, setComments] = useState<Comment[]>([]);
   const [showComments, setShowComments] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
@@ -254,7 +264,7 @@ function PostFeedItem({
             setIsDeleteConfirmOpen(false);
           }
         }}
-        title="Supprimer le post"
+        title={t("post.deleteTitle")}
         centered
         radius={8}
         closeOnClickOutside={!isDeletingPost}
@@ -263,29 +273,29 @@ function PostFeedItem({
       >
         <Stack gap="md">
           <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
-            Ce post sera retiré du fil. Cette action est définitive.
+            {t("post.deleteDescription")}
           </Text>
 
           <Group justify="flex-end">
             <RippleButton
               type="button"
-              rippleColor="#ffffff"
+              rippleColor="var(--foreground)"
               disabled={isDeletingPost}
               onClick={() => setIsDeleteConfirmOpen(false)}
               className={secondaryButtonClassName}
             >
-              Annuler
+              {t("common.cancel")}
             </RippleButton>
             <RippleButton
               type="button"
-              rippleColor="#ffffff"
+              rippleColor="var(--foreground)"
               disabled={isDeletingPost}
               onClick={confirmDeletePost}
-              className={redButtonClassName}
+              className={destructiveButtonClassName}
             >
               <span className="flex items-center gap-2">
                 <FiTrash2 size={16} />
-                {isDeletingPost ? "Suppression..." : "Supprimer"}
+                {isDeletingPost ? t("post.deleting") : t("common.delete")}
               </span>
             </RippleButton>
           </Group>
@@ -381,8 +391,11 @@ export default function PostList({
   fetchUpdatedPosts,
   fetchCommentsForPost,
   pageSize = 5,
-  title = "Fil d'actualité",
+  title,
+  showCreateButton = true,
 }: PostListProps) {
+  const { t } = useI18n();
+  const listTitle = title ?? t("post.feedTitle");
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const mediaPreviewsRef = useRef<string[]>([]);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
@@ -423,7 +436,7 @@ export default function PostList({
 
     if (nextFiles.length === 0) {
       if (files.length > 0) {
-        setCreatePostError("Images 100 Mo maximum. Vidéos 10 Go maximum.");
+        setCreatePostError(t("post.fileTooLarge"));
       }
 
       return;
@@ -432,7 +445,7 @@ export default function PostList({
     setCreatePostError(
       validFiles.length === files.length
         ? null
-        : "Certains fichiers trop lourds ont été ignorés. Images 100 Mo, vidéos 10 Go."
+        : t("post.ignoredFiles")
     );
     setSelectedPostMedia((current) => [...current, ...nextFiles]);
     setPreviewUrls((current) => [
@@ -485,7 +498,7 @@ export default function PostList({
 
     try {
       for (const media of selectedPostMedia) {
-        uploadedMedia.push(await uploadPostMedia(media));
+        uploadedMedia.push(await uploadPostMedia(media, t("post.uploadError")));
       }
 
       const post = await createPost({
@@ -497,7 +510,13 @@ export default function PostList({
       setIsCreatePostOpen(false);
     } catch (error) {
       await Promise.all(uploadedMedia.map(deleteUploadedPostMedia));
-      setCreatePostError(getCreatePostErrorMessage(error));
+      setCreatePostError(
+        getCreatePostErrorMessage(
+          error,
+          t("post.createErrorFallback"),
+          t("common.serverUnreachable")
+        )
+      );
     } finally {
       setIsCreatingPost(false);
     }
@@ -511,7 +530,15 @@ export default function PostList({
       await deletePost(post.id);
     } catch (deleteError) {
       prependPost(post);
-      setPostActionError(`Suppression impossible. ${getApiErrorMessage(deleteError)}`);
+      setPostActionError(
+        t("post.deleteImpossible", {
+          message: getApiErrorMessage(
+            deleteError,
+            t("common.unknownError"),
+            t("common.serverUnreachable")
+          ),
+        })
+      );
     }
   }
 
@@ -575,7 +602,7 @@ export default function PostList({
       <Modal
         opened={isCreatePostOpen}
         onClose={closeCreatePostModal}
-        title="Ajouter un post"
+        title={t("post.modalTitle")}
         centered
         radius={8}
         overlayProps={{ backgroundOpacity: 0.72, blur: 2 }}
@@ -584,7 +611,7 @@ export default function PostList({
           <Textarea
             value={postContent}
             onChange={(event) => setPostContent(event.currentTarget.value)}
-            placeholder="Quoi de neuf ?"
+            placeholder={t("post.composerPlaceholder")}
             autosize
             minRows={4}
             maxRows={10}
@@ -597,7 +624,7 @@ export default function PostList({
             disabled={isCreatingPost || selectedPostMedia.length >= postMediaMaxFiles}
             onDrop={addSelectedPostMedia}
             onReject={() => {
-              setCreatePostError("Choisissez jusqu'à 4 fichiers JPG, PNG, GIF, WebP, MP4 ou WebM. Images 100 Mo, vidéos 10 Go.");
+              setCreatePostError(t("post.fileReject"));
             }}
             style={{
               border: "1px dashed var(--border)",
@@ -623,10 +650,10 @@ export default function PostList({
               </Box>
               <Box style={{ minWidth: 0 }}>
                 <Text fw={600} size="sm" style={{ color: "var(--foreground)" }}>
-                  Ajouter des fichiers
+                  {t("post.addFiles")}
                 </Text>
                 <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
-                  JPG, PNG, GIF, WebP, MP4 ou WebM. Images 100 Mo, vidéos 10 Go.
+                  {t("post.fileHint")}
                 </Text>
               </Box>
             </Group>
@@ -663,7 +690,7 @@ export default function PostList({
                         controls
                         muted
                         preload="metadata"
-                        aria-label={file?.name ?? "Vidéo du post"}
+                        aria-label={file?.name ?? t("post.videoAlt")}
                         src={previewUrl}
                         style={{
                           display: "block",
@@ -675,20 +702,21 @@ export default function PostList({
                     ) : (
                       <Image
                         src={previewUrl}
-                        alt={file?.name ?? "Image du post"}
+                        alt={file?.name ?? t("post.imageAlt")}
                         h="100%"
                         w="100%"
                         fit="cover"
                       />
                     )}
                     <ActionIcon
-                      aria-label="Retirer le fichier"
-                      color="red"
+                      aria-label={t("post.removeFile")}
                       radius="xl"
                       size="sm"
                       variant="filled"
                       onClick={() => removeSelectedPostMedia(index)}
                       style={{
+                        backgroundColor: "var(--destructive)",
+                        color: "white",
                         position: "absolute",
                         right: 8,
                         top: 8,
@@ -704,12 +732,19 @@ export default function PostList({
 
           {selectedPostMedia.length >= postMediaMaxFiles && (
             <Text size="xs" style={{ color: "var(--muted-foreground)" }}>
-              Limite de 4 fichiers atteinte.
+              {t("post.maxFiles")}
             </Text>
           )}
 
           {createPostError && (
-            <Alert color="red" variant="light">
+            <Alert
+              variant="light"
+              style={{
+                backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+                borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+                color: "var(--destructive)",
+              }}
+            >
               {createPostError}
             </Alert>
           )}
@@ -717,23 +752,23 @@ export default function PostList({
           <Group justify="flex-end">
             <RippleButton
               type="button"
-              rippleColor="#ffffff"
+              rippleColor="var(--foreground)"
               disabled={isCreatingPost}
               onClick={closeCreatePostModal}
               className={secondaryButtonClassName}
             >
-              Annuler
+              {t("common.cancel")}
             </RippleButton>
             <RippleButton
               type="button"
-              rippleColor="#000000"
+              rippleColor="var(--color-breezy-black)"
               disabled={!postContent.trim() || isCreatingPost}
               onClick={handleCreatePost}
               className={greenButtonClassName}
             >
               <span className="flex items-center gap-2">
                 <FiSend size={16} />
-                {isCreatingPost ? "Publication..." : "Publier"}
+                {isCreatingPost ? t("common.publishing") : t("common.publish")}
               </span>
             </RippleButton>
           </Group>
@@ -742,48 +777,64 @@ export default function PostList({
 
       <Group justify="space-between" align="center">
         <Text fw={700} style={{ color: "var(--foreground)" }} size="lg">
-          {title}
+          {listTitle}
         </Text>
-        <div className="relative rounded-full">
-          <ShineBorder
-            borderWidth="0.125rem"
-            duration={15}
-            shineColor={[
-              "var(--color-breezy-green)",
-              "var(--color-breezy-yellow)",
-              "var(--color-breezy-green)",
-            ]}
-            className="z-20"
-          />
-          <RippleButton
-            type="button"
-            rippleColor="var(--color-breezy-green)"
-            onClick={() => setIsCreatePostOpen(true)}
-            className={addPostButtonClassName}
-          >
-            <span className="flex items-center gap-2">
-              <FiPlus size={16} />
-              Ajouter un post
-            </span>
-          </RippleButton>
-        </div>
+        {showCreateButton && (
+          <div className="relative rounded-full">
+            <ShineBorder
+              borderWidth="0.125rem"
+              duration={15}
+              shineColor={[
+                "var(--color-breezy-green)",
+                "var(--color-breezy-yellow)",
+                "var(--color-breezy-green)",
+              ]}
+              className="z-20"
+            />
+            <RippleButton
+              type="button"
+              rippleColor="var(--color-breezy-green)"
+              onClick={() => setIsCreatePostOpen(true)}
+              className={addPostButtonClassName}
+            >
+              <span className="flex items-center gap-2">
+                <FiPlus size={16} />
+                {t("post.add")}
+              </span>
+            </RippleButton>
+          </div>
+        )}
       </Group>
 
       {error && (
-        <Alert color="red" variant="light">
+        <Alert
+          variant="light"
+          style={{
+            backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+            borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+            color: "var(--destructive)",
+          }}
+        >
           {error}
         </Alert>
       )}
 
       {postActionError && (
-        <Alert color="red" variant="light">
+        <Alert
+          variant="light"
+          style={{
+            backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+            borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+            color: "var(--destructive)",
+          }}
+        >
           {postActionError}
         </Alert>
       )}
 
       {posts.length === 0 ? (
         <Text style={{ color: "var(--muted-foreground)" }} ta="center" py="xl">
-          Aucun post pour le moment.
+          {t("post.noPosts")}
         </Text>
       ) : (
         <AnimatedList delay={0} reverseOrder={false} className="gap-3">
@@ -809,7 +860,7 @@ export default function PostList({
 
       {!hasMore && posts.length > 0 && (
         <Text style={{ color: "var(--muted-foreground)" }} ta="center" size="sm" py="sm">
-          Vous avez atteint la fin du feed.
+          {t("post.endFeed")}
         </Text>
       )}
     </Stack>

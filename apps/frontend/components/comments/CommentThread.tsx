@@ -8,6 +8,7 @@ import { RippleButton } from "@/components/ui/ripple-button";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { isApiStatusCode } from "@/lib/api/http-client";
 import { likeComment, unlikeComment } from "@/lib/api/interaction.service";
+import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   hydrateLike,
@@ -70,6 +71,7 @@ function ThreadNode({
   onCancelReply: () => void;
   onReplySubmit?: (parentComment: Comment, content: string) => void | Promise<void>;
 }) {
+  const { t } = useI18n();
   const visualDepth = Math.min(depth, maxVisualDepth);
   const isReplying = activeReplyId === node.id;
   const dispatch = useAppDispatch();
@@ -163,19 +165,21 @@ function ThreadNode({
           >
             <Group justify="space-between" align="center" mb="xs">
               <Text size="sm" c="green.3" fw={600}>
-                Réponse à @{node.author.username}
+                {t("comment.replyTo", { username: node.author.username })}
               </Text>
               <RippleButton
                 type="button"
-                rippleColor="#ffffff"
+                rippleColor="var(--foreground)"
                 onClick={onCancelReply}
                 className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent"
               >
-                Annuler
+                {t("common.cancel")}
               </RippleButton>
             </Group>
             <CommentComposer
-              placeholder={`Répondre à @${node.author.username}...`}
+              placeholder={t("comment.replyPlaceholder", {
+                username: node.author.username,
+              })}
               onSubmit={async (content) => {
                 await onReplySubmit?.(node, content);
                 onCancelReply();
@@ -206,13 +210,14 @@ export default function CommentThread({
   maxVisualDepth = 3,
   onReplySubmit,
 }: CommentThreadProps) {
+  const { t } = useI18n();
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const tree = buildCommentTree(comments);
 
   if (tree.length === 0) {
     return (
       <Text style={{ color: "var(--muted-foreground)" }} ta="center" py="xl">
-        Aucun commentaire pour le moment.
+        {t("comment.noComments")}
       </Text>
     );
   }

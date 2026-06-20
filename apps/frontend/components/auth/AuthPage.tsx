@@ -12,6 +12,7 @@ import { RippleButton } from "@/components/ui/ripple-button";
 import { ShineBorder } from "@/components/ui/shine-border";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { ThemedLogo } from "@/components/branding/ThemedLogo";
+import { useI18n } from "@/lib/i18n/client";
 
 type AuthMode = "login" | "register";
 
@@ -50,6 +51,7 @@ function Field({
   pattern,
   minLength,
 }: FieldProps) {
+  const { t } = useI18n();
   const isPasswordField = type === "password";
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const inputType = isPasswordField && isPasswordVisible ? "text" : type;
@@ -59,7 +61,7 @@ function Field({
       <div
         className={`group relative h-14 rounded-xl border transition-shadow focus-within:border-transparent lg:h-14 2xl:h-16 ${
           error
-            ? "border-red-500 focus-within:shadow-[0_0_1.25rem_rgba(239,68,68,0.35)]"
+            ? "border-destructive focus-within:shadow-[0_0_1.25rem_var(--destructive)]"
             : "border-input focus-within:shadow-[0_0_1.25rem_rgb(var(--breezy-green-rgb)_/_0.28)]"
         }`}
       >
@@ -71,7 +73,7 @@ function Field({
           duration={15}
           shineColor={
             error
-              ? ["#ef4444", "#f87171", "#ef4444"]
+              ? ["var(--destructive)", "var(--destructive)", "var(--destructive)"]
               : [
                   "var(--color-breezy-green)",
                   "var(--color-breezy-yellow)",
@@ -100,8 +102,8 @@ function Field({
             type="button"
             aria-label={
               isPasswordVisible
-                ? "Masquer le mot de passe"
-                : "Afficher le mot de passe"
+                ? t("auth.hidePassword")
+                : t("auth.showPassword")
             }
           aria-pressed={isPasswordVisible}
           onClick={() => setIsPasswordVisible((visible) => !visible)}
@@ -116,7 +118,7 @@ function Field({
         )}
       </div>
       {error && (
-        <p id={`${id}-error`} className="mt-2 text-sm text-red-400" role="alert">
+        <p id={`${id}-error`} className="mt-2 text-sm text-destructive" role="alert">
           {error}
         </p>
       )}
@@ -127,6 +129,7 @@ function Field({
 export default function AuthPage({ mode }: { mode: AuthMode }) {
   const router = useRouter();
   const { notify } = useNotifications();
+  const { t } = useI18n();
   const isLogin = mode === "login";
 
   // Client-side form state and validation.
@@ -139,21 +142,21 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
   const [submitError, setSubmitError] = useState<string>();
   const usernameError =
     !isLogin && hasSubmitted && username.trim().length === 0
-      ? "Le nom d’utilisateur est obligatoire."
+      ? t("auth.usernameRequired")
       : undefined;
   const emailError =
     (hasSubmitted || email.length > 0) && !EMAIL_REGEX.test(email)
-      ? "L’adresse e-mail n’est pas valide."
+      ? t("auth.invalidEmail")
       : undefined;
   const passwordLengthError =
     (hasSubmitted || password.length > 0) && password.length < 8
-      ? "Le mot de passe doit contenir au moins 8 caractères."
+      ? t("auth.passwordTooShort")
       : undefined;
   const passwordConfirmationError =
     !isLogin &&
     (hasSubmitted || passwordConfirmation.length > 0) &&
     password !== passwordConfirmation
-      ? "Les mots de passe ne correspondent pas."
+      ? t("auth.passwordsMismatch")
       : undefined;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -175,8 +178,8 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
     if (isLogin ? hasInvalidLoginForm : hasInvalidRegisterForm) {
       notify({
         tone: "error",
-        title: "Formulaire incomplet",
-        description: "Corrige les champs indiqués avant de continuer.",
+        title: t("auth.incompleteTitle"),
+        description: t("auth.incompleteDescription"),
       });
       return;
     }
@@ -185,8 +188,8 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
     const authNotificationId = notify(
       {
         tone: "loading",
-        title: isLogin ? "Connexion en cours" : "Création du compte",
-        description: "La requête est envoyée au service d'authentification.",
+        title: isLogin ? t("auth.loginLoadingTitle") : t("auth.registerLoadingTitle"),
+        description: t("auth.loadingDescription"),
       },
       { duration: null },
     );
@@ -208,7 +211,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
         notify(
           {
             tone: "error",
-            title: "Authentification impossible",
+            title: t("auth.authErrorTitle"),
             description: result.message,
           },
           { replaceId: authNotificationId },
@@ -219,8 +222,8 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
       notify(
         {
           tone: "success",
-          title: isLogin ? "Connexion réussie" : "Compte créé",
-          description: "Redirection vers Breezyl.",
+          title: isLogin ? t("auth.loginSuccessTitle") : t("auth.registerSuccessTitle"),
+          description: t("auth.successDescription"),
         },
         { replaceId: authNotificationId },
       );
@@ -233,13 +236,13 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
       const message =
         error instanceof Error
           ? error.message
-          : "Une erreur inattendue est survenue.";
+          : t("common.unknownError");
 
       setSubmitError(message);
       notify(
         {
           tone: "error",
-          title: "Authentification impossible",
+          title: t("auth.authErrorTitle"),
           description: message,
         },
         { replaceId: authNotificationId },
@@ -254,7 +257,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
     ? [
         {
           id: "email",
-          label: "Adresse e-mail",
+          label: t("auth.email"),
           type: "email",
           autoComplete: "email",
           value: email,
@@ -264,7 +267,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
         },
         {
           id: "password",
-          label: "Mot de passe",
+          label: t("auth.password"),
           type: "password",
           autoComplete: "current-password",
           value: password,
@@ -276,7 +279,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
     : [
         {
           id: "username",
-          label: "Nom d'utilisateur",
+          label: t("auth.username"),
           autoComplete: "username",
           value: username,
           onChange: (event) => setUsername(event.target.value),
@@ -284,7 +287,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
         },
         {
           id: "email",
-          label: "Adresse e-mail",
+          label: t("auth.email"),
           type: "email",
           autoComplete: "email",
           value: email,
@@ -294,7 +297,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
         },
         {
           id: "password",
-          label: "Mot de passe",
+          label: t("auth.password"),
           type: "password",
           autoComplete: "new-password",
           value: password,
@@ -304,7 +307,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
         },
         {
           id: "passwordConfirmation",
-          label: "Confirmer le mot de passe",
+          label: t("auth.confirmPassword"),
           type: "password",
           autoComplete: "new-password",
           value: passwordConfirmation,
@@ -330,7 +333,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
           {/* Brand header. */}
           <Link
             href="/"
-            aria-label="Breezyl - Accueil"
+            aria-label={t("nav.brandHome")}
             className="mx-auto inline-flex items-center gap-2 rounded-full p-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-breezy-green"
           >
             <ThemedLogo
@@ -357,7 +360,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
               ))}
 
               {submitError && (
-                <p className="text-sm text-red-400" role="alert">
+                <p className="text-sm text-destructive" role="alert">
                   {submitError}
                 </p>
               )}
@@ -365,10 +368,10 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
               <RippleButton
                 type="submit"
                 disabled={isSubmitting}
-                rippleColor="#000000"
+                rippleColor="var(--color-breezy-black)"
                 className="h-12 w-full rounded-full border-0 bg-foreground px-5 text-base font-bold text-background shadow-sm transition hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground lg:h-14 lg:bg-breezy-green lg:text-lg lg:text-white lg:shadow-lg lg:shadow-breezy-green/20 lg:hover:bg-breezy-green/90 lg:focus-visible:outline-breezy-green 2xl:h-16"
               >
-                {isLogin ? "Se connecter" : "Créer le compte"}
+                {isLogin ? t("auth.loginButton") : t("auth.registerButton")}
               </RippleButton>
             </form>
           </section>
@@ -376,13 +379,13 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
           {/* Switch between login and registration. */}
           <p className="text-[15.2px] text-muted-foreground">
             {isLogin
-              ? "Vous n’avez pas de compte ?"
-              : "Vous avez déjà un compte ?"}{" "}
+              ? t("auth.noAccount")
+              : t("auth.hasAccount")}{" "}
             <Link
               href={isLogin ? "/register" : "/login"}
               className="text-breezy-green hover:underline"
             >
-              {isLogin ? "Inscrivez-vous" : "Connectez-vous"}
+              {isLogin ? t("auth.signUp") : t("auth.signIn")}
             </Link>
           </p>
         </div>

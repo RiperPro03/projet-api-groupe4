@@ -4,8 +4,15 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Avatar, Card, Group, Loader, Stack, Text } from "@mantine/core";
-import { FiArrowLeft, FiCalendar, FiUserCheck, FiUserPlus } from "react-icons/fi";
+import {
+  FiArrowLeft,
+  FiCalendar,
+  FiUserCheck,
+  FiUserMinus,
+  FiUserPlus,
+} from "react-icons/fi";
 import ProfileActivityTabs from "@/components/profil/ProfileActivityTabs";
+import ProfileSocialStats from "@/components/profil/ProfileSocialStats";
 import { Particles } from "@/components/ui/particles";
 import { RippleButton } from "@/components/ui/ripple-button";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
@@ -17,6 +24,7 @@ import {
   type PublicProfile,
 } from "@/lib/api/profile.service";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
+import { useI18n } from "@/lib/i18n/client";
 
 type PageState =
   | { status: "loading" }
@@ -29,14 +37,25 @@ type PageState =
       isOwnProfile: boolean;
     };
 
+const followButtonBaseClassName =
+  "group mt-1 inline-flex h-10 min-w-36 items-center justify-center rounded-full border px-4 text-sm font-semibold shadow-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-breezy-yellow disabled:cursor-wait disabled:opacity-70";
+
+const followButtonClassName =
+  "border-transparent bg-breezy-green text-black shadow-lg shadow-breezy-green/20 hover:bg-breezy-green/90";
+
+const followingButtonClassName =
+  "border-border bg-card/90 text-foreground hover:border-destructive/70 hover:bg-destructive/10 hover:text-destructive";
+
 export default function PublicProfilePage() {
   const params = useParams();
   const username = decodeURIComponent(params.username as string);
   const { notify } = useNotifications();
+  const { dateLocale, t } = useI18n();
 
   const [state, setState] = useState<PageState>({ status: "loading" });
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [socialRefreshKey, setSocialRefreshKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,15 +84,18 @@ export default function PublicProfilePage() {
           currentUser?.profile?.username === profile.username ||
           currentUserId === profile.id_user;
 
-        setState({ status: "ready", profile, currentUserId, isOwnProfile: isOwn });
+        const following =
+          !isOwn && currentUserId
+            ? await getFollowStatus(currentUserId, profile.id_user)
+            : false;
 
-        if (!isOwn && currentUserId) {
-          const following = await getFollowStatus(currentUserId, profile.id_user);
-          if (!cancelled) setIsFollowing(following);
-        }
+        if (cancelled) return;
+
+        setState({ status: "ready", profile, currentUserId, isOwnProfile: isOwn });
+        setIsFollowing(following);
       } catch {
         if (!cancelled)
-          setState({ status: "error", message: "Impossible de charger ce profil." });
+          setState({ status: "error", message: t("profile.loadError") });
       }
     }
 
@@ -81,7 +103,7 @@ export default function PublicProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [username]);
+  }, [username, t]);
 
   const handleFollowToggle = useCallback(async () => {
     if (state.status !== "ready" || !state.currentUserId) return;
@@ -91,30 +113,36 @@ export default function PublicProfilePage() {
       if (isFollowing) {
         await unfollowUser(state.currentUserId, state.profile.id_user);
         setIsFollowing(false);
+        setSocialRefreshKey((key) => key + 1);
         notify({
-          title: "Abonnement retiré",
-          description: `Vous ne suivez plus @${state.profile.username}.`,
+          title: t("profile.followRemovedTitle"),
+          description: t("profile.followRemovedDescription", {
+            username: state.profile.username,
+          }),
           tone: "success",
         });
       } else {
         await followUser(state.currentUserId, state.profile.id_user);
         setIsFollowing(true);
+        setSocialRefreshKey((key) => key + 1);
         notify({
-          title: "Abonnement ajouté",
-          description: `Vous suivez maintenant @${state.profile.username}.`,
+          title: t("profile.followAddedTitle"),
+          description: t("profile.followAddedDescription", {
+            username: state.profile.username,
+          }),
           tone: "success",
         });
       }
     } catch {
       notify({
-        title: "Erreur",
-        description: "Impossible de modifier l'abonnement. Réessayez.",
+        title: t("profile.followErrorTitle"),
+        description: t("profile.followErrorDescription"),
         tone: "error",
       });
     } finally {
       setFollowLoading(false);
     }
-  }, [state, isFollowing, notify]);
+  }, [state, isFollowing, notify, t]);
 
   /* ── Loading ── */
   if (state.status === "loading") {
@@ -137,21 +165,17 @@ export default function PublicProfilePage() {
           🔍
         </Text>
         <Text fw={700} size="xl" style={{ color: "var(--foreground)" }}>
-          Utilisateur introuvable
+          {t("profile.userNotFoundTitle")}
         </Text>
         <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
-          Le profil{" "}
-          <Text component="span" fw={600} style={{ color: "var(--foreground)" }}>
-            @{username}
-          </Text>{" "}
-          n'existe pas.
+          {t("profile.userNotFoundDescription", { username })}
         </Text>
         <Link href="/search">
           <RippleButton
-            rippleColor="rgba(0,0,0,0.2)"
+            rippleColor="var(--color-breezy-black)"
             className="mt-2 rounded-full bg-breezy-green px-6 py-2 text-sm font-semibold text-black"
           >
-            Rechercher un utilisateur
+            {t("profile.searchUser")}
           </RippleButton>
         </Link>
       </section>
@@ -163,7 +187,7 @@ export default function PublicProfilePage() {
     return (
       <section className="flex min-h-[calc(100svh-64px)] flex-col items-center justify-center gap-3 bg-background px-5 text-foreground md:min-h-svh">
         <Card radius={8} p="md" withBorder style={{ borderColor: "var(--destructive)" }}>
-          <Text size="sm" c="red">
+          <Text size="sm" style={{ color: "var(--destructive)" }}>
             {state.message}
           </Text>
         </Card>
@@ -171,7 +195,7 @@ export default function PublicProfilePage() {
           href="/"
           className="text-sm text-breezy-green underline hover:text-breezy-green/80"
         >
-          Retour à l'accueil
+          {t("profile.backHome")}
         </Link>
       </section>
     );
@@ -180,7 +204,7 @@ export default function PublicProfilePage() {
   /* ── Profil chargé ── */
   const { profile, isOwnProfile } = state;
   const displayName = profile.nickname || profile.username;
-  const joinedAt = new Intl.DateTimeFormat("fr-FR", {
+  const joinedAt = new Intl.DateTimeFormat(dateLocale, {
     month: "long",
     year: "numeric",
   }).format(new Date(profile.createdAt));
@@ -202,14 +226,14 @@ export default function PublicProfilePage() {
           className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <FiArrowLeft className="h-4 w-4" aria-hidden />
-          Retour à la recherche
+          {t("profile.backSearch")}
         </Link>
 
         {/* En-tête : avatar + bouton action */}
         <div className="flex items-start justify-between gap-4">
           <Avatar
             src={profile.url_photo || null}
-            alt={`Photo de profil de ${displayName}`}
+            alt={t("profile.photoAlt", { name: displayName })}
             radius="xl"
             size={80}
             color="green"
@@ -221,28 +245,55 @@ export default function PublicProfilePage() {
           {/* Bouton Suivre / Suivi — masqué si c'est son propre profil */}
           {!isOwnProfile && (
             <RippleButton
+              type="button"
               onClick={handleFollowToggle}
               disabled={followLoading}
+              aria-pressed={isFollowing}
               aria-label={
                 isFollowing
-                  ? `Ne plus suivre @${profile.username}`
-                  : `Suivre @${profile.username}`
+                  ? t("profile.unfollowAria", { username: profile.username })
+                  : t("profile.followAria", { username: profile.username })
               }
-              rippleColor={isFollowing ? "rgba(220,38,38,0.2)" : "rgba(0,0,0,0.2)"}
-              className={`mt-1 inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all disabled:opacity-60 ${
+              rippleColor={
                 isFollowing
-                  ? "border border-border bg-transparent text-foreground hover:border-red-500 hover:text-red-500"
-                  : "bg-breezy-green text-black hover:bg-breezy-green/80"
+                  ? "var(--destructive)"
+                  : "rgb(var(--breezy-green-rgb) / 0.25)"
+              }
+              className={`${followButtonBaseClassName} ${
+                isFollowing
+                  ? followingButtonClassName
+                  : followButtonClassName
               }`}
             >
               {followLoading ? (
-                <Loader size="xs" color={isFollowing ? "red" : "dark"} />
+                <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap">
+                  <Loader
+                    size="xs"
+                    color={isFollowing ? "var(--destructive)" : "dark"}
+                  />
+                  <span>
+                    {isFollowing
+                      ? t("profile.unfollowLoading")
+                      : t("profile.followLoading")}
+                  </span>
+                </span>
               ) : isFollowing ? (
-                <FiUserCheck className="h-4 w-4" aria-hidden />
+                <>
+                  <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap group-hover:hidden">
+                    <FiUserCheck className="h-4 w-4" aria-hidden />
+                    {t("profile.following")}
+                  </span>
+                  <span className="hidden items-center justify-center gap-2 whitespace-nowrap group-hover:inline-flex">
+                    <FiUserMinus className="h-4 w-4" aria-hidden />
+                    {t("profile.unfollow")}
+                  </span>
+                </>
               ) : (
-                <FiUserPlus className="h-4 w-4" aria-hidden />
+                <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap">
+                  <FiUserPlus className="h-4 w-4" aria-hidden />
+                  {t("profile.follow")}
+                </span>
               )}
-              {isFollowing ? "Suivi" : "Suivre"}
             </RippleButton>
           )}
 
@@ -252,7 +303,7 @@ export default function PublicProfilePage() {
                 rippleColor="rgb(var(--breezy-green-rgb) / 0.15)"
                 className="mt-1 inline-flex items-center rounded-full border border-border bg-transparent px-5 py-2 text-sm font-semibold text-foreground hover:bg-accent"
               >
-                Modifier le profil
+                {t("profile.editProfile")}
               </RippleButton>
             </Link>
           )}
@@ -268,6 +319,12 @@ export default function PublicProfilePage() {
           </Text>
         </Stack>
 
+        <ProfileSocialStats
+          profileUserId={profile.id_user}
+          username={profile.username}
+          refreshKey={socialRefreshKey}
+        />
+
         {profile.bio && (
           <Text mt="md" lh={1.6} style={{ color: "var(--foreground)", opacity: 0.85 }}>
             {profile.bio}
@@ -281,7 +338,7 @@ export default function PublicProfilePage() {
             aria-hidden
           />
           <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
-            A rejoint Breezyl en {joinedAt}
+            {t("profile.joined", { date: joinedAt })}
           </Text>
         </Group>
 

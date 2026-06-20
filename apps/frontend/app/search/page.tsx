@@ -9,6 +9,7 @@ import {
   searchProfilesByUsername,
   type PublicProfile,
 } from "@/lib/api/profile.service";
+import { useI18n } from "@/lib/i18n/client";
 
 const fieldContainerClassName =
   "group relative overflow-hidden rounded-xl border border-transparent bg-background shadow-lg shadow-black/20 transition-shadow focus-within:shadow-[0_0_1.25rem_rgb(var(--breezy-green-rgb)_/_0.28)]";
@@ -35,6 +36,7 @@ function ProfileSkeleton() {
 }
 
 export default function SearchPage() {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PublicProfile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,12 +59,12 @@ export default function SearchPage() {
       setResults(profiles);
       setSearched(true);
     } catch {
-      setError("Impossible de charger les résultats. Réessayez.");
+      setError(t("search.loadError"));
       setResults([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     doSearch(debouncedQuery);
@@ -90,7 +92,7 @@ export default function SearchPage() {
           mb="lg"
           style={{ color: "var(--foreground)" }}
         >
-          Rechercher
+          {t("search.title")}
         </Text>
 
         {/* Barre de recherche */}
@@ -114,14 +116,14 @@ export default function SearchPage() {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher un utilisateur..."
-              aria-label="Rechercher un utilisateur par son nom d'utilisateur"
+              placeholder={t("search.placeholder")}
+              aria-label={t("search.inputAria")}
               className="w-full rounded-xl bg-transparent py-3 pl-11 pr-11 text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
             {query && (
               <button
                 onClick={clearSearch}
-                aria-label="Effacer la recherche"
+                aria-label={t("search.clear")}
                 className="absolute right-4 text-muted-foreground transition-colors hover:text-foreground"
               >
                 <FiX className="h-4 w-4" />
@@ -147,7 +149,7 @@ export default function SearchPage() {
             withBorder
             style={{ borderColor: "var(--destructive)" }}
           >
-            <Text size="sm" c="red">
+            <Text size="sm" style={{ color: "var(--destructive)" }}>
               {error}
             </Text>
           </Card>
@@ -162,17 +164,14 @@ export default function SearchPage() {
               aria-hidden
             />
             <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
-              Aucun utilisateur trouvé pour{" "}
-              <Text component="span" fw={600} style={{ color: "var(--foreground)" }}>
-                «&nbsp;{query}&nbsp;»
-              </Text>
+              {t("search.noResults", { query })}
             </Text>
           </Stack>
         )}
 
         {/* Résultats */}
         {!loading && !error && results.length > 0 && (
-          <Stack gap="sm" role="list" aria-label="Résultats de recherche">
+          <Stack gap="sm" role="list" aria-label={t("search.title")}>
             {results.map((profile) => {
               const displayName = profile.nickname || profile.username;
               return (
@@ -247,7 +246,7 @@ export default function SearchPage() {
               aria-hidden
             />
             <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
-              Tapez un nom d&apos;utilisateur pour commencer
+              {t("search.initial")}
             </Text>
           </Stack>
         )}

@@ -7,6 +7,7 @@ import {
   REFRESH_TOKEN_KEY,
 } from "@/lib/auth-token-storage";
 import { getCurrentUser } from "@/lib/current-user";
+import { getServerI18n } from "@/lib/i18n/server";
 
 export type UpdateProfilePayload = {
   username: string;
@@ -40,12 +41,13 @@ function getApiUrl(path: string) {
 export async function updateCurrentProfileAction(
   payload: UpdateProfilePayload,
 ): Promise<UpdateProfileResult> {
+  const { t } = await getServerI18n();
   const username = payload.username.trim();
 
   if (!username) {
     return {
       status: "error",
-      message: "Le nom d'utilisateur est obligatoire.",
+      message: t("api.profileUsernameRequired"),
     };
   }
 
@@ -58,7 +60,7 @@ export async function updateCurrentProfileAction(
   if (!currentUser || !accessToken) {
     return {
       status: "error",
-      message: "Votre session a expiré. Reconnectez-vous.",
+      message: t("api.sessionExpired"),
     };
   }
 
@@ -85,7 +87,7 @@ export async function updateCurrentProfileAction(
 
     return {
       status: "error",
-      message: data?.message ?? "Impossible de modifier le profil.",
+      message: data?.message ?? t("api.profileUpdateImpossible"),
     };
   }
 
@@ -97,24 +99,26 @@ export async function updateCurrentProfileAction(
 export async function updatePasswordAction(
   payload: UpdatePasswordPayload,
 ): Promise<UpdateProfileResult> {
+  const { t } = await getServerI18n();
+
   if (!payload.currentPassword || !payload.newPassword) {
     return {
       status: "error",
-      message: "Tous les champs sont obligatoires.",
+      message: t("api.fieldsRequired"),
     };
   }
 
   if (payload.newPassword.length < 8) {
     return {
       status: "error",
-      message: "Le nouveau mot de passe doit contenir au moins 8 caractères.",
+      message: t("api.newPasswordTooShort"),
     };
   }
 
   if (payload.currentPassword === payload.newPassword) {
     return {
       status: "error",
-      message: "Le nouveau mot de passe doit être différent de l'ancien.",
+      message: t("api.newPasswordSame"),
     };
   }
 
@@ -124,7 +128,7 @@ export async function updatePasswordAction(
   if (!accessToken) {
     return {
       status: "error",
-      message: "Votre session a expiré. Reconnectez-vous.",
+      message: t("api.sessionExpired"),
     };
   }
 
@@ -145,8 +149,8 @@ export async function updatePasswordAction(
       status: "error",
       message:
         data?.message === "Invalid current password"
-          ? "Le mot de passe actuel est incorrect."
-          : data?.message ?? "Impossible de modifier le mot de passe.",
+          ? t("api.invalidCurrentPassword")
+          : data?.message ?? t("api.passwordUpdateImpossible"),
     };
   }
 

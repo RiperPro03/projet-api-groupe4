@@ -14,6 +14,7 @@ import {
 } from "@mantine/core";
 import type { ReactNode } from "react";
 import { FiHeart, FiMessageCircle, FiTrash2 } from "react-icons/fi";
+import { useI18n } from "@/lib/i18n/client";
 import type { Author, Media } from "@/types/post";
 
 type ContentCardProps = {
@@ -35,8 +36,8 @@ type ContentCardProps = {
 
 const urlRegex = /(https?:\/\/[^\s]+)/g;
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("fr-FR", {
+function formatDate(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
@@ -44,8 +45,8 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function countLabel(value = 0) {
-  return new Intl.NumberFormat("fr-FR", {
+function countLabel(value = 0, locale: string) {
+  return new Intl.NumberFormat(locale, {
     notation: value > 999 ? "compact" : "standard",
   }).format(value);
 }
@@ -85,6 +86,8 @@ function LinkifiedText({ text }: { text: string }) {
 }
 
 function MediaGrid({ media = [] }: { media?: Media[] }) {
+  const { t } = useI18n();
+
   if (media.length === 0) {
     return null;
   }
@@ -122,7 +125,7 @@ function MediaGrid({ media = [] }: { media?: Media[] }) {
             <video
               controls
               preload="metadata"
-              aria-label={item.alt ?? "Vidéo du contenu"}
+              aria-label={item.alt ?? t("content.videoContent")}
               style={{
                 display: "block",
                 height: "100%",
@@ -144,11 +147,13 @@ function ActionButton({
   count,
   onClick,
   children,
+  locale,
 }: {
   label: string;
   count?: number;
   onClick?: () => void;
   children: ReactNode;
+  locale: string;
 }) {
   return (
     <Group gap={6} wrap="nowrap">
@@ -166,7 +171,7 @@ function ActionButton({
       </Tooltip>
       {typeof count === "number" && (
         <Text size="sm" style={{ color: "var(--muted-foreground)" }} miw={20}>
-          {countLabel(count)}
+          {countLabel(count, locale)}
         </Text>
       )}
     </Group>
@@ -189,6 +194,7 @@ export default function ContentCard({
   onDelete,
   isDeleting = false,
 }: ContentCardProps) {
+  const { dateLocale, t } = useI18n();
   const discussionCount = type === "post" ? commentsCount : repliesCount;
   const initials = author.name
     .split(" ")
@@ -210,7 +216,7 @@ export default function ContentCard({
         &middot;
       </Text>
       <Text style={{ color: "var(--muted-foreground)" }} size="sm">
-        {formatDate(createdAt)}
+        {formatDate(createdAt, dateLocale)}
       </Text>
     </Group>
   );
@@ -222,16 +228,18 @@ export default function ContentCard({
 
       <Group gap="xl" mt={4}>
         <ActionButton
-          label={type === "post" ? "Commenter" : "Répondre"}
+          label={type === "post" ? t("content.comment") : t("content.reply")}
           count={discussionCount}
           onClick={onComment}
+          locale={dateLocale}
         >
           <FiMessageCircle size={18} />
         </ActionButton>
         <ActionButton
-          label={isLiked ? "Retirer le like" : "Aimer"}
+          label={isLiked ? t("content.unlike") : t("content.like")}
           count={likesCount}
           onClick={onLike}
+          locale={dateLocale}
         >
           <Box c={isLiked ? "green.4" : undefined} component="span" lh={0}>
             <FiHeart size={18} />
@@ -254,10 +262,9 @@ export default function ContentCard({
       }}
     >
       {onDelete && (
-        <Tooltip label="Supprimer le post">
+        <Tooltip label={t("content.deletePost")}>
           <ActionIcon
-            aria-label="Supprimer le post"
-            color="red"
+            aria-label={t("content.deletePost")}
             disabled={isDeleting}
             loading={isDeleting}
             onClick={onDelete}
@@ -265,6 +272,7 @@ export default function ContentCard({
             size="sm"
             variant="subtle"
             style={{
+              color: "var(--destructive)",
               position: "absolute",
               right: 12,
               top: 12,

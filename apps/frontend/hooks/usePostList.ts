@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getApiErrorMessage } from "@/lib/api/http-client";
+import { useI18n } from "@/lib/i18n/client";
 import type { Post } from "@/types/post";
 
 export type PostPageParams = {
@@ -28,6 +29,7 @@ export function usePostList({
   fetchUpdatedPosts,
   pageSize = 5,
 }: UsePostListOptions) {
+  const { t } = useI18n();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -52,7 +54,15 @@ export function usePostList({
         }
       } catch (loadError) {
         if (isMounted) {
-          setError(`Impossible de charger les posts. ${getApiErrorMessage(loadError)}`);
+          setError(
+            t("post.loadError", {
+              message: getApiErrorMessage(
+                loadError,
+                t("common.unknownError"),
+                t("common.serverUnreachable")
+              ),
+            })
+          );
         }
       } finally {
         if (isMounted) {
@@ -66,7 +76,7 @@ export function usePostList({
     return () => {
       isMounted = false;
     };
-  }, [fetchPosts, pageSize]);
+  }, [fetchPosts, pageSize, t]);
 
   const refresh = useCallback(async () => {
     const loader = fetchUpdatedPosts ?? fetchPosts;
@@ -82,11 +92,19 @@ export function usePostList({
         return [...newPosts, ...currentPosts];
       });
     } catch (refreshError) {
-      setError(`Impossible de recharger les posts. ${getApiErrorMessage(refreshError)}`);
+      setError(
+        t("post.refreshError", {
+          message: getApiErrorMessage(
+            refreshError,
+            t("common.unknownError"),
+            t("common.serverUnreachable")
+          ),
+        })
+      );
     } finally {
       setIsRefreshing(false);
     }
-  }, [fetchPosts, fetchUpdatedPosts, pageSize]);
+  }, [fetchPosts, fetchUpdatedPosts, pageSize, t]);
 
   const prependPost = useCallback((post: Post) => {
     setPosts((currentPosts) => {
@@ -122,11 +140,19 @@ export function usePostList({
       setNextCursor(page.nextCursor);
       setHasMore(page.hasMore);
     } catch (loadMoreError) {
-      setError(`Impossible de charger plus de posts. ${getApiErrorMessage(loadMoreError)}`);
+      setError(
+        t("post.loadMoreError", {
+          message: getApiErrorMessage(
+            loadMoreError,
+            t("common.unknownError"),
+            t("common.serverUnreachable")
+          ),
+        })
+      );
     } finally {
       setIsLoadingMore(false);
     }
-  }, [fetchPosts, hasMore, isLoadingMore, nextCursor, pageSize]);
+  }, [fetchPosts, hasMore, isLoadingMore, nextCursor, pageSize, t]);
 
   return {
     posts,

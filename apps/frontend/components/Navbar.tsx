@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { FiBell, FiHome, FiMail, FiSearch, FiUser } from "react-icons/fi";
+import { FiBell, FiHome, FiSearch, FiUser } from "react-icons/fi";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { ThemedLogo } from "@/components/branding/ThemedLogo";
+import { useI18n } from "@/lib/i18n/client";
 import type { CurrentUser } from "@/lib/current-user";
 
 export default function Navbar({
@@ -14,6 +15,7 @@ export default function Navbar({
     currentUser: CurrentUser | null;
 }) {
     const pathname = usePathname();
+    const { t } = useI18n();
     const [logoAnimationKey, setLogoAnimationKey] = useState(0);
     const profileName =
         currentUser?.profile?.nickname ||
@@ -24,10 +26,10 @@ export default function Navbar({
     const profilePhoto = currentUser?.profile?.url_photo;
 
     const links = [
-        { href: "/", label: "Accueil", icon: FiHome },
-        { href: "/search", label: "Recherche", icon: FiSearch },
-        { href: "/notif", label: "Notifications", icon: FiBell },
-        { href: "/profile", label: "Profil", icon: FiUser },
+        { href: "/", label: t("nav.home"), icon: FiHome },
+        { href: "/search", label: t("nav.search"), icon: FiSearch },
+        { href: "/notif", label: t("nav.notifications"), icon: FiBell },
+        { href: "/profile", label: t("nav.profile"), icon: FiUser },
     ];
 
     return (
@@ -39,7 +41,7 @@ export default function Navbar({
                 <Link
                     href="/"
                     className="mb-4 hidden h-fit items-center whitespace-nowrap rounded-xl px-1 py-1 text-2xl font-bold text-breezy-green hover:bg-accent md:flex"
-                    aria-label="Breezyl - Accueil"
+                    aria-label={t("nav.brandHome")}
                 >
                     <ThemedLogo
                         size={40}

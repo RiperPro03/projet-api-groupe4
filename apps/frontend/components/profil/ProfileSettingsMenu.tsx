@@ -8,6 +8,7 @@ import {
   FiEdit3,
   FiEye,
   FiEyeOff,
+  FiGlobe,
   FiImage,
   FiLogOut,
   FiSettings,
@@ -26,6 +27,8 @@ import { RippleButton } from "@/components/ui/ripple-button";
 import { ShineBorder } from "@/components/ui/shine-border";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { getApiErrorMessage, httpClient } from "@/lib/api/http-client";
+import { useI18n } from "@/lib/i18n/client";
+import { isLocale } from "@/lib/i18n/config";
 
 type ProfileSettingsMenuProps = {
   profile: UpdateProfilePayload;
@@ -69,6 +72,7 @@ function PasswordField({
   autoFocus,
   minLength,
 }: PasswordFieldProps) {
+  const { t } = useI18n();
   const [isVisible, setIsVisible] = useState(false);
 
   return (
@@ -101,7 +105,7 @@ function PasswordField({
         <button
           type="button"
           aria-label={
-            isVisible ? "Masquer le mot de passe" : "Afficher le mot de passe"
+            isVisible ? t("auth.hidePassword") : t("auth.showPassword")
           }
           onClick={() => setIsVisible((visible) => !visible)}
           className="absolute inset-y-0 right-0 z-30 flex w-12 items-center justify-center text-lg text-muted-foreground transition-colors hover:text-breezy-green"
@@ -135,14 +139,14 @@ function getMediaObjectKeyFromUrl(url: string) {
   }
 }
 
-async function uploadProfileImage(file: File) {
+async function uploadProfileImage(file: File, labels: { alt: string; uploadError: string }) {
   const presignedResponse = await httpClient.post<PresignedUrlResponse>(
     "/media/presigned-url",
     {
       filename: file.name,
       mimeType: file.type,
       size: file.size,
-      alt: "Photo de profil",
+      alt: labels.alt,
       usage: "profile",
     },
   );
@@ -155,7 +159,7 @@ async function uploadProfileImage(file: File) {
     body: file,
   }).then((response) => {
     if (!response.ok) {
-      throw new Error("Impossible d'envoyer l'image vers le bucket.");
+      throw new Error(labels.uploadError);
     }
   });
 
@@ -172,14 +176,22 @@ async function deletePreviousProfileImage(url: string) {
   await httpClient.delete(`/media/${encodeURIComponent(objectKey)}`).catch(() => undefined);
 }
 
-function getProfileUpdateErrorMessage(error: unknown) {
-  const apiErrorMessage = getApiErrorMessage(error);
+function getProfileUpdateErrorMessage(
+  error: unknown,
+  fallbackMessage: string,
+  serverUnreachableMessage: string
+) {
+  const apiErrorMessage = getApiErrorMessage(
+    error,
+    fallbackMessage,
+    serverUnreachableMessage
+  );
 
-  if (apiErrorMessage !== "Une erreur inattendue est survenue.") {
+  if (apiErrorMessage !== fallbackMessage) {
     return apiErrorMessage;
   }
 
-  return error instanceof Error ? error.message : apiErrorMessage;
+  return error instanceof Error ? error.message : fallbackMessage;
 }
 
 export default function ProfileSettingsMenu({
@@ -187,6 +199,7 @@ export default function ProfileSettingsMenu({
 }: ProfileSettingsMenuProps) {
   const router = useRouter();
   const { notify } = useNotifications();
+  const { locale, setLocale, languages, t } = useI18n();
   const menuRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -285,6 +298,25 @@ export default function ProfileSettingsMenu({
     setAvatarPreview(URL.createObjectURL(file));
   }
 
+  function handleLanguageChange(value: string) {
+    if (!isLocale(value) || value === locale) {
+      return;
+    }
+
+    const nextLanguage = languages.find((language) => language.code === value);
+
+    setLocale(value);
+    notify({
+      tone: "success",
+      title: t("language.changedTitle"),
+      description: t("language.changedDescription", {
+        language: nextLanguage?.nativeName ?? value,
+      }),
+    });
+    setIsMenuOpen(false);
+    router.refresh();
+  }
+
   async function handleProfileUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -299,7 +331,10 @@ export default function ProfileSettingsMenu({
       const previousPhotoUrl = profile.url_photo;
 
       if (selectedAvatar) {
-        const publicUrl = await uploadProfileImage(selectedAvatar);
+        const publicUrl = await uploadProfileImage(selectedAvatar, {
+          alt: t("settings.profileImageAlt"),
+          uploadError: t("settings.uploadError"),
+        });
         nextForm = {
           ...form,
           url_photo: publicUrl,
@@ -312,7 +347,7 @@ export default function ProfileSettingsMenu({
       if (result.status === "error") {
         notify({
           tone: "error",
-          title: "Modification impossible",
+          title: t("settings.updateImpossible"),
           description: result.message,
         });
         return;
@@ -324,8 +359,8 @@ export default function ProfileSettingsMenu({
 
       notify({
         tone: "success",
-        title: "Profil modifié",
-        description: "Vos informations ont été mises à jour.",
+        title: t("settings.savedTitle"),
+        description: t("settings.savedDescription"),
       });
       setIsEditorOpen(false);
       setSelectedAvatar(null);
@@ -334,8 +369,12 @@ export default function ProfileSettingsMenu({
     } catch (error) {
       notify({
         tone: "error",
-        title: "Modification impossible",
-        description: getProfileUpdateErrorMessage(error),
+        title: t("settings.updateImpossible"),
+        description: getProfileUpdateErrorMessage(
+          error,
+          t("common.unknownError"),
+          t("common.serverUnreachable")
+        ),
       });
     } finally {
       setIsSaving(false);
@@ -369,8 +408,8 @@ export default function ProfileSettingsMenu({
     if (passwordForm.newPassword !== passwordForm.passwordConfirmation) {
       notify({
         tone: "error",
-        title: "Modification impossible",
-        description: "La confirmation ne correspond pas au nouveau mot de passe.",
+        title: t("settings.updateImpossible"),
+        description: t("settings.passwordMismatch"),
       });
       return;
     }
@@ -386,7 +425,7 @@ export default function ProfileSettingsMenu({
       if (result.status === "error") {
         notify({
           tone: "error",
-          title: "Modification impossible",
+          title: t("settings.updateImpossible"),
           description: result.message,
         });
         return;
@@ -397,8 +436,8 @@ export default function ProfileSettingsMenu({
     } catch {
       notify({
         tone: "error",
-        title: "Modification impossible",
-        description: "Une erreur inattendue est survenue.",
+        title: t("settings.updateImpossible"),
+        description: t("common.unknownError"),
       });
     } finally {
       setIsUpdatingPassword(false);
@@ -409,7 +448,7 @@ export default function ProfileSettingsMenu({
     <div ref={menuRef} className="relative">
       <button
         type="button"
-        aria-label="Ouvrir les paramètres du profil"
+        aria-label={t("settings.open")}
         aria-haspopup="menu"
         aria-expanded={isMenuOpen}
         onClick={() => setIsMenuOpen((open) => !open)}
@@ -421,7 +460,7 @@ export default function ProfileSettingsMenu({
       {isMenuOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-14 z-30 w-56 overflow-hidden rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-2xl"
+          className="absolute right-0 top-14 z-30 w-72 overflow-hidden rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-2xl"
         >
           <button
             type="button"
@@ -430,7 +469,7 @@ export default function ProfileSettingsMenu({
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-breezy-yellow"
           >
             <FiEdit3 className="text-breezy-green" aria-hidden="true" />
-            Modifier le profil
+            {t("settings.editProfile")}
           </button>
 
           <button
@@ -440,13 +479,34 @@ export default function ProfileSettingsMenu({
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-breezy-yellow"
           >
             <FiShield className="text-breezy-yellow" aria-hidden="true" />
-            Sécurité
+            {t("settings.security")}
           </button>
 
           <div className="my-1 border-t border-border" />
 
+          <label className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
+            <span className="flex min-w-0 items-center gap-3">
+              <FiGlobe className="shrink-0 text-breezy-green" aria-hidden="true" />
+              {t("language.label")}
+            </span>
+            <select
+              value={locale}
+              aria-label={t("language.selectLabel")}
+              onChange={(event) => handleLanguageChange(event.target.value)}
+              className="h-9 w-40 rounded-full border border-border bg-background pl-3 pr-8 text-sm font-semibold text-foreground outline-none transition-colors hover:border-breezy-green focus-visible:outline-2 focus-visible:outline-breezy-yellow"
+            >
+              {languages.map((language) => (
+                <option key={language.code} value={language.code}>
+                  {language.shortName} · {language.nativeName}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="my-1 border-t border-border" />
+
           <div className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
-            <span>Thème</span>
+            <span>{t("settings.theme")}</span>
             <ThemeToggle className="h-10 w-24 rounded-full" />
           </div>
 
@@ -457,10 +517,10 @@ export default function ProfileSettingsMenu({
             role="menuitem"
             disabled={isLoggingOut}
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10 focus-visible:outline-2 focus-visible:outline-red-400 disabled:cursor-wait disabled:opacity-60"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-destructive disabled:cursor-wait disabled:opacity-60"
           >
             <FiLogOut aria-hidden="true" />
-            {isLoggingOut ? "Déconnexion..." : "Se déconnecter"}
+            {isLoggingOut ? t("settings.loggingOut") : t("settings.logout")}
           </button>
         </div>
       )}
@@ -480,16 +540,16 @@ export default function ProfileSettingsMenu({
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 p-5 md:border-b-0 md:p-8 md:pb-0">
               <div>
                 <h2 id="edit-profile-title" className="text-xl font-bold">
-                  Modifier le profil
+                  {t("settings.editTitle")}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Mettez a jour les informations visibles sur votre profil.
+                  {t("settings.editDescription")}
                 </p>
               </div>
 
               <button
                 type="button"
-                aria-label="Fermer"
+                aria-label={t("common.close")}
                 onClick={() => setIsEditorOpen(false)}
                 className="flex size-9 shrink-0 items-center justify-center rounded-full text-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
@@ -503,7 +563,7 @@ export default function ProfileSettingsMenu({
             >
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground/75">
-                  Nom d&apos;utilisateur
+                  {t("settings.username")}
                 </span>
                 <div className={fieldContainerClassName}>
                   <ShineBorder
@@ -529,7 +589,7 @@ export default function ProfileSettingsMenu({
 
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground/75">
-                  Nom affiché
+                  {t("settings.displayName")}
                 </span>
                 <div className={fieldContainerClassName}>
                   <ShineBorder
@@ -546,14 +606,14 @@ export default function ProfileSettingsMenu({
                     value={form.nickname}
                     onChange={(event) => updateField("nickname", event.target.value)}
                     className={fieldClassName}
-                    placeholder="Votre nom affiché"
+                    placeholder={t("settings.displayNamePlaceholder")}
                   />
                 </div>
               </label>
 
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground/75">
-                  Biographie
+                  {t("settings.bio")}
                 </span>
                 <div className={fieldContainerClassName}>
                   <ShineBorder
@@ -570,14 +630,14 @@ export default function ProfileSettingsMenu({
                     value={form.bio}
                     onChange={(event) => updateField("bio", event.target.value)}
                     className={`${fieldClassName} block min-h-28 resize-y`}
-                    placeholder="Présentez-vous en quelques mots"
+                    placeholder={t("settings.bioPlaceholder")}
                   />
                 </div>
               </label>
 
               <div className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground/75">
-                  Photo de profil
+                  {t("settings.profilePhoto")}
                 </span>
                 <Dropzone
                   accept={avatarMimeTypes}
@@ -595,8 +655,8 @@ export default function ProfileSettingsMenu({
                   onReject={() => {
                     notify({
                       tone: "error",
-                      title: "Image refusee",
-                      description: "Choisissez une image JPG, PNG, GIF ou WebP de 5 Mo maximum.",
+                      title: t("settings.rejectedImageTitle"),
+                      description: t("settings.rejectedImageDescription"),
                     });
                   }}
                   className="rounded-xl border border-dashed border-input bg-background p-0 transition-colors hover:border-breezy-green"
@@ -618,11 +678,11 @@ export default function ProfileSettingsMenu({
                       <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                         <FiUpload className="shrink-0 text-breezy-green" aria-hidden="true" />
                         <span>
-                          {selectedAvatar ? selectedAvatar.name : "Déposer une image"}
+                          {selectedAvatar ? selectedAvatar.name : t("settings.dropImage")}
                         </span>
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        JPG, PNG, GIF ou WebP. 5 Mo maximum.
+                        {t("settings.imageHint")}
                       </p>
                     </div>
                   </div>
@@ -632,19 +692,19 @@ export default function ProfileSettingsMenu({
               <div className="flex justify-end gap-3 pt-3">
                 <RippleButton
                   type="button"
-                  rippleColor="#ffffff"
+                  rippleColor="var(--foreground)"
                   onClick={() => setIsEditorOpen(false)}
                   className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
                 >
-                  Annuler
+                  {t("common.cancel")}
                 </RippleButton>
                 <RippleButton
                   type="submit"
                   disabled={isSaving}
-                  rippleColor="#000000"
+                  rippleColor="var(--color-breezy-black)"
                   className="rounded-full border-0 bg-breezy-green px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-breezy-green/90 disabled:cursor-wait disabled:opacity-60"
                 >
-                  {isSaving ? "Enregistrement..." : "Enregistrer"}
+                  {isSaving ? t("settings.saving") : t("common.save")}
                 </RippleButton>
               </div>
             </form>
@@ -668,16 +728,16 @@ export default function ProfileSettingsMenu({
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 p-5 md:border-b-0 md:p-8 md:pb-0">
               <div>
                 <h2 id="security-title" className="text-xl font-bold">
-                  Sécurité
+                  {t("settings.security")}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Modifiez votre mot de passe. Vous devrez ensuite vous reconnecter.
+                  {t("settings.securityDescription")}
                 </p>
               </div>
 
               <button
                 type="button"
-                aria-label="Fermer"
+                aria-label={t("common.close")}
                 onClick={() => setIsSecurityOpen(false)}
                 className="flex size-9 shrink-0 items-center justify-center rounded-full text-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
@@ -691,7 +751,7 @@ export default function ProfileSettingsMenu({
             >
               <PasswordField
                 id="current-password"
-                label="Mot de passe actuel"
+                label={t("settings.currentPassword")}
                 autoComplete="current-password"
                 autoFocus
                 value={passwordForm.currentPassword}
@@ -701,7 +761,7 @@ export default function ProfileSettingsMenu({
               />
               <PasswordField
                 id="new-password"
-                label="Nouveau mot de passe"
+                label={t("settings.newPassword")}
                 autoComplete="new-password"
                 minLength={8}
                 value={passwordForm.newPassword}
@@ -711,7 +771,7 @@ export default function ProfileSettingsMenu({
               />
               <PasswordField
                 id="password-confirmation"
-                label="Confirmer le nouveau mot de passe"
+                label={t("settings.confirmNewPassword")}
                 autoComplete="new-password"
                 minLength={8}
                 value={passwordForm.passwordConfirmation}
@@ -726,19 +786,19 @@ export default function ProfileSettingsMenu({
               <div className="flex justify-end gap-3 pt-3">
                 <RippleButton
                   type="button"
-                  rippleColor="#ffffff"
+                  rippleColor="var(--foreground)"
                   onClick={() => setIsSecurityOpen(false)}
                   className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
                 >
-                  Annuler
+                  {t("common.cancel")}
                 </RippleButton>
                 <RippleButton
                   type="submit"
                   disabled={isUpdatingPassword}
-                  rippleColor="#000000"
+                  rippleColor="var(--color-breezy-black)"
                   className="rounded-full border-0 bg-breezy-yellow px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-breezy-yellow/90 disabled:cursor-wait disabled:opacity-60"
                 >
-                  {isUpdatingPassword ? "Modification..." : "Modifier"}
+                  {isUpdatingPassword ? t("settings.updatingPassword") : t("settings.updatePassword")}
                 </RippleButton>
               </div>
             </form>

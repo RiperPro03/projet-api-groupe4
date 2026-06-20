@@ -80,12 +80,7 @@ export default async function ProfilePage() {
         {profile?.bio && (
           <p className="mt-4 leading-6 text-foreground/85">{profile.bio}</p>
         )}
-
-        <p className="mt-4 flex items-center gap-1.5 text-sm text-muted-foreground">
-          <FiCalendar aria-hidden="true" />
-          {t("profile.joined", { date: joinedAt })}
-        </p>
-
+        
         <div className="mt-8">
           <ProfileActivityTabs profileUserId={profileUserId} />
         </div>

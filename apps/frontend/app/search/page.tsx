@@ -118,7 +118,7 @@ export default function SearchPage() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t("search.placeholder")}
               aria-label={t("search.inputAria")}
-              className="w-full rounded-xl bg-transparent py-3 pl-11 pr-11 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              className="search-input w-full rounded-xl bg-transparent py-3 pl-11 pr-11 text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
             {query && (
               <button

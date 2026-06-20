@@ -184,6 +184,20 @@
   body::-webkit-scrollbar {
     display: none;
   }
+
+  .search-input::-webkit-search-cancel-button,
+  .search-input::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+  }
+
+  .search-input::-ms-clear,
+  .search-input::-ms-reveal {
+    display: none;
+    height: 0;
+    width: 0;
+  }
 }
 
 ::view-transition-old(root),

@@ -331,17 +331,6 @@ export default function PublicProfilePage() {
           </Text>
         )}
 
-        <Group gap={6} mt="md">
-          <FiCalendar
-            className="h-4 w-4"
-            style={{ color: "var(--muted-foreground)" }}
-            aria-hidden
-          />
-          <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
-            {t("profile.joined", { date: joinedAt })}
-          </Text>
-        </Group>
-
         {/* Onglets posts / commentaires */}
         <div className="mt-8">
           <ProfileActivityTabs profileUserId={profile.id_user} isOwnProfile={isOwnProfile} />

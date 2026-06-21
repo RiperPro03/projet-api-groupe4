@@ -263,8 +263,6 @@ services:
     restart: unless-stopped
     expose: 
       - "3007"
-    env_file:
-      - ./services/interaction-service/.env
     environment:
       PORT: 3007
       SERVICE_NAME: interaction-service
@@ -273,8 +271,6 @@ services:
     depends_on:
       interaction-mongodb:
         condition: service_healthy
-      nginx-internal:
-        condition: service_started
     networks:
       - breezy-network
 
@@ -285,8 +281,6 @@ services:
     restart: unless-stopped
     expose:
       - "3008"
-    env_file:
-      - ./services/notification-service/.env
     environment:
       PORT: 3008
       SERVICE_NAME: notification-service

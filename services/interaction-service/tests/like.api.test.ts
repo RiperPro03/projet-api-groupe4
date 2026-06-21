@@ -13,6 +13,11 @@ const commentLikeMocks = vi.hoisted(() => ({
   countDocuments: vi.fn(),
 }));
 
+const likeNotificationMocks = vi.hoisted(() => ({
+  notifyPostLikeSafely: vi.fn(),
+  notifyCommentLikeSafely: vi.fn(),
+}));
+
 vi.mock("../src/models/post-like.model.js", () => ({
   PostLike: {
     create: postLikeMocks.create,
@@ -27,6 +32,11 @@ vi.mock("../src/models/comment-like.model.js", () => ({
     findOneAndDelete: commentLikeMocks.findOneAndDelete,
     countDocuments: commentLikeMocks.countDocuments,
   },
+}));
+
+vi.mock("../src/services/like-notification.service.js", () => ({
+  notifyPostLikeSafely: likeNotificationMocks.notifyPostLikeSafely,
+  notifyCommentLikeSafely: likeNotificationMocks.notifyCommentLikeSafely,
 }));
 
 import app from "../src/app.js";
@@ -60,6 +70,10 @@ describe("like API", () => {
       expect(response.status).toBe(201);
       expect(response.body.userId).toBe("alice");
       expect(response.body.postId).toBe("post-123");
+      expect(likeNotificationMocks.notifyPostLikeSafely).toHaveBeenCalledWith(
+        "alice",
+        "post-123"
+      );
     });
 
     it("refuse un body incomplet", async () => {
@@ -150,6 +164,10 @@ describe("like API", () => {
 
       expect(response.status).toBe(201);
       expect(response.body.commentId).toBe("comment-456");
+      expect(likeNotificationMocks.notifyCommentLikeSafely).toHaveBeenCalledWith(
+        "alice",
+        "comment-456"
+      );
     });
 
     it("crée un like sur une réponse via commentId", async () => {

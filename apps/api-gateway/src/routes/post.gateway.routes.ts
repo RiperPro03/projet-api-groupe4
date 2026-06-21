@@ -11,7 +11,6 @@ import {
   authenticatedRoles,
   moderationRoles,
   requireBodyOwnerOrRoles,
-  requireOwnerOrRoles,
   requirePostOwnerOrRoles,
   requireRoles,
 } from "../middlewares/rbac.middleware";
@@ -24,7 +23,7 @@ router.all("/health", forwardPostRequest);
 router.use(authMiddleware);
 router.get(
   "/",
-  requireOwnerOrRoles({ roles: moderationRoles, ownerQueryParam: "authorId" }),
+  requireRoles(authenticatedRoles),
   getPostsByAuthorController,
 );
 router.get("/all", requireRoles(authenticatedRoles), getAllPostsController);

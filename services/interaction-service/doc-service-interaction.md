@@ -298,11 +298,19 @@ Cas couverts :
 
 | Service | Interaction |
 |---------|-------------|
-| **notification-service** | (futur Fx15) Notifier lors d'un like — hors périmètre Fx6 |
-| **post-service** | (futur) Les IDs post/comment sont opaques pour Fx6 |
+| **notification-service** | Fx15 — notification créée après un like réussi (fire-and-forget) |
+| **post-service** | Fx15 — fournit `authorId` du post liké via `GET /posts/:id` |
 | **api-gateway** | Point d'entrée `/api/interactions` |
 
-Pour Fx6, le service fonctionne **de manière autonome** : aucun appel HTTP vers les autres microservices.
+Pour Fx6, le cœur métier des likes reste **autonome** côté persistance. Fx15 ajoute un appel HTTP optionnel vers `notification-service` qui n'impacte pas la réponse du like en cas d'échec.
+
+### Fx15 — fichiers ajoutés
+
+| Fichier | Rôle |
+|---------|------|
+| `src/clients/post.client.ts` | Récupère `authorId` via `GET /posts/:id` |
+| `src/clients/notification.client.ts` | `POST /notifications` |
+| `src/services/like-notification.service.ts` | Orchestration + fire-and-forget |
 
 ---
 
@@ -312,5 +320,4 @@ Pour Fx6, le service fonctionne **de manière autonome** : aucun appel HTTP vers
 |-----------|-------------|
 | Auth JWT | `userId` pris du token au lieu du body |
 | Fx7 / Fx8 | CRUD commentaires et réponses |
-| Fx15 | Événement vers `notification-service` lors d'un like |
-| API Gateway | Proxy `/api/interactions/*` |
+| Fx14 / Fx16 | Autres types de notifications (hors périmètre interaction-service) |

@@ -4,7 +4,6 @@ import { authMiddleware } from "../middlewares/auth.middleware";
 import {
   authenticatedRoles,
   requireBodyOwnerOrRoles,
-  requireOwnerOrRoles,
   requireRoles,
 } from "../middlewares/rbac.middleware";
 import { createForwardHandler } from "../utils/http-client";
@@ -26,7 +25,12 @@ router.delete(
 );
 router.get(
   "/following",
-  requireOwnerOrRoles({ roles: [], ownerQueryParam: "followerId" }),
+  requireRoles(authenticatedRoles),
+  forwardFollowRequest,
+);
+router.get(
+  "/followers",
+  requireRoles(authenticatedRoles),
   forwardFollowRequest,
 );
 router.use(requireRoles(authenticatedRoles));

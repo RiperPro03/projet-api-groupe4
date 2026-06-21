@@ -190,7 +190,7 @@ const getAuthorsById = async (authorIds: string[]) => {
       return [
         authorId,
         {
-          id: profile.id_user ?? authorId,
+          id: authorId,
           name,
           username,
           avatarUrl: profile.url_photo?.trim() || undefined,

@@ -13,6 +13,10 @@ import {
   removeCommentLike,
   removePostLike,
 } from "../services/like.service.js";
+import {
+  notifyCommentLikeSafely,
+  notifyPostLikeSafely,
+} from "../services/like-notification.service.js";
 
 function getTrimmedString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -91,6 +95,7 @@ export const addPostLikeHandler: RequestHandler = async (req, res, next) => {
     }
 
     const like = await addPostLike(body.userId, body.postId);
+    notifyPostLikeSafely(body.userId, body.postId);
     res.status(201).json(like);
   } catch (error) {
     next(error);
@@ -160,6 +165,7 @@ export const addCommentLikeHandler: RequestHandler = async (req, res, next) => {
     }
 
     const like = await addCommentLike(body.userId, body.commentId, body.postId);
+    notifyCommentLikeSafely(body.userId, body.commentId);
     res.status(201).json(like);
   } catch (error) {
     next(error);

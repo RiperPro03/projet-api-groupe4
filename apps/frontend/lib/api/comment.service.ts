@@ -1,4 +1,3 @@
-import { resolveCurrentUserId } from "@/lib/current-user.shared";
 import { getCurrentUserFromApi } from "./current-user.service";
 import { httpClient } from "./http-client";
 import type { Comment } from "@/types/comment";
@@ -110,7 +109,7 @@ export async function createComment({
   parentCommentId?: string | null;
 }) {
   const currentUser = await getCurrentUserFromApi();
-  const authorId = resolveCurrentUserId(currentUser);
+  const authorId = currentUser.auth.id;
 
   const { data } = await httpClient.post<CommentResponse>("/comments", {
     postId,

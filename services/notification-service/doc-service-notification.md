@@ -280,7 +280,7 @@ Le lien **Notifications** de la navbar pointe vers `/notif`. Un **badge** sur la
 | `apps/frontend/types/notification.ts` | Type `UserNotification` + pagination |
 | `apps/frontend/lib/api/notification.service.ts` | Client HTTP Axios vers la gateway |
 | `apps/frontend/hooks/useNotificationList.ts` | État liste, pagination cursor, actions lu/supprimer |
-| `apps/frontend/lib/current-user.shared.ts` | `resolveCurrentUserId()` pour `recipientId` |
+| `apps/frontend/lib/current-user.shared.ts` | Type `CurrentUser` (auth / user / profile) |
 | `apps/frontend/components/notifications/NotificationInbox.tsx` | Charge l'utilisateur puis la liste |
 | `apps/frontend/components/notifications/InboxNotificationList.tsx` | Liste paginée + « Tout marquer comme lu » |
 | `apps/frontend/components/notifications/InboxNotificationItem.tsx` | Rendu d'une notification |
@@ -297,7 +297,7 @@ Le lien **Notifications** de la navbar pointe vers `/notif`. Un **badge** sur la
 
 Paramètres de liste utilisés par le front :
 
-- `recipientId` — ID résolu via `profile.id_user ?? user.id_user ?? auth.id`
+- `recipientId` — `currentUser.auth.id`
 - `limit` — 20 par défaut
 - `cursor` — pagination (ID MongoDB de la dernière notification)
 - `unreadOnly` — optionnel (`true` / `1`)

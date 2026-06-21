@@ -20,7 +20,3 @@ export type CurrentUser = {
     updatedAt: string;
   } | null;
 };
-
-export function resolveCurrentUserId(user: CurrentUser): string {
-  return user.profile?.id_user ?? user.user?.id_user ?? user.auth.id;
-}

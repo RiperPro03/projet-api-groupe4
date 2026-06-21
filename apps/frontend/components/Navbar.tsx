@@ -7,7 +7,7 @@ import { FiBell, FiHome, FiMail, FiSearch, FiUser } from "react-icons/fi";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { ThemedLogo } from "@/components/branding/ThemedLogo";
 import { getUnreadCount } from "@/lib/api/notification.service";
-import { resolveCurrentUserId, type CurrentUser } from "@/lib/current-user.shared";
+import type { CurrentUser } from "@/lib/current-user.shared";
 
 export default function Navbar({
     currentUser,
@@ -31,9 +31,7 @@ export default function Navbar({
         }
 
         let isMounted = true;
-        const recipientId = resolveCurrentUserId(currentUser);
-
-        getUnreadCount(recipientId)
+        getUnreadCount(currentUser.auth.id)
             .then((count) => {
                 if (isMounted) {
                     setUnreadCount(count);

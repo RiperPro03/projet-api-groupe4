@@ -3,7 +3,6 @@ import { ACCESS_TOKEN_KEY } from "@/lib/auth-token-storage";
 import type { CurrentUser } from "@/lib/current-user.shared";
 
 export type { CurrentUser } from "@/lib/current-user.shared";
-export { resolveCurrentUserId } from "@/lib/current-user.shared";
 
 type CurrentUserResponse = {
   status: "success";

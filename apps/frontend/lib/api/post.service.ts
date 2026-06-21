@@ -1,4 +1,3 @@
-import { resolveCurrentUserId } from "@/lib/current-user.shared";
 import { httpClient } from "./http-client";
 import { getCurrentUserFromApi } from "./current-user.service";
 import type { FetchPostPage, PostPage, PostPageParams } from "@/hooks/usePostList";
@@ -134,7 +133,7 @@ export async function fetchPostById(postId: string): Promise<Post | null> {
 
 export async function createPost({ content, tags }: CreatePostInput): Promise<Post> {
   const currentUser = await getCurrentUserFromApi();
-  const authorId = resolveCurrentUserId(currentUser);
+  const authorId = currentUser.auth.id;
 
   const { data } = await httpClient.post<PostResponse>("/posts", {
     authorId,

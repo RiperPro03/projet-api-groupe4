@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import InboxNotificationList from "@/components/notifications/InboxNotificationList";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { fetchUserNotifications } from "@/lib/api/notification.service";
-import { resolveCurrentUserId } from "@/lib/current-user.shared";
 
 export default function NotificationInbox() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -21,7 +20,7 @@ export default function NotificationInbox() {
           return;
         }
 
-        setUserId(resolveCurrentUserId(currentUser));
+        setUserId(currentUser.auth.id);
       })
       .catch(() => {
         if (isMounted) {

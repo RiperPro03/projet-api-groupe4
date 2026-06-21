@@ -3,16 +3,27 @@ import { redirect } from "next/navigation";
 import { FiCalendar } from "react-icons/fi";
 import ProfileActivityTabs from "@/components/profil/ProfileActivityTabs";
 import ProfileSettingsMenu from "@/components/profil/ProfileSettingsMenu";
+import ProfileSocialStats from "@/components/profil/ProfileSocialStats";
 import { Particles } from "@/components/ui/particles";
-import { getCurrentUser } from "@/lib/current-user";
 
-export const metadata: Metadata = {
-  title: "Mon profil",
-  description: "Votre profil Breezyl.",
-};
+import { getCurrentUser } from "@/lib/current-user";
+import { getServerI18n } from "@/lib/i18n/server";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerI18n();
+
+  return {
+    title: t("profile.pageTitle"),
+    description: t("profile.pageDescription"),
+  };
+}
 
 export default async function ProfilePage() {
-  const currentUser = await getCurrentUser();
+  const [currentUser, i18n] = await Promise.all([
+    getCurrentUser(),
+    getServerI18n(),
+  ]);
+  const { language, t } = i18n;
 
   if (!currentUser) {
     redirect("/login?redirect=/profile");
@@ -21,8 +32,9 @@ export default async function ProfilePage() {
   const { auth, profile } = currentUser;
   const username = profile?.username || auth.email.split("@")[0];
   const displayName = profile?.nickname || username;
+  const profileUserId = profile?.id_user ?? currentUser.user?.id_user ?? auth.id;
   const joinedAtSource = profile?.createdAt || auth.createdAt;
-  const joinedAt = new Intl.DateTimeFormat("fr-FR", {
+  const joinedAt = new Intl.DateTimeFormat(language.dateLocale, {
     month: "long",
     year: "numeric",
   }).format(new Date(joinedAtSource));
@@ -46,7 +58,7 @@ export default async function ProfilePage() {
                 ? { backgroundImage: `url(${profile.url_photo})` }
                 : undefined
             }
-            aria-label={`Photo de profil de ${displayName}`}
+            aria-label={t("profile.photoAlt", { name: displayName })}
           />
 
           <ProfileSettingsMenu
@@ -64,13 +76,15 @@ export default async function ProfilePage() {
           <p className="text-muted-foreground">@{username}</p>
         </div>
 
+        <ProfileSocialStats profileUserId={profileUserId} username={username} />
+
         {profile?.bio && (
           <p className="mt-4 leading-6 text-foreground/85">{profile.bio}</p>
         )}
 
         <p className="mt-4 flex items-center gap-1.5 text-sm text-muted-foreground">
           <FiCalendar aria-hidden="true" />
-          A rejoint Breezyl en {joinedAt}
+          {t("profile.joined", { date: joinedAt })}
         </p>
 
         <div className="mt-8">

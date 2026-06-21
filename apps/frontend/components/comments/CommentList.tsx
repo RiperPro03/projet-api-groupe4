@@ -8,6 +8,7 @@ import { useCommentList } from "@/hooks/useCommentList";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { isApiStatusCode } from "@/lib/api/http-client";
 import { likeComment, unlikeComment } from "@/lib/api/interaction.service";
+import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   hydrateLike,
@@ -94,6 +95,7 @@ function CommentListItem({ comment }: { comment: Comment }) {
 }
 
 export default function CommentList({ fetchComments }: CommentListProps) {
+  const { t } = useI18n();
   const { comments, isLoading, error } = useCommentList({ fetchComments });
 
   if (isLoading) {
@@ -107,14 +109,21 @@ export default function CommentList({ fetchComments }: CommentListProps) {
   return (
     <Stack gap="md">
       {error && (
-        <Alert color="red" variant="light">
+        <Alert
+          variant="light"
+          style={{
+            backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+            borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+            color: "var(--destructive)",
+          }}
+        >
           {error}
         </Alert>
       )}
 
       {comments.length === 0 ? (
         <Text c="gray.5" ta="center" py="xl">
-          Aucun commentaire pour le moment.
+          {t("comment.noComments")}
         </Text>
       ) : (
         <AnimatedList delay={120} className="gap-3">

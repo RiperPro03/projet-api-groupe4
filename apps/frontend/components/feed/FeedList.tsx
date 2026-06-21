@@ -6,8 +6,10 @@ import PostList from "@/components/posts/PostList";
 import { fetchPostComments } from "@/lib/api/comment.service";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { fetchFeedPosts } from "@/lib/api/post.service";
+import { useI18n } from "@/lib/i18n/client";
 
 export default function FeedList() {
+  const { t } = useI18n();
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export default function FeedList() {
       })
       .catch(() => {
         if (isMounted) {
-          setError("Impossible de verifier l'utilisateur connecte.");
+          setError(t("api.currentUserVerifyError"));
         }
       })
       .finally(() => {
@@ -37,7 +39,7 @@ export default function FeedList() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [t]);
 
   const fetchPosts = useMemo(() => {
     return userId ? fetchFeedPosts(userId) : null;
@@ -53,8 +55,15 @@ export default function FeedList() {
 
   if (error || !fetchPosts) {
     return (
-      <Alert color="red" variant="light">
-        {error ?? "Utilisateur introuvable."}
+      <Alert
+        variant="light"
+        style={{
+          backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+          borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+          color: "var(--destructive)",
+        }}
+      >
+        {error ?? t("api.userNotFound")}
       </Alert>
     );
   }

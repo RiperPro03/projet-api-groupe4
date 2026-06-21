@@ -1,5 +1,6 @@
 import { getCurrentUserFromApi } from "./current-user.service";
 import { httpClient } from "./http-client";
+import type { CurrentUser } from "@/lib/current-user";
 import type { Comment } from "@/types/comment";
 import type { Author } from "@/types/post";
 
@@ -32,12 +33,29 @@ type CommentResponse = {
   };
 };
 
-function mapApiComment(comment: ApiComment, likesCount = 0): Comment {
+function getCurrentUserAuthor(currentUser: CurrentUser, authorId: string): Author {
+  const username = currentUser.profile?.username?.trim() || authorId.slice(0, 12);
+  const name = currentUser.profile?.nickname?.trim() || username;
+  const avatarUrl = currentUser.profile?.url_photo?.trim() || undefined;
+
+  return {
+    id: currentUser.profile?.id_user ?? currentUser.user?.id_user ?? authorId,
+    name,
+    username,
+    avatarUrl,
+  };
+}
+
+function mapApiComment(
+  comment: ApiComment,
+  likesCount = 0,
+  authorOverride?: Author
+): Comment {
   return {
     id: comment.id,
     id_post: comment.postId,
     parentCommentId: comment.parentCommentId ?? null,
-    author: comment.author ?? {
+    author: authorOverride ?? comment.author ?? {
       id: comment.authorId,
       name: `Utilisateur ${comment.authorId.slice(0, 8)}`,
       username: comment.authorId.slice(0, 12),
@@ -118,5 +136,9 @@ export async function createComment({
     parentCommentId,
   });
 
-  return mapApiComment(data.data.comment);
+  return mapApiComment(
+    data.data.comment,
+    0,
+    getCurrentUserAuthor(currentUser, authorId)
+  );
 }

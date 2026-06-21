@@ -24,6 +24,7 @@ import {
   type PublicProfile,
 } from "@/lib/api/profile.service";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
+import { getAuthenticatedUserId } from "@/lib/current-user-ids";
 import { useI18n } from "@/lib/i18n/client";
 
 type PageState =
@@ -74,11 +75,7 @@ export default function PublicProfilePage() {
           return;
         }
 
-        const currentUserId =
-          currentUser?.profile?.id_user ??
-          currentUser?.user?.id_user ??
-          currentUser?.auth.id ??
-          null;
+        const currentUserId = currentUser ? getAuthenticatedUserId(currentUser) : null;
 
         const isOwn =
           currentUser?.profile?.username === profile.username ||
@@ -330,17 +327,6 @@ export default function PublicProfilePage() {
             {profile.bio}
           </Text>
         )}
-
-        <Group gap={6} mt="md">
-          <FiCalendar
-            className="h-4 w-4"
-            style={{ color: "var(--muted-foreground)" }}
-            aria-hidden
-          />
-          <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
-            {t("profile.joined", { date: joinedAt })}
-          </Text>
-        </Group>
 
         {/* Onglets posts / commentaires */}
         <div className="mt-8">

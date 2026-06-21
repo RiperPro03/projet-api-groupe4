@@ -6,6 +6,7 @@ import PostList from "@/components/posts/PostList";
 import { fetchPostComments } from "@/lib/api/comment.service";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { fetchFeedPosts } from "@/lib/api/post.service";
+import { getAuthenticatedUserId } from "@/lib/current-user-ids";
 import { useI18n } from "@/lib/i18n/client";
 
 export default function FeedList() {
@@ -23,7 +24,7 @@ export default function FeedList() {
           return;
         }
 
-        setUserId(currentUser.auth.id);
+        setUserId(getAuthenticatedUserId(currentUser));
       })
       .catch(() => {
         if (isMounted) {

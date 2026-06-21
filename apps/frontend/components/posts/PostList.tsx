@@ -24,6 +24,7 @@ import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { getApiErrorMessage, httpClient, isApiStatusCode } from "@/lib/api/http-client";
 import { likePost, unlikePost } from "@/lib/api/interaction.service";
 import { createPost, deletePost } from "@/lib/api/post.service";
+import { getAuthenticatedUserId } from "@/lib/current-user-ids";
 import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -332,7 +333,7 @@ function PostFeedItem({
           }
 
           const currentUser = await getCurrentUserFromApi();
-          const userId = currentUser.auth.id;
+          const userId = getAuthenticatedUserId(currentUser);
 
           setIsLikePending(true);
 
@@ -545,9 +546,7 @@ export default function PostList({
     getCurrentUserFromApi()
       .then((currentUser) => {
         if (isMounted) {
-          setCurrentUserId(
-            currentUser.profile?.id_user ?? currentUser.user?.id_user ?? currentUser.auth.id
-          );
+          setCurrentUserId(getAuthenticatedUserId(currentUser));
         }
       })
       .catch(() => undefined);

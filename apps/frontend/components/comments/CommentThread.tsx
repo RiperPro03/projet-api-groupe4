@@ -8,6 +8,7 @@ import { RippleButton } from "@/components/ui/ripple-button";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { isApiStatusCode } from "@/lib/api/http-client";
 import { likeComment, unlikeComment } from "@/lib/api/interaction.service";
+import { getAuthenticatedUserId } from "@/lib/current-user-ids";
 import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -99,7 +100,7 @@ function ThreadNode({
     }
 
     const currentUser = await getCurrentUserFromApi();
-    const userId = currentUser.auth.id;
+    const userId = getAuthenticatedUserId(currentUser);
 
     setIsLikePending(true);
 

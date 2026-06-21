@@ -6,14 +6,14 @@ ENV CI=true
 
 RUN corepack enable
 
-COPY package.json package-lock.json ./
+COPY package.json pnpm-workspace.yaml ./
 
-RUN npm ci
+RUN pnpm install
 
 COPY . .
 
 EXPOSE 3003
 
-RUN npm run build
+RUN pnpm run build
 
-CMD ["npm", "run", "start"]
+CMD ["pnpm", "run", "start"]

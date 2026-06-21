@@ -165,8 +165,10 @@ services:
       PORT: 3007
       SERVICE_NAME: interaction-service
       MONGO_URI: mongodb://interaction-mongodb:27017/${INTERACTION_MONGO_DB:-interaction_db}
+      INTERNAL_NGINX_URL: http://nginx-internal
     depends_on:
       - interaction-mongodb
+      - nginx-internal
     networks:
       - breezy-network
     deploy: *replicated-service

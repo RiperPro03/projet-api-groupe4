@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
-import type { CurrentUser } from "@/lib/current-user.shared";
+import type { CurrentUser } from "@/lib/current-user";
 
 const AUTH_ROUTES = ["/login", "/register"];
 

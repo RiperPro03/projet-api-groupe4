@@ -1,9 +1,29 @@
 import { cookies } from "next/headers";
 import { ACCESS_TOKEN_KEY } from "@/lib/auth-token-storage";
-import type { CurrentUser } from "@/lib/current-user.shared";
 import { getServerI18n } from "@/lib/i18n/server";
 
-export type { CurrentUser } from "@/lib/current-user.shared";
+export type CurrentUser = {
+  auth: {
+    id: string;
+    email: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  user: {
+    id_user: string;
+    role: "USER" | "MODERATOR" | "ADMIN";
+    statuts: "ACTIVE" | "INACTIVE";
+  } | null;
+  profile: {
+    id_user: string;
+    username: string;
+    nickname: string;
+    bio: string;
+    url_photo: string;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
+};
 
 type CurrentUserResponse = {
   status: "success";

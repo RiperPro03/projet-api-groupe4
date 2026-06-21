@@ -269,12 +269,12 @@ services:
       PORT: 3007
       SERVICE_NAME: interaction-service
       MONGO_URI: mongodb://interaction-mongodb:27017/interaction_db
-      POST_SERVICE_URL: http://post-service:3003
-      NOTIFICATION_SERVICE_URL: http://notification-service:3008
-      PROFILE_SERVICE_URL: http://profile-service:3006
+      INTERNAL_NGINX_URL: http://nginx-internal
     depends_on:
       interaction-mongodb:
         condition: service_healthy
+      nginx-internal:
+        condition: service_started
     networks:
       - breezy-network
 

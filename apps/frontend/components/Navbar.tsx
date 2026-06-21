@@ -8,7 +8,7 @@ import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { ThemedLogo } from "@/components/branding/ThemedLogo";
 import { getUnreadCount } from "@/lib/api/notification.service";
 import { useI18n } from "@/lib/i18n/client";
-import type { CurrentUser } from "@/lib/current-user.shared";
+import type { CurrentUser } from "@/lib/current-user";
 
 export default function Navbar({
     currentUser,

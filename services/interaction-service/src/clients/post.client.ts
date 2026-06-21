@@ -1,4 +1,4 @@
-import { env } from "../config/env.js";
+import { internalHttpClient } from "./internal-http.client.js";
 
 type PostResponseBody = {
   status?: string;
@@ -10,19 +10,14 @@ type PostResponseBody = {
 };
 
 export async function getPostAuthorId(postId: string): Promise<string | null> {
-  const response = await fetch(`${env.postServiceUrl}/posts/${postId}`, {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-    },
-  });
+  try {
+    const { data } = await internalHttpClient.get<PostResponseBody>(
+      `/posts/${postId}`
+    );
+    const authorId = data.data?.post?.authorId?.trim();
 
-  if (!response.ok) {
+    return authorId || null;
+  } catch {
     return null;
   }
-
-  const body = (await response.json()) as PostResponseBody;
-  const authorId = body.data?.post?.authorId?.trim();
-
-  return authorId || null;
 }

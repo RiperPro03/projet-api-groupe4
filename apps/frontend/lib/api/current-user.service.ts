@@ -1,5 +1,5 @@
 import { httpClient } from "./http-client";
-import type { CurrentUser } from "@/lib/current-user.shared";
+import type { CurrentUser } from "@/lib/current-user";
 
 type CurrentUserResponse = {
   status: "success";

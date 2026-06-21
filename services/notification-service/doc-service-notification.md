@@ -280,7 +280,7 @@ Le lien **Notifications** de la navbar pointe vers `/notif`. Un **badge** sur la
 | `apps/frontend/types/notification.ts` | Type `UserNotification` + pagination |
 | `apps/frontend/lib/api/notification.service.ts` | Client HTTP Axios vers la gateway |
 | `apps/frontend/hooks/useNotificationList.ts` | État liste, pagination cursor, actions lu/supprimer |
-| `apps/frontend/lib/current-user.shared.ts` | Type `CurrentUser` (auth / user / profile) |
+| `apps/frontend/lib/current-user.ts` | Type `CurrentUser` + `getCurrentUser()` serveur |
 | `apps/frontend/components/notifications/NotificationInbox.tsx` | Charge l'utilisateur puis la liste |
 | `apps/frontend/components/notifications/InboxNotificationList.tsx` | Liste paginée + « Tout marquer comme lu » |
 | `apps/frontend/components/notifications/InboxNotificationItem.tsx` | Rendu d'une notification |

@@ -1,4 +1,8 @@
 import { Post } from "../models/post.model";
+import {
+    notifyPostMentionsSafely,
+    resolveMentionedUserIds,
+} from "./mention-notification.service";
 import type {
     CreatePostInput,
     PostPageResponse,
@@ -80,12 +84,16 @@ async function createPost(
     authorId: string,
     data: CreatePostInput
 ): Promise<PostResponse> {
+    const content = data.content.trim();
+    const mentions = await resolveMentionedUserIds(content, authorId);
     const post = await Post.create({
         authorId,
-        content: data.content.trim(),
+        content,
         tags: data.tags ?? [],
         media: data.media ?? [],
     });
+
+    notifyPostMentionsSafely(authorId, String(post._id), content);
 
     return sanitizePost(post);
 }

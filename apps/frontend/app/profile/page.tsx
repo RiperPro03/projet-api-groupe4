@@ -5,6 +5,7 @@ import ProfileActivityTabs from "@/components/profil/ProfileActivityTabs";
 import ProfileSettingsMenu from "@/components/profil/ProfileSettingsMenu";
 import ProfileSocialStats from "@/components/profil/ProfileSocialStats";
 import { Particles } from "@/components/ui/particles";
+import { getProfileUserId } from "@/lib/current-user-ids";
 import { getCurrentUser } from "@/lib/current-user";
 import { getServerI18n } from "@/lib/i18n/server";
 
@@ -31,7 +32,7 @@ export default async function ProfilePage() {
   const { auth, profile } = currentUser;
   const username = profile?.username || auth.email.split("@")[0];
   const displayName = profile?.nickname || username;
-  const profileUserId = profile?.id_user ?? currentUser.user?.id_user ?? auth.id;
+  const profileUserId = getProfileUserId(currentUser);
   const joinedAtSource = profile?.createdAt || auth.createdAt;
   const joinedAt = new Intl.DateTimeFormat(language.dateLocale, {
     month: "long",

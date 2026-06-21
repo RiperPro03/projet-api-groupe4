@@ -1,5 +1,6 @@
 import { getCurrentUserFromApi } from "./current-user.service";
 import { httpClient } from "./http-client";
+import { getAuthenticatedUserId } from "@/lib/current-user-ids";
 import type { CurrentUser } from "@/lib/current-user";
 import type { Comment } from "@/types/comment";
 import type { Author } from "@/types/post";
@@ -39,7 +40,7 @@ function getCurrentUserAuthor(currentUser: CurrentUser, authorId: string): Autho
   const avatarUrl = currentUser.profile?.url_photo?.trim() || undefined;
 
   return {
-    id: currentUser.profile?.id_user ?? currentUser.user?.id_user ?? authorId,
+    id: authorId,
     name,
     username,
     avatarUrl,
@@ -127,8 +128,7 @@ export async function createComment({
   parentCommentId?: string | null;
 }) {
   const currentUser = await getCurrentUserFromApi();
-  const authorId =
-    currentUser.profile?.id_user ?? currentUser.user?.id_user ?? currentUser.auth.id;
+  const authorId = getAuthenticatedUserId(currentUser);
 
   const { data } = await httpClient.post<CommentResponse>("/comments", {
     postId,

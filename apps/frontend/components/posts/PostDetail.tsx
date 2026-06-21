@@ -10,6 +10,7 @@ import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { isApiStatusCode } from "@/lib/api/http-client";
 import { likePost, unlikePost } from "@/lib/api/interaction.service";
 import { fetchPostById } from "@/lib/api/post.service";
+import { getAuthenticatedUserId } from "@/lib/current-user-ids";
 import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -160,10 +161,7 @@ export default function PostDetail({ postId }: PostDetailProps) {
           }
 
           const currentUser = await getCurrentUserFromApi();
-          const userId =
-            currentUser.profile?.id_user ??
-            currentUser.user?.id_user ??
-            currentUser.auth.id;
+          const userId = getAuthenticatedUserId(currentUser);
 
           setIsLikePending(true);
 

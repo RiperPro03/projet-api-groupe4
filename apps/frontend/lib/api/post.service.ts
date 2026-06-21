@@ -1,5 +1,6 @@
 import { httpClient } from "./http-client";
 import { getCurrentUserFromApi } from "./current-user.service";
+import { getAuthenticatedUserId } from "@/lib/current-user-ids";
 import type { CurrentUser } from "@/lib/current-user";
 import type { FetchPostPage, PostPage, PostPageParams } from "@/hooks/usePostList";
 import type { Author, Media, Post } from "@/types/post";
@@ -46,7 +47,7 @@ function getCurrentUserAuthor(currentUser: CurrentUser, authorId: string): Autho
   const avatarUrl = currentUser.profile?.url_photo?.trim() || undefined;
 
   return {
-    id: currentUser.profile?.id_user ?? currentUser.user?.id_user ?? authorId,
+    id: authorId,
     name,
     username,
     avatarUrl,
@@ -160,8 +161,7 @@ export async function deletePost(postId: string) {
 
 export async function createPost({ content, media, tags }: CreatePostInput): Promise<Post> {
   const currentUser = await getCurrentUserFromApi();
-  const authorId =
-    currentUser.profile?.id_user ?? currentUser.user?.id_user ?? currentUser.auth.id;
+  const authorId = getAuthenticatedUserId(currentUser);
 
   const { data } = await httpClient.post<PostResponse>("/posts", {
     authorId,

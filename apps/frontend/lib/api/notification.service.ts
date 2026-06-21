@@ -80,7 +80,7 @@ export function fetchUserNotifications(
 ): FetchNotificationPage {
   return async (params) => {
     const { data } = await httpClient.get<NotificationsListResponse>(
-      "/notifications/notifications",
+      "/notifications",
       {
         params: {
           recipientId,
@@ -104,7 +104,7 @@ export function fetchUserNotifications(
 
 export async function getUnreadCount(recipientId: string) {
   const { data } = await httpClient.get<UnreadCountResponse>(
-    "/notifications/notifications/unread-count",
+    "/notifications/unread-count",
     {
       params: { recipientId },
     }
@@ -115,7 +115,7 @@ export async function getUnreadCount(recipientId: string) {
 
 export async function markNotificationAsRead(notificationId: string) {
   const { data } = await httpClient.patch<NotificationResponse>(
-    `/notifications/notifications/${notificationId}/read`
+    `/notifications/${notificationId}/read`
   );
 
   return mapApiNotification(data.data.notification);
@@ -123,7 +123,7 @@ export async function markNotificationAsRead(notificationId: string) {
 
 export async function markAllNotificationsAsRead(recipientId: string) {
   const { data } = await httpClient.patch<MarkAllReadResponse>(
-    "/notifications/notifications/read-all",
+    "/notifications/read-all",
     { recipientId }
   );
 
@@ -131,5 +131,5 @@ export async function markAllNotificationsAsRead(recipientId: string) {
 }
 
 export async function deleteNotification(notificationId: string) {
-  await httpClient.delete(`/notifications/notifications/${notificationId}`);
+  await httpClient.delete(`/notifications/${notificationId}`);
 }

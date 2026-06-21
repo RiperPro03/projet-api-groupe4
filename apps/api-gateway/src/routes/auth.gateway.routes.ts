@@ -2,7 +2,13 @@ import { Router } from "express";
 import type { NextFunction, Request, Response } from "express";
 
 import { registerController } from "../controllers/register.controller";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { authMiddleware, optionalAuthMiddleware } from "../middlewares/auth.middleware";
+import {
+  adminRoles,
+  allowVisitorOrRoles,
+  requireParamOwnerOrRoles,
+  requireRoles,
+} from "../middlewares/rbac.middleware";
 import { buildServiceUrl } from "../config/services";
 import { createForwardHandler, requestService } from "../utils/http-client";
 
@@ -92,13 +98,17 @@ const refreshTokenController = async (req: Request, res: Response, next: NextFun
 router.all("/health", forwardAuthRequest);
 router.all("/health/db", forwardAuthRequest);
 router.all("/login", forwardAuthRequest);
-router.post("/register", registerController);
+router.post("/register", optionalAuthMiddleware, allowVisitorOrRoles(adminRoles), registerController);
 router.post("/refresh-token", refreshTokenController);
 router.delete("/session", (_req, res) => {
   clearTokenCookies(res);
   res.status(200).json({ status: "success" });
 });
 router.use(authMiddleware);
+router.get("/me", forwardAuthRequest);
+router.get("/verify", forwardAuthRequest);
+router.get("/", requireRoles(adminRoles), forwardAuthRequest);
+router.get("/:id", requireParamOwnerOrRoles({ roles: adminRoles, ownerParam: "id" }), forwardAuthRequest);
 router.use(forwardAuthRequest);
 
 export default router;

@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Dropzone } from "@mantine/dropzone";
 import {
   FiEdit3,
+  FiChevronDown,
   FiEye,
   FiEyeOff,
   FiGlobe,
@@ -62,6 +64,19 @@ type PasswordFieldProps = {
   autoFocus?: boolean;
   minLength?: number;
 };
+
+function LanguageFlag({ code }: { code: string }) {
+  return (
+    <Image
+      src={`/flags/${code}.svg`}
+      alt=""
+      width={24}
+      height={16}
+      className="h-4 w-6 shrink-0 rounded-[0.125rem] border border-white/20 object-cover shadow-sm"
+      aria-hidden="true"
+    />
+  );
+}
 
 function PasswordField({
   id,
@@ -202,6 +217,7 @@ export default function ProfileSettingsMenu({
   const { locale, setLocale, languages, t } = useI18n();
   const menuRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSecurityOpen, setIsSecurityOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -223,12 +239,14 @@ export default function ProfileSettingsMenu({
         !menuRef.current?.contains(event.target as Node)
       ) {
         setIsMenuOpen(false);
+        setIsLanguageMenuOpen(false);
       }
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsMenuOpen(false);
+        setIsLanguageMenuOpen(false);
         setIsEditorOpen(false);
         setIsSecurityOpen(false);
       }
@@ -269,6 +287,7 @@ export default function ProfileSettingsMenu({
     setSelectedAvatar(null);
     setAvatarPreview(null);
     setIsMenuOpen(false);
+    setIsLanguageMenuOpen(false);
     setIsEditorOpen(true);
   }
 
@@ -279,6 +298,7 @@ export default function ProfileSettingsMenu({
       passwordConfirmation: "",
     });
     setIsMenuOpen(false);
+    setIsLanguageMenuOpen(false);
     setIsSecurityOpen(true);
   }
 
@@ -314,6 +334,7 @@ export default function ProfileSettingsMenu({
       }),
     });
     setIsMenuOpen(false);
+    setIsLanguageMenuOpen(false);
     router.refresh();
   }
 
@@ -444,6 +465,9 @@ export default function ProfileSettingsMenu({
     }
   }
 
+  const selectedLanguage =
+    languages.find((language) => language.code === locale) ?? languages[0];
+
   return (
     <div ref={menuRef} className="relative">
       <button
@@ -451,7 +475,10 @@ export default function ProfileSettingsMenu({
         aria-label={t("settings.open")}
         aria-haspopup="menu"
         aria-expanded={isMenuOpen}
-        onClick={() => setIsMenuOpen((open) => !open)}
+        onClick={() => {
+          setIsMenuOpen((open) => !open);
+          setIsLanguageMenuOpen(false);
+        }}
         className="flex size-11 items-center justify-center rounded-full border border-border bg-card text-xl text-foreground transition-colors hover:border-breezy-green hover:bg-breezy-green hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-breezy-yellow"
       >
         <FiSettings aria-hidden="true" />
@@ -460,7 +487,7 @@ export default function ProfileSettingsMenu({
       {isMenuOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-14 z-30 w-72 overflow-hidden rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-2xl"
+          className="absolute right-0 top-14 z-30 w-72 overflow-visible rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-2xl"
         >
           <button
             type="button"
@@ -484,24 +511,66 @@ export default function ProfileSettingsMenu({
 
           <div className="my-1 border-t border-border" />
 
-          <label className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
+          <div className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
             <span className="flex min-w-0 items-center gap-3">
               <FiGlobe className="shrink-0 text-breezy-green" aria-hidden="true" />
               {t("language.label")}
             </span>
-            <select
-              value={locale}
-              aria-label={t("language.selectLabel")}
-              onChange={(event) => handleLanguageChange(event.target.value)}
-              className="h-9 w-40 rounded-full border border-border bg-background pl-3 pr-8 text-sm font-semibold text-foreground outline-none transition-colors hover:border-breezy-green focus-visible:outline-2 focus-visible:outline-breezy-yellow"
-            >
-              {languages.map((language) => (
-                <option key={language.code} value={language.code}>
-                  {language.shortName} · {language.nativeName}
-                </option>
-              ))}
-            </select>
-          </label>
+            <div className="relative">
+              <button
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded={isLanguageMenuOpen}
+                aria-label={t("language.selectLabel")}
+                onClick={() => setIsLanguageMenuOpen((open) => !open)}
+                className="flex h-9 w-40 items-center justify-between gap-2 rounded-full border border-border bg-background px-3 text-sm font-semibold text-foreground outline-none transition-colors hover:border-breezy-green focus-visible:outline-2 focus-visible:outline-breezy-yellow"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <LanguageFlag code={selectedLanguage.code} />
+                  <span className="truncate">{selectedLanguage.nativeName}</span>
+                </span>
+                <FiChevronDown
+                  className={`size-4 shrink-0 transition-transform ${
+                    isLanguageMenuOpen ? "rotate-180" : ""
+                  }`}
+                  aria-hidden="true"
+                />
+              </button>
+
+              {isLanguageMenuOpen && (
+                <div
+                  role="listbox"
+                  aria-label={t("language.selectLabel")}
+                  className="absolute right-0 top-11 z-40 w-48 overflow-hidden rounded-xl border border-border bg-popover py-1 text-popover-foreground shadow-xl"
+                >
+                  {languages.map((language) => (
+                    <button
+                      key={language.code}
+                      type="button"
+                      role="option"
+                      aria-selected={language.code === locale}
+                      onClick={() => {
+                        if (language.code === locale) {
+                          setIsLanguageMenuOpen(false);
+                          return;
+                        }
+
+                        handleLanguageChange(language.code);
+                      }}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-breezy-yellow ${
+                        language.code === locale
+                          ? "bg-breezy-green text-black hover:bg-breezy-green"
+                          : ""
+                      }`}
+                    >
+                      <LanguageFlag code={language.code} />
+                      <span>{language.nativeName}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           <div className="my-1 border-t border-border" />
 

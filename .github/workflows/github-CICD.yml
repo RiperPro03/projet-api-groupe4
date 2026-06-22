@@ -16,6 +16,9 @@ on:
       - "services/profile-service/**"
       - "services/follow-service/**"
       - "services/interaction-service/**"
+      - "services/media-service/**"
+      - "services/notification-service/**"
+      - "services/post-service/**"
       - ".github/workflows/github-CICD.yml"
       - "pnpm-lock.yaml"
       - "package.json"
@@ -27,6 +30,9 @@ on:
       - "services/profile-service/**"
       - "services/follow-service/**"
       - "services/interaction-service/**"
+      - "services/media-service/**"
+      - "services/notification-service/**"
+      - "services/post-service/**"
       - ".github/workflows/github-CICD.yml"
       - "pnpm-lock.yaml"
       - "package.json"
@@ -43,6 +49,9 @@ jobs:
       profile: ${{ steps.filter.outputs.profile }}
       follow: ${{ steps.filter.outputs.follow }}
       interaction: ${{ steps.filter.outputs.interaction }}
+      media: ${{ steps.filter.outputs.media }}
+      notification: ${{ steps.filter.outputs.notification }}
+      post: ${{ steps.filter.outputs.post }}
 
     steps:
       - name: Checkout repository
@@ -68,6 +77,12 @@ jobs:
               - "services/follow-service/**"
             interaction:
               - "services/interaction-service/**"
+            media:
+              - "services/media-service/**"
+            notification:
+              - "services/notification-service/**"
+            post:
+              - "services/post-service/**"
 
   auth-service:
     name: Stage 1 - Auth Service
@@ -264,6 +279,129 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
+
+      - name: TypeScript build
+        run: pnpm build
+
+      - name: Run Vitest with coverage
+        run: pnpm test:coverage
+
+  media-service:
+    name: Stage 6 - Media Service
+    needs: changes
+    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.media == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/media-service
+    env:
+      NODE_ENV: test
+      SERVICE_NAME: media-service-test
+      MONGO_URI: mongodb://localhost:27022/media_service_test
+      MINIO_ENDPOINT: localhost
+      MINIO_PORT: "9000"
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: breezy-media-test
+      MINIO_PUBLIC_URL: http://localhost:9000
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript build
+        run: pnpm build
+
+      - name: Run Vitest with coverage
+        run: pnpm test:coverage
+
+  notification-service:
+    name: Stage 7 - Notification Service
+    needs: changes
+    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.notification == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/notification-service
+    env:
+      NODE_ENV: test
+      SERVICE_NAME: notification-service-test
+      MONGO_URI: mongodb://localhost:27023/notification_service_test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript build
+        run: pnpm build
+
+      - name: Run Vitest with coverage
+        run: pnpm test:coverage
+
+  post-service:
+    name: Stage 8 - Post Service
+    needs: changes
+    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.post == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/post-service
+    env:
+      NODE_ENV: test
+      SERVICE_NAME: post-service-test
+      MONGO_URI: mongodb://localhost:27021/post_service_test
+      NOTIFICATION_SERVICE_URL: http://localhost:3008
+      PROFILE_SERVICE_URL: http://localhost:3006
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: TypeScript build
         run: pnpm build

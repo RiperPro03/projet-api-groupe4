@@ -14,10 +14,11 @@ import {
 } from "@mantine/core";
 import { Dropzone } from "@mantine/dropzone";
 import { useEffect, useRef, useState } from "react";
-import { FiPlus, FiSend, FiTrash2, FiUpload } from "react-icons/fi";
+import { FiPlus, FiSend, FiTrash2, FiUpload, FiX } from "react-icons/fi";
 import CommentComposer from "@/components/comments/CommentComposer";
 import CommentThread from "@/components/comments/CommentThread";
 import { AnimatedList } from "@/components/ui/animated-list";
+import { MagicCard } from "@/components/ui/magic-card";
 import { usePostList, type FetchPostPage } from "@/hooks/usePostList";
 import { createComment } from "@/lib/api/comment.service";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
@@ -598,177 +599,210 @@ export default function PostList({
       <Modal
         opened={isCreatePostOpen}
         onClose={closeCreatePostModal}
-        title={t("post.modalTitle")}
         centered
         radius={8}
+        padding={0}
+        withCloseButton={false}
         overlayProps={{ backgroundOpacity: 0.72, blur: 2 }}
       >
-        <Stack gap="md">
-          <Textarea
-            value={postContent}
-            onChange={(event) => setPostContent(event.currentTarget.value)}
-            placeholder={t("post.composerPlaceholder")}
-            autosize
-            minRows={4}
-            maxRows={10}
-          />
-          <Dropzone
-            accept={postMediaMimeTypes}
-            maxFiles={postMediaMaxFiles}
-            maxSize={postVideoMaxSize}
-            multiple
-            disabled={isCreatingPost || selectedPostMedia.length >= postMediaMaxFiles}
-            onDrop={addSelectedPostMedia}
-            onReject={() => {
-              setCreatePostError(t("post.fileReject"));
-            }}
-            style={{
-              border: "1px dashed var(--border)",
-              borderRadius: 8,
-              background: "var(--muted)",
-              padding: 0,
-            }}
-          >
-            <Group gap="sm" p="md" wrap="nowrap">
-              <Box
+        <MagicCard className="border-0 shadow-2xl">
+          <Stack gap={0}>
+            <Group justify="space-between" gap="md" className="border-b border-border px-5 py-4">
+              <Text fw={700} size="lg" style={{ color: "var(--foreground)" }}>
+                {t("post.modalTitle")}
+              </Text>
+              <ActionIcon
+                aria-label={t("common.close")}
+                variant="subtle"
+                radius="xl"
+                disabled={isCreatingPost}
+                onClick={closeCreatePostModal}
+                style={{ color: "var(--muted-foreground)" }}
+              >
+                <FiX size={18} />
+              </ActionIcon>
+            </Group>
+
+            <Stack gap="md" p="md">
+              <Textarea
+                value={postContent}
+                onChange={(event) => setPostContent(event.currentTarget.value)}
+                placeholder={t("post.composerPlaceholder")}
+                autosize
+                minRows={4}
+                maxRows={10}
+                classNames={{
+                  input:
+                    "border-border bg-muted text-foreground placeholder:text-muted-foreground selection:bg-breezy-green/25 selection:text-foreground",
+                }}
+                styles={{
+                  wrapper: {
+                    "--input-bd-focus": "rgb(var(--breezy-green-rgb) / 0.65)",
+                  },
+                  input: {
+                    caretColor: "var(--color-breezy-green)",
+                  },
+                }}
+              />
+              <Dropzone
+                accept={postMediaMimeTypes}
+                maxFiles={postMediaMaxFiles}
+                maxSize={postVideoMaxSize}
+                multiple
+                disabled={isCreatingPost || selectedPostMedia.length >= postMediaMaxFiles}
+                onDrop={addSelectedPostMedia}
+                onReject={() => {
+                  setCreatePostError(t("post.fileReject"));
+                }}
                 style={{
-                  alignItems: "center",
-                  background: "var(--card)",
-                  border: "1px solid var(--border)",
+                  border: "1px dashed var(--border)",
                   borderRadius: 8,
-                  display: "flex",
-                  height: 44,
-                  justifyContent: "center",
-                  width: 44,
+                  background: "var(--muted)",
+                  padding: 0,
                 }}
               >
-                <FiUpload size={20} />
-              </Box>
-              <Box style={{ minWidth: 0 }}>
-                <Text fw={600} size="sm" style={{ color: "var(--foreground)" }}>
-                  {t("post.addFiles")}
-                </Text>
-                <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
-                  {t("post.fileHint")}
-                </Text>
-              </Box>
-            </Group>
-          </Dropzone>
-
-          {postMediaPreviews.length > 0 && (
-            <Box
-              style={{
-                display: "grid",
-                gap: 8,
-                gridTemplateColumns:
-                  postMediaPreviews.length === 1
-                    ? "1fr"
-                    : "repeat(2, minmax(0, 1fr))",
-              }}
-            >
-              {postMediaPreviews.map((previewUrl, index) => {
-                const file = selectedPostMedia[index];
-                const isVideo = file?.type.startsWith("video/");
-
-                return (
+                <Group gap="sm" p="md" wrap="nowrap">
                   <Box
-                    key={previewUrl}
-                    pos="relative"
                     style={{
-                      aspectRatio: postMediaPreviews.length === 1 ? "16 / 10" : "1 / 1",
+                      alignItems: "center",
+                      background: "var(--card)",
                       border: "1px solid var(--border)",
                       borderRadius: 8,
-                      overflow: "hidden",
+                      display: "flex",
+                      height: 44,
+                      justifyContent: "center",
+                      width: 44,
                     }}
                   >
-                    {isVideo ? (
-                      <video
-                        controls
-                        muted
-                        preload="metadata"
-                        aria-label={file?.name ?? t("post.videoAlt")}
-                        src={previewUrl}
-                        style={{
-                          display: "block",
-                          height: "100%",
-                          objectFit: "cover",
-                          width: "100%",
-                        }}
-                      />
-                    ) : (
-                      <Image
-                        src={previewUrl}
-                        alt={file?.name ?? t("post.imageAlt")}
-                        h="100%"
-                        w="100%"
-                        fit="cover"
-                      />
-                    )}
-                    <ActionIcon
-                      aria-label={t("post.removeFile")}
-                      radius="xl"
-                      size="sm"
-                      variant="filled"
-                      onClick={() => removeSelectedPostMedia(index)}
-                      style={{
-                        backgroundColor: "var(--destructive)",
-                        color: "white",
-                        position: "absolute",
-                        right: 8,
-                        top: 8,
-                      }}
-                    >
-                      <FiTrash2 size={14} />
-                    </ActionIcon>
+                    <FiUpload size={20} />
                   </Box>
-                );
-              })}
-            </Box>
-          )}
+                  <Box style={{ minWidth: 0 }}>
+                    <Text fw={600} size="sm" style={{ color: "var(--foreground)" }}>
+                      {t("post.addFiles")}
+                    </Text>
+                    <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
+                      {t("post.fileHint")}
+                    </Text>
+                  </Box>
+                </Group>
+              </Dropzone>
 
-          {selectedPostMedia.length >= postMediaMaxFiles && (
-            <Text size="xs" style={{ color: "var(--muted-foreground)" }}>
-              {t("post.maxFiles")}
-            </Text>
-          )}
+              {postMediaPreviews.length > 0 && (
+                <Box
+                  style={{
+                    display: "grid",
+                    gap: 8,
+                    gridTemplateColumns:
+                      postMediaPreviews.length === 1
+                        ? "1fr"
+                        : "repeat(2, minmax(0, 1fr))",
+                  }}
+                >
+                  {postMediaPreviews.map((previewUrl, index) => {
+                    const file = selectedPostMedia[index];
+                    const isVideo = file?.type.startsWith("video/");
 
-          {createPostError && (
-            <Alert
-              variant="light"
-              style={{
-                backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
-                borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
-                color: "var(--destructive)",
-              }}
-            >
-              {createPostError}
-            </Alert>
-          )}
+                    return (
+                      <Box
+                        key={previewUrl}
+                        pos="relative"
+                        style={{
+                          aspectRatio: postMediaPreviews.length === 1 ? "16 / 10" : "1 / 1",
+                          border: "1px solid var(--border)",
+                          borderRadius: 8,
+                          overflow: "hidden",
+                        }}
+                      >
+                        {isVideo ? (
+                          <video
+                            controls
+                            muted
+                            preload="metadata"
+                            aria-label={file?.name ?? t("post.videoAlt")}
+                            src={previewUrl}
+                            style={{
+                              display: "block",
+                              height: "100%",
+                              objectFit: "cover",
+                              width: "100%",
+                            }}
+                          />
+                        ) : (
+                          <Image
+                            src={previewUrl}
+                            alt={file?.name ?? t("post.imageAlt")}
+                            h="100%"
+                            w="100%"
+                            fit="cover"
+                          />
+                        )}
+                        <ActionIcon
+                          aria-label={t("post.removeFile")}
+                          radius="xl"
+                          size="sm"
+                          variant="filled"
+                          onClick={() => removeSelectedPostMedia(index)}
+                          style={{
+                            backgroundColor: "var(--destructive)",
+                            color: "white",
+                            position: "absolute",
+                            right: 8,
+                            top: 8,
+                          }}
+                        >
+                          <FiTrash2 size={14} />
+                        </ActionIcon>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
 
-          <Group justify="flex-end">
-            <RippleButton
-              type="button"
-              rippleColor="var(--foreground)"
-              disabled={isCreatingPost}
-              onClick={closeCreatePostModal}
-              className={secondaryButtonClassName}
-            >
-              {t("common.cancel")}
-            </RippleButton>
-            <RippleButton
-              type="button"
-              rippleColor="var(--color-breezy-black)"
-              disabled={!postContent.trim() || isCreatingPost}
-              onClick={handleCreatePost}
-              className={greenButtonClassName}
-            >
-              <span className="flex items-center gap-2">
-                <FiSend size={16} />
-                {isCreatingPost ? t("common.publishing") : t("common.publish")}
-              </span>
-            </RippleButton>
-          </Group>
-        </Stack>
+              {selectedPostMedia.length >= postMediaMaxFiles && (
+                <Text size="xs" style={{ color: "var(--muted-foreground)" }}>
+                  {t("post.maxFiles")}
+                </Text>
+              )}
+
+              {createPostError && (
+                <Alert
+                  variant="light"
+                  style={{
+                    backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+                    borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+                    color: "var(--destructive)",
+                  }}
+                >
+                  {createPostError}
+                </Alert>
+              )}
+
+              <Group justify="flex-end">
+                <RippleButton
+                  type="button"
+                  rippleColor="var(--foreground)"
+                  disabled={isCreatingPost}
+                  onClick={closeCreatePostModal}
+                  className={secondaryButtonClassName}
+                >
+                  {t("common.cancel")}
+                </RippleButton>
+                <RippleButton
+                  type="button"
+                  rippleColor="var(--color-breezy-black)"
+                  disabled={!postContent.trim() || isCreatingPost}
+                  onClick={handleCreatePost}
+                  className={greenButtonClassName}
+                >
+                  <span className="flex items-center gap-2">
+                    <FiSend size={16} />
+                    {isCreatingPost ? t("common.publishing") : t("common.publish")}
+                  </span>
+                </RippleButton>
+              </Group>
+            </Stack>
+          </Stack>
+        </MagicCard>
       </Modal>
 
       <Group justify="space-between" align="center">

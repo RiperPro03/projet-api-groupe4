@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { Particles } from "@/components/ui/particles";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
 import type { CurrentUser } from "@/lib/current-user";
 
@@ -25,7 +26,16 @@ export default function AppShell({
     <>
       <ScrollProgress className="z-[60] h-1 bg-linear-to-r from-breezy-green via-breezy-yellow to-breezy-green md:left-20" />
       <Navbar currentUser={currentUser} />
-      <main className="flex-1 pb-16 md:pb-0 md:pl-20">{children}</main>
+      <main className="relative flex-1 overflow-hidden bg-background pb-16 md:pb-0 md:pl-20">
+        <Particles
+          className="fixed z-0"
+          quantity={240}
+          color="var(--foreground)"
+          size={1.1}
+          speed={0.3}
+        />
+        <div className="relative z-10">{children}</div>
+      </main>
     </>
   );
 }

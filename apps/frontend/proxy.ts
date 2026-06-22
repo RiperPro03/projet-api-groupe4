@@ -12,16 +12,26 @@ type AuthResponse = {
   };
 };
 
+type CurrentUserResponse = {
+  data?: {
+    user?: {
+      statuts?: string;
+    } | null;
+  };
+};
+
 const AUTH_ROUTES = ["/login", "/register"];
-const PROTECTED_ROUTES = ["/", "/profile"];
+const PROTECTED_ROUTES = ["/", "/profile", "/admin"];
 const TOKEN_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
+// Route matching helpers
 function isMatchingRoute(pathname: string, routes: string[]) {
   return routes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 }
 
+// API URL resolution
 function getApiUrl(request: NextRequest, path: string) {
   const baseUrl =
     process.env.INTERNAL_API_URL ??
@@ -36,6 +46,7 @@ function getApiUrl(request: NextRequest, path: string) {
   return new URL(`${normalizedBaseUrl}${path}`, request.nextUrl.origin).toString();
 }
 
+// Cookie security and persistence
 function isHttpsRequest(request: NextRequest) {
   return (
     request.nextUrl.protocol === "https:" ||
@@ -76,6 +87,7 @@ function clearTokenCookies(response: NextResponse) {
   response.cookies.delete(REFRESH_TOKEN_KEY);
 }
 
+// Request forwarding with refreshed tokens
 function createNextResponseWithRequestTokens(
   request: NextRequest,
   tokens: { accessToken?: string; refreshToken?: string },
@@ -109,6 +121,7 @@ function createNextResponseWithRequestTokens(
   });
 }
 
+// Authentication redirects
 function redirectToLogin(request: NextRequest) {
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = "/login";
@@ -120,16 +133,20 @@ function redirectToLogin(request: NextRequest) {
   return response;
 }
 
-async function verifyAccessToken(request: NextRequest, accessToken: string) {
+async function verifyCurrentSession(request: NextRequest, accessToken: string) {
   try {
-    const response = await axios.get(getApiUrl(request, "/auth/verify"), {
+    const response = await axios.get<CurrentUserResponse>(getApiUrl(request, "/me"), {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
       validateStatus: () => true,
     });
 
-    return response.status >= 200 && response.status < 300;
+    if (response.status < 200 || response.status >= 300) {
+      return false;
+    }
+
+    return response.data.data?.user?.statuts !== "INACTIVE";
   } catch {
     return false;
   }
@@ -158,6 +175,7 @@ async function refreshAccessToken(request: NextRequest, refreshToken: string) {
   }
 }
 
+// Main route guard
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAuthRoute = isMatchingRoute(pathname, AUTH_ROUTES);
@@ -166,14 +184,19 @@ export async function proxy(request: NextRequest) {
   const accessToken = request.cookies.get(ACCESS_TOKEN_KEY)?.value;
   const refreshToken = request.cookies.get(REFRESH_TOKEN_KEY)?.value;
 
-  if (accessToken && await verifyAccessToken(request, accessToken)) {
-    return NextResponse.next();
+  if (accessToken && await verifyCurrentSession(request, accessToken)) {
+    return isAuthRoute
+      ? NextResponse.redirect(new URL("/", request.url))
+      : NextResponse.next();
   }
 
   if (refreshToken) {
     const refreshedTokens = await refreshAccessToken(request, refreshToken);
 
-    if (refreshedTokens?.accessToken) {
+    if (
+      refreshedTokens?.accessToken &&
+      await verifyCurrentSession(request, refreshedTokens.accessToken)
+    ) {
       const response = isAuthRoute
         ? NextResponse.redirect(new URL("/", request.url))
         : createNextResponseWithRequestTokens(request, {
@@ -209,6 +232,7 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// Middleware matcher
 export const config = {
   matcher: [
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",

@@ -4,7 +4,6 @@ import { FiCalendar } from "react-icons/fi";
 import ProfileActivityTabs from "@/components/profil/ProfileActivityTabs";
 import ProfileSettingsMenu from "@/components/profil/ProfileSettingsMenu";
 import ProfileSocialStats from "@/components/profil/ProfileSocialStats";
-import { Particles } from "@/components/ui/particles";
 import { getProfileUserId } from "@/lib/current-user-ids";
 import { getCurrentUser } from "@/lib/current-user";
 import { getServerI18n } from "@/lib/i18n/server";
@@ -40,16 +39,8 @@ export default async function ProfilePage() {
   }).format(new Date(joinedAtSource));
 
   return (
-    <section className="relative min-h-[calc(100svh-64px)] overflow-hidden bg-background px-5 py-8 text-foreground md:min-h-svh">
-      <Particles
-        className="z-0"
-        quantity={120}
-        color="var(--foreground)"
-        size={1.2}
-        speed={0.35}
-      />
-
-      <div className="relative z-10 mx-auto w-full max-w-2xl">
+    <section className="relative min-h-[calc(100svh-64px)] overflow-hidden bg-transparent px-5 py-8 text-foreground md:min-h-svh">
+      <div className="mx-auto w-full max-w-2xl">
         <div className="flex items-center justify-between gap-4">
           <div
             className="flex size-20 shrink-0 items-center justify-center rounded-full bg-breezy-green bg-cover bg-center text-2xl font-bold text-black"

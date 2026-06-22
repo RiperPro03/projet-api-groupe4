@@ -22,10 +22,11 @@ export type FollowStats = {
   followingCount: number;
 };
 
+// Profile lookup endpoints
 /**
- * Recherche dynamique par username (partiel, insensible à la casse)
+ * Dynamic username search (partial, case-insensitive)
  * GET /api/profiles/search?username=a
- * Retourne { status, data: PublicProfile[] }
+ * Returns { status, data: PublicProfile[] }
  */
 export async function searchProfilesByUsername(
   username: string
@@ -40,10 +41,18 @@ export async function searchProfilesByUsername(
   return Array.isArray(data.data) ? data.data : [];
 }
 
+export async function getProfiles(): Promise<PublicProfile[]> {
+  const { data } = await httpClient.get<{ status: string; data: PublicProfile[] }>(
+    "/profiles"
+  );
+
+  return Array.isArray(data.data) ? data.data : [];
+}
+
 /**
- * Profil complet par username exact
+ * Full profile by exact username
  * GET /api/profiles/username/:username
- * Retourne { status, data: PublicProfile }
+ * Returns { status, data: PublicProfile }
  */
 export async function getProfileByUsername(
   username: string
@@ -60,9 +69,10 @@ export async function getProfileByUsername(
   }
 }
 
+// Follow state lookup
 /**
- * Vérifie si currentUserId suit targetUserId
- * GET /api/follows/following?followerId=xxx → tableau de follows
+ * Checks whether currentUserId follows targetUserId
+ * GET /api/follows/following?followerId=xxx -> follow list
  */
 export async function getFollowStatus(
   currentUserId: string,
@@ -94,6 +104,7 @@ export async function getProfileById(
   }
 }
 
+// Follow stats and social lists
 export async function getFollowStats(userId: string): Promise<FollowStats> {
   try {
     const [followersResponse, followingResponse] = await Promise.all([
@@ -141,8 +152,9 @@ export async function getFollowingProfiles(userId: string): Promise<PublicProfil
   return getProfilesFromFollowIds(data.map((follow) => follow.following_id));
 }
 
+// Follow mutations
 /**
- * Suivre un utilisateur
+ * Follow a user
  * POST /api/follows  body: { followerId, followingId }
  */
 export async function followUser(
@@ -164,7 +176,7 @@ export async function followUser(
 }
 
 /**
- * Ne plus suivre un utilisateur
+ * Unfollow a user
  * DELETE /api/follows  body: { followerId, followingId }
  */
 export async function unfollowUser(

@@ -20,6 +20,7 @@ import type { Comment } from "@/types/comment";
 type CommentThreadProps = {
   comments: Comment[];
   maxVisualDepth?: number;
+  highlightCommentId?: string | null;
   onReplySubmit?: (parentComment: Comment, content: string) => void | Promise<void>;
 };
 
@@ -58,6 +59,7 @@ function ThreadNode({
   depth,
   maxVisualDepth,
   activeReplyId,
+  highlightCommentId,
   onStartReply,
   onCancelReply,
   onReplySubmit,
@@ -66,6 +68,7 @@ function ThreadNode({
   depth: number;
   maxVisualDepth: number;
   activeReplyId: string | null;
+  highlightCommentId?: string | null;
   onStartReply: (comment: Comment) => void;
   onCancelReply: () => void;
   onReplySubmit?: (parentComment: Comment, content: string) => void | Promise<void>;
@@ -79,6 +82,16 @@ function ThreadNode({
   const likesCount = likeState?.likesCount ?? node.likesCount;
   const isLiked = likeState?.isLiked ?? node.isLiked ?? false;
   const [isLikePending, setIsLikePending] = useState(false);
+  const isHighlighted = highlightCommentId === node.id;
+
+  useEffect(() => {
+    if (!isHighlighted) {
+      return;
+    }
+
+    const element = document.getElementById(`comment-${node.id}`);
+    element?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [isHighlighted, node.id]);
 
   useEffect(() => {
     dispatch(
@@ -129,10 +142,16 @@ function ThreadNode({
 
   return (
     <Box
+      id={`comment-${node.id}`}
       pl={{ base: visualDepth * 14, sm: visualDepth * 22 }}
       style={{
         borderLeft:
           depth > 0 ? "1px solid var(--border)" : undefined,
+        borderRadius: isHighlighted ? 8 : undefined,
+        backgroundColor: isHighlighted
+          ? "color-mix(in srgb, var(--breezy-green) 10%, transparent)"
+          : undefined,
+        transition: "background-color 0.3s ease",
       }}
     >
       <Stack gap="sm">
@@ -188,6 +207,7 @@ function ThreadNode({
             depth={depth + 1}
             maxVisualDepth={maxVisualDepth}
             activeReplyId={activeReplyId}
+            highlightCommentId={highlightCommentId}
             onStartReply={onStartReply}
             onCancelReply={onCancelReply}
             onReplySubmit={onReplySubmit}
@@ -201,6 +221,7 @@ function ThreadNode({
 export default function CommentThread({
   comments,
   maxVisualDepth = 3,
+  highlightCommentId = null,
   onReplySubmit,
 }: CommentThreadProps) {
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
@@ -223,6 +244,7 @@ export default function CommentThread({
           depth={0}
           maxVisualDepth={maxVisualDepth}
           activeReplyId={activeReplyId}
+          highlightCommentId={highlightCommentId}
           onStartReply={(comment) => setActiveReplyId(comment.id)}
           onCancelReply={() => setActiveReplyId(null)}
           onReplySubmit={onReplySubmit}

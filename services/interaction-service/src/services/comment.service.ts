@@ -108,3 +108,19 @@ export async function getCommentReplies(
 
   return comments.map(mapComment);
 }
+
+export async function getCommentById(
+  commentId: string
+): Promise<CommentResponse> {
+  const resolvedCommentId = requireNonEmpty(commentId, "commentId");
+  const comment = await Comment.findOne({
+    _id: resolvedCommentId,
+    deletedAt: null,
+  }).lean();
+
+  if (!comment) {
+    throw new CommentError("Commentaire introuvable", 404);
+  }
+
+  return mapComment(comment);
+}

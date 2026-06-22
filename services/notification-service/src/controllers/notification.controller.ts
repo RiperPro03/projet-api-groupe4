@@ -48,6 +48,7 @@ export const createNotificationHandler: RequestHandler = async (
       type: req.body?.type,
       resourceType: req.body?.resourceType,
       resourceId: req.body?.resourceId,
+      postId: req.body?.postId,
     });
 
     res.status(201).json({

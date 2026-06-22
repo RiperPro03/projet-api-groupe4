@@ -85,7 +85,7 @@ describe("like-notification.service", () => {
     it("envoie une notification quand l'auteur du commentaire est différent", async () => {
       commentMocks.findById.mockReturnValue({
         select: vi.fn().mockReturnValue({
-          lean: vi.fn().mockResolvedValue({ authorId: "user-b" }),
+          lean: vi.fn().mockResolvedValue({ authorId: "user-b", postId: "post-123" }),
         }),
       });
 
@@ -99,6 +99,7 @@ describe("like-notification.service", () => {
         actorId: "user-a",
         resourceType: "comment",
         resourceId: "comment-123",
+        postId: "post-123",
       });
     });
 

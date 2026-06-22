@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ActionIcon, Card, Group, Text } from "@mantine/core";
 import { FiHeart, FiTrash2 } from "react-icons/fi";
+import { fetchCommentPostId } from "@/lib/api/comment.service";
 import type { UserNotification } from "@/types/notification";
 
 type InboxNotificationItemProps = {
@@ -20,18 +22,63 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function getNotificationMessage(notification: UserNotification) {
+  if (!notification.actorName) {
+    return notification.message;
+  }
+
+  if (notification.resourceType === "post") {
+    return {
+      actorName: notification.actorName,
+      suffix: " a aimé votre post",
+    };
+  }
+
+  return {
+    actorName: notification.actorName,
+    suffix: " a aimé votre commentaire",
+  };
+}
+
+function buildCommentLikeHref(notification: UserNotification) {
+  if (!notification.postId) {
+    return null;
+  }
+
+  return `/posts/${notification.postId}?comment=${notification.resourceId}`;
+}
+
 export default function InboxNotificationItem({
   notification,
   onMarkAsRead,
   onDelete,
 }: InboxNotificationItemProps) {
+  const router = useRouter();
   const isPostLike =
     notification.type === "like" && notification.resourceType === "post";
+  const isCommentLike =
+    notification.type === "like" && notification.resourceType === "comment";
+  const commentLikeHref = buildCommentLikeHref(notification);
+  const notificationMessage = getNotificationMessage(notification);
 
   async function handleClick() {
     if (!notification.isRead) {
       await onMarkAsRead(notification.id);
     }
+  }
+
+  async function handleCommentLikeClick() {
+    await handleClick();
+
+    const postId =
+      notification.postId ??
+      (await fetchCommentPostId(notification.resourceId).catch(() => null));
+
+    if (!postId) {
+      return;
+    }
+
+    router.push(`/posts/${postId}?comment=${notification.resourceId}`);
   }
 
   async function handleDelete(event: React.MouseEvent) {
@@ -69,7 +116,16 @@ export default function InboxNotificationItem({
         </div>
         <div className="min-w-0 flex-1">
           <Text size="sm" fw={notification.isRead ? 500 : 600} lh={1.45}>
-            {notification.message}
+            {typeof notificationMessage === "string" ? (
+              notificationMessage
+            ) : (
+              <>
+                <Text span fw={700}>
+                  {notificationMessage.actorName}
+                </Text>
+                {notificationMessage.suffix}
+              </>
+            )}
           </Text>
           <Text size="xs" c="dimmed" mt={4}>
             {formatDate(notification.createdAt)}
@@ -96,6 +152,30 @@ export default function InboxNotificationItem({
       >
         {content}
       </Link>
+    );
+  }
+
+  if (isCommentLike && commentLikeHref) {
+    return (
+      <Link
+        href={commentLikeHref}
+        className="block no-underline text-inherit"
+        onClick={handleClick}
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  if (isCommentLike) {
+    return (
+      <button
+        type="button"
+        className="block w-full border-0 bg-transparent p-0 text-left"
+        onClick={handleCommentLikeClick}
+      >
+        {content}
+      </button>
     );
   }
 

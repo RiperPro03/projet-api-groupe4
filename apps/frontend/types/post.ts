@@ -21,6 +21,7 @@ export type Post = {
   media: Media[];
   likesCount: number;
   isLiked?: boolean;
+  likers?: Author[];
   commentsCount: number;
   createdAt: string;
 };

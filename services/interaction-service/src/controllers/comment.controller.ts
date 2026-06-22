@@ -3,6 +3,7 @@ import type { RequestHandler } from "express";
 import {
   CommentError,
   createComment,
+  getCommentById,
   getCommentReplies,
   getCommentsByAuthor,
   getCommentsByPost,
@@ -80,6 +81,26 @@ export const getCommentRepliesHandler: RequestHandler = async (
       status: "success",
       message: "Replies retrieved",
       data: { comments },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getCommentByIdHandler: RequestHandler = async (req, res, next) => {
+  try {
+    const commentId = getRouteParam(req.params.commentId);
+
+    if (!commentId) {
+      throw new CommentError("commentId est requis", 400);
+    }
+
+    const comment = await getCommentById(commentId);
+
+    res.status(200).json({
+      status: "success",
+      message: "Comment retrieved",
+      data: { comment },
     });
   } catch (error) {
     next(error);

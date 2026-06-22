@@ -8,6 +8,7 @@ export type CreateNotificationInput = {
   type: NotificationType;
   resourceType: NotificationResourceType;
   resourceId: string;
+  postId?: string | null;
 };
 
 export type NotificationResponse = {
@@ -17,6 +18,7 @@ export type NotificationResponse = {
   type: NotificationType;
   resourceType: NotificationResourceType;
   resourceId: string;
+  postId: string | null;
   message: string;
   isRead: boolean;
   createdAt: Date;

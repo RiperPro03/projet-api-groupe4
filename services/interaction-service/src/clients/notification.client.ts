@@ -5,6 +5,7 @@ export type CreateLikeNotificationInput = {
   actorId: string;
   resourceType: "post" | "comment";
   resourceId: string;
+  postId?: string;
 };
 
 export async function createLikeNotification(
@@ -22,6 +23,7 @@ export async function createLikeNotification(
       type: "like",
       resourceType: input.resourceType,
       resourceId: input.resourceId,
+      postId: input.postId,
     }),
   });
 

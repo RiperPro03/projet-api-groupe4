@@ -23,9 +23,13 @@ import type { Post } from "@/types/post";
 
 type PostDetailProps = {
   postId: string;
+  highlightCommentId?: string | null;
 };
 
-export default function PostDetail({ postId }: PostDetailProps) {
+export default function PostDetail({
+  postId,
+  highlightCommentId = null,
+}: PostDetailProps) {
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -146,6 +150,7 @@ export default function PostDetail({ postId }: PostDetailProps) {
         likesCount={likesCount}
         commentsCount={comments.filter((comment) => !comment.parentCommentId).length}
         isLiked={isLiked}
+        likers={post.likers}
         onLike={async () => {
           if (isLikePending) {
             return;
@@ -183,7 +188,11 @@ export default function PostDetail({ postId }: PostDetailProps) {
         }}
       />
       <CommentComposer onSubmit={handleCommentSubmit} />
-      <CommentThread comments={comments} onReplySubmit={handleReplySubmit} />
+      <CommentThread
+        comments={comments}
+        onReplySubmit={handleReplySubmit}
+        highlightCommentId={highlightCommentId}
+      />
     </Stack>
   );
 }

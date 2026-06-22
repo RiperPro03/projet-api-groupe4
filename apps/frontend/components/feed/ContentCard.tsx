@@ -13,6 +13,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { FiHeart, FiMessageCircle } from "react-icons/fi";
+import { AvatarCircles } from "@/registry/magicui/avatar-circles";
 import type { Author, Media } from "@/types/post";
 
 type ContentCardProps = {
@@ -26,6 +27,7 @@ type ContentCardProps = {
   repliesCount?: number;
   isReply?: boolean;
   isLiked?: boolean;
+  likers?: Author[];
   onComment?: () => void;
   onLike?: () => void;
 };
@@ -45,6 +47,10 @@ function countLabel(value = 0) {
   return new Intl.NumberFormat("fr-FR", {
     notation: value > 999 ? "compact" : "standard",
   }).format(value);
+}
+
+function buildAvatarImageUrl(name: string) {
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=00923e&color=fff`;
 }
 
 function LinkifiedText({ text }: { text: string }) {
@@ -180,10 +186,12 @@ export default function ContentCard({
   repliesCount,
   isReply = false,
   isLiked = false,
+  likers = [],
   onComment,
   onLike,
 }: ContentCardProps) {
   const discussionCount = type === "post" ? commentsCount : repliesCount;
+  const remainingLikers = Math.max(0, likesCount - likers.length);
   const initials = author.name
     .split(" ")
     .map((part) => part[0])
@@ -226,7 +234,7 @@ export default function ContentCard({
           <LinkifiedText text={content} />
           <MediaGrid media={media} />
 
-          <Group gap="xl" mt={4}>
+          <Group gap="xl" mt={4} align="center">
             <ActionButton
               label={type === "post" ? "Commenter" : "Repondre"}
               count={discussionCount}
@@ -234,11 +242,22 @@ export default function ContentCard({
             >
               <FiMessageCircle size={18} />
             </ActionButton>
-            <ActionButton label={isLiked ? "Retirer le like" : "Aimer"} count={likesCount} onClick={onLike}>
-              <Box c={isLiked ? "green.4" : undefined} component="span" lh={0}>
-              <FiHeart size={18} />
-              </Box>
-            </ActionButton>
+            <Group gap="sm" wrap="nowrap" align="center">
+              <ActionButton label={isLiked ? "Retirer le like" : "Aimer"} count={likesCount} onClick={onLike}>
+                <Box c={isLiked ? "green.4" : undefined} component="span" lh={0}>
+                <FiHeart size={18} />
+                </Box>
+              </ActionButton>
+              {type === "post" && likesCount > 0 && likers.length > 0 && (
+                <AvatarCircles
+                  numPeople={remainingLikers}
+                  avatarUrls={likers.map((liker) => ({
+                    imageUrl: liker.avatarUrl || buildAvatarImageUrl(liker.name),
+                    profileUrl: "#",
+                  }))}
+                />
+              )}
+            </Group>
           </Group>
         </Stack>
       </Group>

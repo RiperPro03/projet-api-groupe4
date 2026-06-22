@@ -10,6 +10,7 @@ import {
   LikeError,
   listLikedCommentIds,
   listLikedPostIds,
+  listPostLikerIds,
   removeCommentLike,
   removePostLike,
 } from "../services/like.service.js";
@@ -111,6 +112,24 @@ export const removePostLikeHandler: RequestHandler = async (req, res, next) => {
 
     await removePostLike(body.userId, body.postId);
     res.status(200).json({ message: "Like supprimé" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const listPostLikersHandler: RequestHandler = async (req, res, next) => {
+  try {
+    const postId = getField(req, "postId");
+    if (!postId) {
+      throw new LikeError("postId est requis", 400);
+    }
+
+    const limitValue = getField(req, "limit");
+    const parsedLimit = limitValue ? Number.parseInt(limitValue, 10) : 5;
+    const limit = Number.isNaN(parsedLimit) ? 5 : parsedLimit;
+    const userIds = await listPostLikerIds(postId, limit);
+
+    res.status(200).json({ userIds });
   } catch (error) {
     next(error);
   }

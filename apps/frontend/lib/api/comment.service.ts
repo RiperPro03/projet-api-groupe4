@@ -100,6 +100,14 @@ export async function fetchCommentReplies(commentId: string): Promise<Comment[]>
   return mapCommentsWithCounts(data.data.comments);
 }
 
+export async function fetchCommentPostId(commentId: string): Promise<string | null> {
+  const { data } = await httpClient.get<CommentResponse>(
+    `/comments/${commentId}`
+  );
+
+  return data.data.comment?.postId ?? null;
+}
+
 export async function createComment({
   postId,
   content,

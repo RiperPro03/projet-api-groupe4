@@ -1,4 +1,5 @@
 import { httpClient } from "./http-client";
+import { fetchProfilesByUserIds } from "./profile.service";
 import type {
   FetchNotificationPage,
   NotificationPage,
@@ -13,6 +14,7 @@ type ApiNotification = {
   type: "like";
   resourceType: "post" | "comment";
   resourceId: string;
+  postId?: string | null;
   message: string;
   isRead: boolean;
   createdAt: string;
@@ -57,11 +59,29 @@ function mapApiNotification(notification: ApiNotification): UserNotification {
     type: notification.type,
     resourceType: notification.resourceType,
     resourceId: notification.resourceId,
+    postId: notification.postId ?? null,
     message: notification.message,
     isRead: notification.isRead,
     createdAt: notification.createdAt,
     readAt: notification.readAt,
   };
+}
+
+async function enrichNotificationsWithActorNames(
+  notifications: UserNotification[]
+): Promise<UserNotification[]> {
+  if (notifications.length === 0) {
+    return notifications;
+  }
+
+  const profiles = await fetchProfilesByUserIds(
+    notifications.map((notification) => notification.actorId)
+  );
+
+  return notifications.map((notification) => ({
+    ...notification,
+    actorName: profiles.get(notification.actorId)?.name,
+  }));
 }
 
 function fallbackPage(
@@ -91,7 +111,9 @@ export function fetchUserNotifications(
       }
     );
 
-    const items = data.data.notifications.map(mapApiNotification);
+    const items = await enrichNotificationsWithActorNames(
+      data.data.notifications.map(mapApiNotification)
+    );
 
     return {
       items,
@@ -118,7 +140,11 @@ export async function markNotificationAsRead(notificationId: string) {
     `/notifications/notifications/${notificationId}/read`
   );
 
-  return mapApiNotification(data.data.notification);
+  const [notification] = await enrichNotificationsWithActorNames([
+    mapApiNotification(data.data.notification),
+  ]);
+
+  return notification;
 }
 
 export async function markAllNotificationsAsRead(recipientId: string) {

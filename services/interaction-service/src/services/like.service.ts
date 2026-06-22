@@ -94,6 +94,22 @@ export async function hasPostLike(
   return Boolean(like);
 }
 
+export async function listPostLikerIds(
+  postId: string,
+  limit = 5
+): Promise<string[]> {
+  const resolvedPostId = requireNonEmpty(postId, "postId");
+  const resolvedLimit = Math.min(Math.max(limit, 1), 20);
+
+  const likes = await PostLike.find({ postId: resolvedPostId })
+    .sort({ createdAt: -1 })
+    .limit(resolvedLimit)
+    .select("userId")
+    .lean();
+
+  return likes.map((like) => like.userId);
+}
+
 export async function listLikedPostIds(
   userId: string,
   postIds: string[]

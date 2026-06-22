@@ -17,6 +17,7 @@ router.all("/posts/likes/status", authMiddleware, forwardInteractionRequest);
 router.get("/comments", authMiddleware, getCommentsController);
 router.post("/comments", authMiddleware, forwardInteractionRequest);
 router.get("/comments/:commentId/replies", authMiddleware, getCommentRepliesController);
+router.get("/comments/:commentId", authMiddleware, forwardInteractionRequest);
 router.all("/comments/likes", authMiddleware, forwardInteractionRequest);
 router.all("/comments/likes/count", authMiddleware, forwardInteractionRequest);
 router.all("/comments/likes/status", authMiddleware, forwardInteractionRequest);

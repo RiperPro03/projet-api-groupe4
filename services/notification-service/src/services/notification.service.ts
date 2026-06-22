@@ -48,6 +48,7 @@ function mapNotification(notification: {
   type: NotificationType;
   resourceType: NotificationResourceType;
   resourceId: string;
+  postId?: string | null;
   message: string;
   isRead: boolean;
   createdAt: Date;
@@ -60,6 +61,7 @@ function mapNotification(notification: {
     type: notification.type,
     resourceType: notification.resourceType,
     resourceId: notification.resourceId,
+    postId: notification.postId ?? null,
     message: notification.message,
     isRead: notification.isRead,
     createdAt: notification.createdAt,
@@ -88,6 +90,13 @@ function validateCreateInput(input: CreateNotificationInput) {
     );
   }
 
+  const postId =
+    resourceType === "comment"
+      ? requireNonEmpty(input.postId, "postId")
+      : typeof input.postId === "string" && input.postId.trim()
+        ? input.postId.trim()
+        : null;
+
   if (
     recipientId === actorId &&
     !env.debugAllowSelfLikeNotifications
@@ -104,6 +113,7 @@ function validateCreateInput(input: CreateNotificationInput) {
     type: "like" as const,
     resourceType,
     resourceId,
+    postId,
   };
 }
 
@@ -117,6 +127,7 @@ export async function createNotification(
     message: buildLikeMessage(validatedInput.resourceType),
     isRead: false,
     readAt: null,
+    postId: validatedInput.postId,
   });
 
   return mapNotification(notification);

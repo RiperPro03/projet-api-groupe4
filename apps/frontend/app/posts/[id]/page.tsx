@@ -3,6 +3,7 @@ import PostDetail from "@/components/posts/PostDetail";
 
 type PostPageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ comment?: string }>;
 };
 
 export async function generateMetadata({
@@ -16,13 +17,14 @@ export async function generateMetadata({
   };
 }
 
-export default async function PostPage({ params }: PostPageProps) {
+export default async function PostPage({ params, searchParams }: PostPageProps) {
   const { id } = await params;
+  const { comment } = await searchParams;
 
   return (
     <section className="min-h-[calc(100svh-64px)] bg-background px-4 py-6 text-foreground md:min-h-svh">
       <div className="mx-auto w-full max-w-2xl">
-        <PostDetail postId={id} />
+        <PostDetail postId={id} highlightCommentId={comment ?? null} />
       </div>
     </section>
   );

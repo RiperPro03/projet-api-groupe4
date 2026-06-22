@@ -28,6 +28,11 @@ const notificationSchema = new Schema(
       required: true,
       trim: true,
     },
+    postId: {
+      type: String,
+      default: null,
+      trim: true,
+    },
     message: {
       type: String,
       required: true,

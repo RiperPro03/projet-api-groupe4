@@ -53,6 +53,7 @@ describe("notification.service", () => {
         type: "like",
         resourceType: "post",
         resourceId: "post-123",
+        postId: null,
         message: "Un utilisateur a aimé votre post",
         isRead: false,
         readAt: null,
@@ -71,10 +72,25 @@ describe("notification.service", () => {
         createLikeNotificationInput({
           resourceType: "comment",
           resourceId: "comment-123",
+          postId: "post-123",
         })
       );
 
       expect(result.message).toBe("Un utilisateur a aimé votre commentaire");
+    });
+
+    it("refuse un like de commentaire sans postId", async () => {
+      await expect(
+        createNotification(
+          createLikeNotificationInput({
+            resourceType: "comment",
+            resourceId: "comment-123",
+          })
+        )
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "postId est requis",
+      });
     });
 
     it("refuse un recipientId vide", async () => {

@@ -138,6 +138,7 @@ function PostFeedItem({
         likesCount={likesCount}
         commentsCount={commentsCount}
         isLiked={isLiked}
+        likers={post.likers}
         onComment={
           canOpenComments ? () => setShowComments((value) => !value) : undefined
         }

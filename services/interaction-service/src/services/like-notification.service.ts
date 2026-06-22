@@ -28,9 +28,11 @@ async function notifyCommentLike(
   actorId: string,
   commentId: string
 ): Promise<void> {
-  const comment = await Comment.findById(commentId).select("authorId").lean();
+  const comment = await Comment.findById(commentId)
+    .select("authorId postId")
+    .lean();
 
-  if (!comment?.authorId || shouldSkipSelfLike(comment.authorId, actorId)) {
+  if (!comment?.authorId || !comment.postId || shouldSkipSelfLike(comment.authorId, actorId)) {
     return;
   }
 
@@ -39,6 +41,7 @@ async function notifyCommentLike(
     actorId,
     resourceType: "comment",
     resourceId: commentId,
+    postId: comment.postId,
   });
 }
 

@@ -18,6 +18,7 @@ const forwardInteractionRequest = createForwardHandler("interactions");
 
 router.post("/posts/likes", authMiddleware, requireBodyOwnerOrRoles({ roles: [], ownerBodyField: "userId" }), forwardInteractionRequest);
 router.delete("/posts/likes", authMiddleware, requireBodyOwnerOrRoles({ roles: [], ownerBodyField: "userId" }), forwardInteractionRequest);
+router.get("/posts/likes", authMiddleware, requireRoles(authenticatedRoles), forwardInteractionRequest);
 router.all("/posts/likes/count", authMiddleware, requireRoles(authenticatedRoles), forwardInteractionRequest);
 router.all("/posts/likes/status", authMiddleware, requireOwnerOrRoles({ roles: [], ownerQueryParam: "userId" }), forwardInteractionRequest);
 
@@ -28,6 +29,12 @@ router.get(
   authMiddleware,
   requireRoles(authenticatedRoles),
   getCommentRepliesController,
+);
+router.get(
+  "/comments/:commentId",
+  authMiddleware,
+  requireRoles(authenticatedRoles),
+  forwardInteractionRequest,
 );
 router.post("/comments/likes", authMiddleware, requireBodyOwnerOrRoles({ roles: [], ownerBodyField: "userId" }), forwardInteractionRequest);
 router.delete("/comments/likes", authMiddleware, requireBodyOwnerOrRoles({ roles: [], ownerBodyField: "userId" }), forwardInteractionRequest);

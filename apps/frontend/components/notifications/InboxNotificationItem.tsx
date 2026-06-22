@@ -5,9 +5,14 @@ import { ActionIcon, Badge, Card, Group, Text } from "@mantine/core";
 import { FiAtSign, FiHeart, FiTrash2 } from "react-icons/fi";
 import {
   getNotificationAriaLabel,
+  getNotificationDisplayMessage,
   getNotificationTypeLabel,
   getResourceTypeLabel,
 } from "@/lib/notification-labels";
+import {
+  getNotificationHref,
+  isNotificationNavigable,
+} from "@/lib/notifications/notification-links";
 import type { UserNotification } from "@/types/notification";
 
 type InboxNotificationItemProps = {
@@ -31,9 +36,8 @@ export default function InboxNotificationItem({
   onDelete,
 }: InboxNotificationItemProps) {
   const isMention = notification.type === "mention";
-  const isPostLink =
-    notification.resourceType === "post" &&
-    (notification.type === "like" || notification.type === "mention");
+  const notificationHref = getNotificationHref(notification);
+  const isNavigable = isNotificationNavigable(notification);
   const Icon = isMention ? FiAtSign : FiHeart;
   const accentColor = isMention ? "amber" : "green";
   const unreadDotClass = isMention ? "bg-amber-500" : "bg-breezy-green";
@@ -85,7 +89,7 @@ export default function InboxNotificationItem({
         </div>
         <div className="min-w-0 flex-1">
           <Text size="sm" fw={notification.isRead ? 500 : 600} lh={1.45}>
-            {notification.message}
+            {getNotificationDisplayMessage(notification)}
           </Text>
           <Group gap="xs" mt={6} wrap="wrap">
             <Badge size="xs" variant="light" color={accentColor} radius="sm">
@@ -113,10 +117,10 @@ export default function InboxNotificationItem({
 
   const ariaLabel = getNotificationAriaLabel(notification);
 
-  if (isPostLink) {
+  if (isNavigable && notificationHref) {
     return (
       <Link
-        href={`/posts/${notification.resourceId}`}
+        href={notificationHref}
         className="block no-underline text-inherit"
         aria-label={ariaLabel}
         onClick={handleClick}

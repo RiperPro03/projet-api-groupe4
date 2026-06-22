@@ -21,15 +21,17 @@ type CurrentUserResponse = {
 };
 
 const AUTH_ROUTES = ["/login", "/register"];
-const PROTECTED_ROUTES = ["/", "/profile"];
+const PROTECTED_ROUTES = ["/", "/profile", "/admin"];
 const TOKEN_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
+// Route matching helpers
 function isMatchingRoute(pathname: string, routes: string[]) {
   return routes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 }
 
+// API URL resolution
 function getApiUrl(request: NextRequest, path: string) {
   const baseUrl =
     process.env.INTERNAL_API_URL ??
@@ -44,6 +46,7 @@ function getApiUrl(request: NextRequest, path: string) {
   return new URL(`${normalizedBaseUrl}${path}`, request.nextUrl.origin).toString();
 }
 
+// Cookie security and persistence
 function isHttpsRequest(request: NextRequest) {
   return (
     request.nextUrl.protocol === "https:" ||
@@ -84,6 +87,7 @@ function clearTokenCookies(response: NextResponse) {
   response.cookies.delete(REFRESH_TOKEN_KEY);
 }
 
+// Request forwarding with refreshed tokens
 function createNextResponseWithRequestTokens(
   request: NextRequest,
   tokens: { accessToken?: string; refreshToken?: string },
@@ -117,6 +121,7 @@ function createNextResponseWithRequestTokens(
   });
 }
 
+// Authentication redirects
 function redirectToLogin(request: NextRequest) {
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = "/login";
@@ -170,6 +175,7 @@ async function refreshAccessToken(request: NextRequest, refreshToken: string) {
   }
 }
 
+// Main route guard
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAuthRoute = isMatchingRoute(pathname, AUTH_ROUTES);
@@ -226,6 +232,7 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// Middleware matcher
 export const config = {
   matcher: [
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",

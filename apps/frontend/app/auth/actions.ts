@@ -104,8 +104,18 @@ async function createHttpOnlySession(tokens: {
   });
 }
 
+async function clearHttpOnlySession() {
+  const cookieStore = await cookies();
+
+  cookieStore.delete(ACCESS_TOKEN_KEY);
+  cookieStore.delete(REFRESH_TOKEN_KEY);
+}
+
 async function requestLogin(payload: AuthPayload): Promise<AuthActionResult> {
   const { t } = await getServerI18n();
+
+  await clearHttpOnlySession();
+
   const response = await fetch(getApiUrl("/auth/login"), {
     method: "POST",
     headers: {
@@ -117,6 +127,8 @@ async function requestLogin(payload: AuthPayload): Promise<AuthActionResult> {
   const result = await readAuthResponse(response, t);
 
   if (!result.ok) {
+    await clearHttpOnlySession();
+
     return {
       status: "error",
       message: result.message,

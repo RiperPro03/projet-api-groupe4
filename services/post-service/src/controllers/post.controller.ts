@@ -39,7 +39,6 @@ async function createPost(req: Request, res: Response) {
         const post = await postService.createPost(req.body.authorId, {
             content: req.body.content,
             tags: req.body.tags,
-            media: req.body.media,
         });
 
         return res.status(201).json({
@@ -162,7 +161,6 @@ async function updatePost(req: Request, res: Response) {
         const post = await postService.updatePost(postId, {
             content: req.body.content,
             tags: req.body.tags,
-            media: req.body.media,
         });
 
         return res.status(200).json({
@@ -205,6 +203,35 @@ async function getAllPosts(req: Request, res: Response) {
     }
 }
 
+// GET /posts/tag/:tag — Recherche par tag
+async function getPostsByTag(req: Request, res: Response) {
+    try {
+        const tag = (Array.isArray(req.params.tag) ? req.params.tag[0] : req.params.tag)?.trim();
+
+        if (!tag) {
+            return res.status(400).json({
+                status: "error",
+                message: "tag param is required",
+            });
+        }
+
+        const { limit, cursor } = getPaginationParams(req);
+        const page = await postService.getPostsByTag(tag, limit, cursor);
+
+        return res.status(200).json({
+            status: "success",
+            message: "Posts retrieved",
+            data: page,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: "error",
+            message: "Internal server error",
+        });
+    }
+}
+
 // DELETE /posts/:id — Soft delete d'un post
 async function softDeletePost(req: Request, res: Response) {
     try {
@@ -217,8 +244,7 @@ async function softDeletePost(req: Request, res: Response) {
             });
         }
 
-        const requesterId = req.header("x-user-id");
-        const post = await postService.softDeletePost(postId, requesterId);
+        const post = await postService.softDeletePost(postId);
 
         return res.status(200).json({
             status: "success",
@@ -230,12 +256,6 @@ async function softDeletePost(req: Request, res: Response) {
             return res.status(404).json({
                 status: "error",
                 message: "Post not found",
-            });
-        }
-        if (error instanceof Error && error.message === "POST_FORBIDDEN") {
-            return res.status(403).json({
-                status: "error",
-                message: "Forbidden",
             });
         }
         console.error(error);
@@ -252,6 +272,7 @@ const postController = {
     getFeedPosts,
     getPostById,
     getAllPosts,
+    getPostsByTag,
     updatePost,
     softDeletePost,
 };

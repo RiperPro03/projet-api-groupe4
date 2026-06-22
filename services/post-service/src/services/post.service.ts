@@ -1,25 +1,22 @@
 import { Post } from "../models/post.model";
-import {
-    notifyPostMentionsSafely,
-    resolveMentionedUserIds,
-} from "./mention-notification.service";
 import type {
     CreatePostInput,
     PostPageResponse,
     PostResponse,
+    PostMedia,
 } from "../types/post.types";
 
 function sanitizePost(post: InstanceType<typeof Post>): PostResponse {
     return {
-        id: String(post._id),
-        authorId: post.authorId,
-        content: post.content,
-        tags: post.tags,
-        media: post.media ?? [],
-        createdAt: post.createdAt as Date,
-        updatedAt: post.updatedAt as Date,
-        deletedAt: post.deletedAt,
-    };
+    id: String(post._id),
+    authorId: post.authorId,
+    content: post.content,
+    tags: post.tags,
+    media: post.media ?? [],
+    createdAt: post.createdAt as Date,
+    updatedAt: post.updatedAt as Date,
+    deletedAt: post.deletedAt,
+};
 }
 
 function mapLeanPost(post: {
@@ -27,7 +24,7 @@ function mapLeanPost(post: {
     authorId: string;
     content: string;
     tags?: string[];
-    media?: PostResponse["media"];
+    media?: PostMedia[];
     createdAt: Date;
     updatedAt: Date;
     deletedAt?: Date | null;
@@ -84,16 +81,12 @@ async function createPost(
     authorId: string,
     data: CreatePostInput
 ): Promise<PostResponse> {
-    const content = data.content.trim();
-    const mentions = await resolveMentionedUserIds(content, authorId);
     const post = await Post.create({
         authorId,
-        content,
+        content: data.content.trim(),
         tags: data.tags ?? [],
         media: data.media ?? [],
     });
-
-    notifyPostMentionsSafely(authorId, String(post._id), content);
 
     return sanitizePost(post);
 }
@@ -164,22 +157,24 @@ async function getAllPosts(
     return findPostPage({}, limit, cursor);
 }
 
-async function softDeletePost(
-    postId: string,
-    requesterId?: string | null
-): Promise<PostResponse> {
-    const post = await Post.findById(postId);
+async function getPostsByTag(
+    tag: string,
+    limit = 5,
+    cursor?: string | null
+): Promise<PostPageResponse> {
+    return findPostPage({ tags: tag }, limit, cursor);
+}
 
-    if (!post || post.deletedAt) {
+async function softDeletePost(postId: string): Promise<PostResponse> {
+    const post = await Post.findByIdAndUpdate(
+        postId,
+        { deletedAt: new Date() },
+        { returnDocument: "after" }
+    );
+
+    if (!post) {
         throw new Error("POST_NOT_FOUND");
     }
-
-    if (requesterId && post.authorId !== requesterId) {
-        throw new Error("POST_FORBIDDEN");
-    }
-
-    post.deletedAt = new Date();
-    await post.save();
 
     return sanitizePost(post);
 }
@@ -189,6 +184,7 @@ const postService = {
     getPostsByAuthor,
     getPostsByAuthors,
     getAllPosts,
+    getPostsByTag,
     getPostById,
     updatePost,
     softDeletePost,

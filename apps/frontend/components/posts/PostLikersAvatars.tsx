@@ -8,12 +8,14 @@ type PostLikersAvatarsProps = {
   likers: Author[];
   likesCount: number;
   className?: string;
+  size?: "default" | "sm";
 };
 
 export default function PostLikersAvatars({
   likers,
   likesCount,
   className,
+  size = "default",
 }: PostLikersAvatarsProps) {
   if (likers.length === 0 || likesCount === 0) {
     return null;
@@ -27,6 +29,7 @@ export default function PostLikersAvatars({
       className={className}
       avatarUrls={avatarUrls}
       numPeople={extraLikers}
+      size={size}
     />
   );
 }

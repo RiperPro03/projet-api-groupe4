@@ -108,7 +108,11 @@ export function useNotificationList({
     setNotifications((currentNotifications) =>
       currentNotifications.map((notification) =>
         notification.id === notificationId
-          ? { ...updated, actor: notification.actor ?? updated.actor }
+          ? {
+              ...updated,
+              actor: notification.actor ?? updated.actor,
+              postId: notification.postId ?? updated.postId,
+            }
           : notification
       )
     );

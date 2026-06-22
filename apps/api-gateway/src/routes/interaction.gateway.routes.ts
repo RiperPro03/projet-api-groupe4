@@ -30,6 +30,12 @@ router.get(
   requireRoles(authenticatedRoles),
   getCommentRepliesController,
 );
+router.get(
+  "/comments/:commentId",
+  authMiddleware,
+  requireRoles(authenticatedRoles),
+  forwardInteractionRequest,
+);
 router.post("/comments/likes", authMiddleware, requireBodyOwnerOrRoles({ roles: [], ownerBodyField: "userId" }), forwardInteractionRequest);
 router.delete("/comments/likes", authMiddleware, requireBodyOwnerOrRoles({ roles: [], ownerBodyField: "userId" }), forwardInteractionRequest);
 router.all("/comments/likes/count", authMiddleware, requireRoles(authenticatedRoles), forwardInteractionRequest);

@@ -11,6 +11,7 @@ export type UserNotification = {
   type: "like" | "mention";
   resourceType: "post" | "comment";
   resourceId: string;
+  postId?: string;
   message: string;
   isRead: boolean;
   createdAt: string;

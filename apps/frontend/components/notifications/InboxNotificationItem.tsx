@@ -9,6 +9,10 @@ import {
   getNotificationTypeLabel,
   getResourceTypeLabel,
 } from "@/lib/notification-labels";
+import {
+  getNotificationHref,
+  isNotificationNavigable,
+} from "@/lib/notifications/notification-links";
 import type { UserNotification } from "@/types/notification";
 
 type InboxNotificationItemProps = {
@@ -32,9 +36,8 @@ export default function InboxNotificationItem({
   onDelete,
 }: InboxNotificationItemProps) {
   const isMention = notification.type === "mention";
-  const isPostLink =
-    notification.resourceType === "post" &&
-    (notification.type === "like" || notification.type === "mention");
+  const notificationHref = getNotificationHref(notification);
+  const isNavigable = isNotificationNavigable(notification);
   const Icon = isMention ? FiAtSign : FiHeart;
   const accentColor = isMention ? "amber" : "green";
   const unreadDotClass = isMention ? "bg-amber-500" : "bg-breezy-green";
@@ -114,10 +117,10 @@ export default function InboxNotificationItem({
 
   const ariaLabel = getNotificationAriaLabel(notification);
 
-  if (isPostLink) {
+  if (isNavigable && notificationHref) {
     return (
       <Link
-        href={`/posts/${notification.resourceId}`}
+        href={notificationHref}
         className="block no-underline text-inherit"
         aria-label={ariaLabel}
         onClick={handleClick}

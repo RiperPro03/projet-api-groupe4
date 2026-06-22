@@ -25,3 +25,14 @@ model User_state {
 
   @@map("users_state")
 }
+
+model ContentReport {
+  id             String   @id @default(uuid())
+  message        String
+  postId         String?
+  reportedUserId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("content_reports")
+}

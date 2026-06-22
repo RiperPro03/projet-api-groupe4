@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FiBell, FiHome, FiSearch, FiUser } from "react-icons/fi";
+import { FiBell, FiHome, FiSearch, FiShield, FiUser } from "react-icons/fi";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { ThemedLogo } from "@/components/branding/ThemedLogo";
 import { getUnreadCount } from "@/lib/api/notification.service";
@@ -19,6 +19,8 @@ export default function Navbar({
     const { t } = useI18n();
     const [logoAnimationKey, setLogoAnimationKey] = useState(0);
     const [unreadCount, setUnreadCount] = useState(0);
+
+    // Current profile display data
     const profileName =
         currentUser?.profile?.nickname ||
         currentUser?.profile?.username ||
@@ -27,6 +29,7 @@ export default function Navbar({
     const profileInitials = profileName.slice(0, 2).toUpperCase();
     const profilePhoto = currentUser?.profile?.url_photo;
 
+    // Notification badge state
     useEffect(() => {
         if (!currentUser) {
             return;
@@ -52,13 +55,22 @@ export default function Navbar({
 
     const displayedUnreadCount = currentUser ? unreadCount : 0;
 
+    // Navigation link permissions
+    const canAccessAdmin =
+        currentUser?.user?.role === "ADMIN" ||
+        currentUser?.user?.role === "MODERATOR";
+
     const links = [
         { href: "/", label: t("nav.home"), icon: FiHome },
         { href: "/search", label: t("nav.search"), icon: FiSearch },
         { href: "/notif", label: t("nav.notifications"), icon: FiBell },
+        ...(canAccessAdmin
+            ? [{ href: "/admin", label: t("nav.admin"), icon: FiShield }]
+            : []),
         { href: "/profile", label: t("nav.profile"), icon: FiUser },
     ];
 
+    // Responsive navigation rendering
     return (
         <nav
             className="group fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:inset-y-0 md:left-0 md:right-auto md:w-20 md:overflow-hidden md:border-r md:border-t-0 md:pb-0 md:transition-[width] md:duration-300 md:ease-out md:hover:w-64"

@@ -13,7 +13,6 @@ import {
 } from "react-icons/fi";
 import ProfileActivityTabs from "@/components/profil/ProfileActivityTabs";
 import ProfileSocialStats from "@/components/profil/ProfileSocialStats";
-import { Particles } from "@/components/ui/particles";
 import { RippleButton } from "@/components/ui/ripple-button";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
 import {
@@ -144,7 +143,7 @@ export default function PublicProfilePage() {
   /* ── Loading ── */
   if (state.status === "loading") {
     return (
-      <section className="min-h-[calc(100svh-64px)] bg-background px-5 py-8 md:min-h-svh">
+      <section className="min-h-[calc(100svh-64px)] bg-transparent px-5 py-8 md:min-h-svh">
         <div className="mx-auto w-full max-w-2xl">
           <Group justify="center" py="xl">
             <Loader color="green" />
@@ -157,7 +156,7 @@ export default function PublicProfilePage() {
   /* ── Not found ── */
   if (state.status === "not_found") {
     return (
-      <section className="flex min-h-[calc(100svh-64px)] flex-col items-center justify-center gap-4 bg-background px-5 text-foreground md:min-h-svh">
+      <section className="flex min-h-[calc(100svh-64px)] flex-col items-center justify-center gap-4 bg-transparent px-5 text-foreground md:min-h-svh">
         <Text size="xl" style={{ fontSize: "3rem" }}>
           🔍
         </Text>
@@ -182,7 +181,7 @@ export default function PublicProfilePage() {
   /* ── Erreur ── */
   if (state.status === "error") {
     return (
-      <section className="flex min-h-[calc(100svh-64px)] flex-col items-center justify-center gap-3 bg-background px-5 text-foreground md:min-h-svh">
+      <section className="flex min-h-[calc(100svh-64px)] flex-col items-center justify-center gap-3 bg-transparent px-5 text-foreground md:min-h-svh">
         <Card radius={8} p="md" withBorder style={{ borderColor: "var(--destructive)" }}>
           <Text size="sm" style={{ color: "var(--destructive)" }}>
             {state.message}
@@ -207,16 +206,8 @@ export default function PublicProfilePage() {
   }).format(new Date(profile.createdAt));
 
   return (
-    <section className="relative min-h-[calc(100svh-64px)] overflow-hidden bg-background px-5 py-8 text-foreground md:min-h-svh">
-      <Particles
-        className="z-0"
-        quantity={100}
-        color="var(--foreground)"
-        size={1.1}
-        speed={0.3}
-      />
-
-      <div className="relative z-10 mx-auto w-full max-w-2xl">
+    <section className="relative min-h-[calc(100svh-64px)] overflow-hidden bg-transparent px-5 py-8 text-foreground md:min-h-svh">
+      <div className="mx-auto w-full max-w-2xl">
         {/* Retour */}
         <Link
           href="/search"

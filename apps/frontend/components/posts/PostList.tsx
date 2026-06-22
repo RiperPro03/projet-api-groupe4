@@ -310,6 +310,7 @@ function PostFeedItem({
         media={post.media}
         createdAt={post.createdAt}
         likesCount={likesCount}
+        likers={post.likers}
         commentsCount={commentsCount}
         isLiked={isLiked}
         onComment={

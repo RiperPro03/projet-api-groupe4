@@ -153,6 +153,7 @@ export default function PostDetail({ postId }: PostDetailProps) {
         media={post.media}
         createdAt={post.createdAt}
         likesCount={likesCount}
+        likers={post.likers}
         commentsCount={comments.filter((comment) => !comment.parentCommentId).length}
         isLiked={isLiked}
         onLike={async () => {

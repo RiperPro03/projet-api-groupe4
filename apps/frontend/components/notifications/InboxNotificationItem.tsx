@@ -5,6 +5,7 @@ import { ActionIcon, Badge, Card, Group, Text } from "@mantine/core";
 import { FiAtSign, FiHeart, FiTrash2 } from "react-icons/fi";
 import {
   getNotificationAriaLabel,
+  getNotificationDisplayMessage,
   getNotificationTypeLabel,
   getResourceTypeLabel,
 } from "@/lib/notification-labels";
@@ -85,7 +86,7 @@ export default function InboxNotificationItem({
         </div>
         <div className="min-w-0 flex-1">
           <Text size="sm" fw={notification.isRead ? 500 : 600} lh={1.45}>
-            {notification.message}
+            {getNotificationDisplayMessage(notification)}
           </Text>
           <Group gap="xs" mt={6} wrap="wrap">
             <Badge size="xs" variant="light" color={accentColor} radius="sm">

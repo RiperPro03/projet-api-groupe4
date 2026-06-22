@@ -7,6 +7,7 @@ import {
   markNotificationAsRead as markNotificationAsReadApi,
 } from "@/lib/api/notification.service";
 import { getApiErrorMessage } from "@/lib/api/http-client";
+import { enrichNotificationsWithActors } from "@/lib/notifications/enrich-notifications";
 import type {
   FetchNotificationPage,
   UserNotification,
@@ -39,8 +40,9 @@ export function useNotificationList({
 
       try {
         const page = await fetchNotifications({ limit: pageSize });
+        const enrichedItems = await enrichNotificationsWithActors(page.items);
         if (isMounted) {
-          setNotifications(page.items);
+          setNotifications(enrichedItems);
           setNextCursor(page.nextCursor);
           setHasMore(page.hasMore);
         }
@@ -77,12 +79,13 @@ export function useNotificationList({
         limit: pageSize,
         cursor: nextCursor,
       });
+      const enrichedItems = await enrichNotificationsWithActors(page.items);
 
       setNotifications((currentNotifications) => {
         const currentIds = new Set(
           currentNotifications.map((notification) => notification.id)
         );
-        const nextItems = page.items.filter(
+        const nextItems = enrichedItems.filter(
           (notification) => !currentIds.has(notification.id)
         );
 
@@ -104,7 +107,9 @@ export function useNotificationList({
 
     setNotifications((currentNotifications) =>
       currentNotifications.map((notification) =>
-        notification.id === notificationId ? updated : notification
+        notification.id === notificationId
+          ? { ...updated, actor: notification.actor ?? updated.actor }
+          : notification
       )
     );
   }, []);

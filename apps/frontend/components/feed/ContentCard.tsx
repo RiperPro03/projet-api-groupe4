@@ -15,6 +15,7 @@ import {
 import type { ReactNode } from "react";
 import { FiHeart, FiMessageCircle, FiTrash2 } from "react-icons/fi";
 import { useI18n } from "@/lib/i18n/client";
+import PostLikersAvatars from "@/components/posts/PostLikersAvatars";
 import type { Author, Media } from "@/types/post";
 
 type ContentCardProps = {
@@ -24,6 +25,7 @@ type ContentCardProps = {
   media?: Media[];
   createdAt: string;
   likesCount: number;
+  likers?: Author[];
   commentsCount?: number;
   repliesCount?: number;
   isReply?: boolean;
@@ -185,6 +187,7 @@ export default function ContentCard({
   media = [],
   createdAt,
   likesCount,
+  likers = [],
   commentsCount,
   repliesCount,
   isReply = false,
@@ -225,6 +228,10 @@ export default function ContentCard({
     <>
       <LinkifiedText text={content} />
       <MediaGrid media={media} />
+
+      {type === "post" && likers.length > 0 && (
+        <PostLikersAvatars likers={likers} likesCount={likesCount} className="mt-2" />
+      )}
 
       <Group gap="xl" mt={4}>
         <ActionButton

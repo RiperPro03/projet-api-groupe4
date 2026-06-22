@@ -96,6 +96,7 @@ export type EnrichedPost = PostServicePost & {
   likesCount: number;
   commentsCount: number;
   isLiked: boolean;
+  likers: Author[];
 };
 
 type PageParams = {
@@ -115,6 +116,13 @@ const getCount = async (url: string, params: Record<string, string>) => {
 
 const getPostLikesCount = (postId: string) =>
   getCount(buildServiceUrl("interactions", "/posts/likes/count"), { postId });
+
+const getPostLikers = (postId: string, limit = 5) =>
+  requestService<{ userIds: string[] }>("interactions", {
+    method: "GET",
+    url: buildServiceUrl("interactions", "/posts/likes"),
+    params: { postId, limit: String(limit) },
+  }).then((response) => response.data.userIds ?? []);
 
 const getCommentLikesCount = (commentId: string) =>
   getCount(buildServiceUrl("interactions", "/comments/likes/count"), {
@@ -247,9 +255,13 @@ export const enrichPosts = async (posts: PostServicePost[], viewerId: string) =>
     viewerId,
     posts.map((post) => post.id)
   ).catch(() => new Set<string>());
+  const likerIdGroups = await Promise.all(
+    posts.map((post) => getPostLikers(post.id).catch(() => []))
+  );
+  const likerAuthors = await getAuthorsById(likerIdGroups.flat());
 
   return Promise.all(
-    posts.map(async (post): Promise<EnrichedPost> => {
+    posts.map(async (post, index): Promise<EnrichedPost> => {
       const [likesCount, comments] = await Promise.all([
         getPostLikesCount(post.id).catch(() => 0),
         getCommentsByPost(post.id).catch(() => []),
@@ -262,6 +274,9 @@ export const enrichPosts = async (posts: PostServicePost[], viewerId: string) =>
         commentsCount: comments.filter((comment) => !comment.parentCommentId)
           .length,
         isLiked: likedPostIds.has(post.id),
+        likers: likerIdGroups[index].map(
+          (likerId) => likerAuthors.get(likerId) ?? getAuthorFallback(likerId)
+        ),
       };
     })
   );

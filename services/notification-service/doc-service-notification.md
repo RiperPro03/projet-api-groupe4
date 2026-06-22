@@ -214,20 +214,6 @@ Règles :
 - pas de notification sur **unlike** ;
 - appel **fire-and-forget** : un échec ici ne fait pas échouer le like.
 
-### Mode debug — self-like (facile à retirer)
-
-Pour tester l'inbox seul (sans second compte), activer **sur les deux services** :
-
-```env
-DEBUG_ALLOW_SELF_LIKE_NOTIFICATIONS=true
-```
-
-Fichiers concernés : `interaction-service/.env` et `notification-service/.env` (voir `.env.example`).
-
-Effet : liker **son propre** post ou commentaire crée quand même une notification reçue par soi-même.
-
-Pour revenir au comportement normal : retirer la variable ou la mettre à `false`, puis redémarrer les services.
-
 Variables côté `interaction-service` :
 
 ```env

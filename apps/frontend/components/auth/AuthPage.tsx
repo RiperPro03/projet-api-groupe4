@@ -7,7 +7,7 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import { loginAction, registerAction } from "@/app/auth/actions";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
-import { Meteors } from "@/components/ui/meteors";
+import { Particles } from "@/components/ui/particles";
 import { RippleButton } from "@/components/ui/ripple-button";
 import { ShineBorder } from "@/components/ui/shine-border";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -319,16 +319,15 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
 
   return (
     <main className="relative min-h-svh bg-background px-6 py-5 text-foreground lg:flex lg:h-svh lg:items-center lg:justify-center lg:bg-[url('/auth-background.png')] lg:bg-cover lg:bg-center lg:px-10 lg:py-8 xl:px-16 2xl:px-24">
+      <Particles
+        className="fixed z-0"
+        quantity={240}
+        color="var(--foreground)"
+        size={1.1}
+        speed={0.3}
+      />
       <ThemeToggle className="absolute right-5 top-5 z-30 shadow-lg" />
-      <div className="relative mx-auto flex min-h-[calc(100svh-40px)] w-full max-w-sm flex-col justify-center overflow-hidden lg:min-h-0 lg:max-w-lg lg:rounded-3xl lg:border lg:border-border lg:bg-background/90 lg:p-10 lg:shadow-2xl xl:max-w-xl xl:p-12 2xl:max-w-2xl 2xl:p-14">
-        <div aria-hidden="true" className="absolute inset-0">
-          <Meteors
-            number={25}
-            minDuration={4}
-            maxDuration={9}
-          />
-        </div>
-
+      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-40px)] w-full max-w-sm flex-col justify-center overflow-hidden lg:min-h-0 lg:max-w-lg lg:rounded-3xl lg:border lg:border-border lg:bg-background/90 lg:p-10 lg:shadow-2xl xl:max-w-xl xl:p-12 2xl:max-w-2xl 2xl:p-14">
         <div className="relative z-10 flex flex-col">
           {/* Brand header. */}
           <Link

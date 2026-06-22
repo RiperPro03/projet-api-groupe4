@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { NextFunction, Request, Response } from "express";
 
+import { loginController } from "../controllers/auth.controller";
 import { registerController } from "../controllers/register.controller";
 import { authMiddleware, optionalAuthMiddleware } from "../middlewares/auth.middleware";
 import {
@@ -97,6 +98,7 @@ const refreshTokenController = async (req: Request, res: Response, next: NextFun
 
 router.all("/health", forwardAuthRequest);
 router.all("/health/db", forwardAuthRequest);
+router.post("/login", loginController);
 router.all("/login", forwardAuthRequest);
 router.post("/register", optionalAuthMiddleware, allowVisitorOrRoles(adminRoles), registerController);
 router.post("/refresh-token", refreshTokenController);

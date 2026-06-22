@@ -1,5 +1,4 @@
 import { Notification } from "../models/notification.model.js";
-import { env } from "../config/env.js";
 import type {
   CreateNotificationInput,
   NotificationListResponse,
@@ -97,19 +96,10 @@ function validateCreateInput(input: CreateNotificationInput) {
   }
 
   if (recipientId === actorId) {
-    if (type === "mention") {
-      throw new NotificationError(
-        "recipientId et actorId ne peuvent pas être identiques",
-        400
-      );
-    }
-
-    if (!env.debugAllowSelfLikeNotifications) {
-      throw new NotificationError(
-        "recipientId et actorId ne peuvent pas être identiques",
-        400
-      );
-    }
+    throw new NotificationError(
+      "recipientId et actorId ne peuvent pas être identiques",
+      400
+    );
   }
 
   return {

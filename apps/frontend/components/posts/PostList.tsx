@@ -10,9 +10,8 @@ import {
   Text,
   Textarea,
 } from "@mantine/core";
-import { Dropzone } from "@mantine/dropzone";
-import { useEffect, useRef, useState } from "react";
-import { FiPlus, FiSend, FiTrash2, FiUpload } from "react-icons/fi";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FiPlus, FiSearch, FiSend, FiX, FiX } from "react-icons/fi";
 import CommentComposer from "@/components/comments/CommentComposer";
 import CommentThread from "@/components/comments/CommentThread";
 import { AnimatedList } from "@/components/ui/animated-list";

@@ -19,6 +19,7 @@ on:
       - "services/media-service/**"
       - "services/notification-service/**"
       - "services/post-service/**"
+      - "apps/api-gateway/**"
       - ".github/workflows/github-CICD.yml"
       - "pnpm-lock.yaml"
       - "package.json"
@@ -33,6 +34,7 @@ on:
       - "services/media-service/**"
       - "services/notification-service/**"
       - "services/post-service/**"
+      - "apps/api-gateway/**"
       - ".github/workflows/github-CICD.yml"
       - "pnpm-lock.yaml"
       - "package.json"
@@ -52,6 +54,7 @@ jobs:
       media: ${{ steps.filter.outputs.media }}
       notification: ${{ steps.filter.outputs.notification }}
       post: ${{ steps.filter.outputs.post }}
+      api_gateway: ${{ steps.filter.outputs.api_gateway }}
 
     steps:
       - name: Checkout repository
@@ -83,6 +86,43 @@ jobs:
               - "services/notification-service/**"
             post:
               - "services/post-service/**"
+            api_gateway:
+              - "apps/api-gateway/**"
+
+  api-gateway:
+    name: Stage 0 - API Gateway
+    needs: changes
+    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.api_gateway == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      INTERNAL_NGINX_URL: http://nginx-internal
+      REQUEST_TIMEOUT_MS: "10000"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript build
+        run: pnpm --filter api-gateway build
+
+      - name: Run Vitest with coverage
+        run: pnpm --filter api-gateway test:coverage
 
   auth-service:
     name: Stage 1 - Auth Service

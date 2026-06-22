@@ -21,12 +21,6 @@ vi.mock("../src/models/notification.model.js", () => ({
   },
 }));
 
-vi.mock("../src/config/env.js", () => ({
-  env: {
-    debugAllowSelfLikeNotifications: false,
-  },
-}));
-
 import app from "../src/app.js";
 import {
   createLikeNotificationInput,

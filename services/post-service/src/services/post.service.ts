@@ -4,6 +4,7 @@ import {
     notifyPostMentionsSafely,
     resolveMentionedUserIds,
 } from "./mention-notification.service";
+import { mergeTagsWithHashtags } from "../utils/tags.utils";
 import type {
     CreatePostInput,
     PostPageResponse,
@@ -87,10 +88,11 @@ async function createPost(
 ): Promise<PostResponse> {
     const content = data.content.trim();
     const mentions = await resolveMentionedUserIds(content, authorId);
+    const tags = mergeTagsWithHashtags(content, data.tags);
     const post = await Post.create({
         authorId,
         content,
-        tags: data.tags ?? [],
+        tags,
         media: data.media ?? [],
     });
 
@@ -145,9 +147,12 @@ async function updatePost(
     postId: string,
     data: Partial<CreatePostInput>
 ): Promise<PostResponse> {
+    const tags = data.content !== undefined
+        ? mergeTagsWithHashtags(data.content, data.tags)
+        : data.tags;
     const post = await Post.findByIdAndUpdate(
         postId,
-        { content: data.content, tags: data.tags, media: data.media },
+        { content: data.content, tags, media: data.media },
         { returnDocument: "after", runValidators: true }
     );
 
@@ -163,6 +168,15 @@ async function getAllPosts(
     cursor?: string | null
 ): Promise<PostPageResponse> {
     return findPostPage({}, limit, cursor);
+}
+
+async function getPostsByTag(
+    tag: string,
+    limit = 5,
+    cursor?: string | null
+): Promise<PostPageResponse> {
+    const normalizedTag = tag.trim().toLowerCase().replace(/^#/, "");
+    return findPostPage({ tags: normalizedTag }, limit, cursor);
 }
 
 async function softDeletePost(
@@ -193,6 +207,7 @@ const postService = {
     createPost,
     getPostsByAuthor,
     getPostsByAuthors,
+    getPostsByTag,
     getAllPosts,
     getPostById,
     updatePost,

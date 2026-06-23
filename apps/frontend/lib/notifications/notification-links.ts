@@ -3,6 +3,12 @@ import type { UserNotification } from "@/types/notification";
 export function getNotificationHref(
   notification: UserNotification
 ): string | null {
+  if (notification.type === "follow") {
+    const username = notification.actor?.username?.trim();
+
+    return username ? `/profile/${encodeURIComponent(username)}` : null;
+  }
+
   if (notification.type !== "like" && notification.type !== "mention") {
     return null;
   }

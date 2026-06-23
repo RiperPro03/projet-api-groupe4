@@ -128,6 +128,7 @@ export default function InboxNotificationList({
           <Tabs.Tab value="all">Toutes</Tabs.Tab>
           <Tabs.Tab value="like">J&apos;aime</Tabs.Tab>
           <Tabs.Tab value="mention">Mentions</Tabs.Tab>
+          <Tabs.Tab value="follow">Abonnés</Tabs.Tab>
         </Tabs.List>
       </Tabs>
 

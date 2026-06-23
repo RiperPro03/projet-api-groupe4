@@ -233,6 +233,7 @@ services:
       PORT: 3004
       SERVICE_NAME: follow-service
       DATABASE_URL: postgresql://follow_user:follow_password@follow-postgres:5432/follow_db?schema=public
+      INTERNAL_NGINX_URL: http://nginx-internal
     depends_on:
       follow-postgres:
         condition: service_healthy

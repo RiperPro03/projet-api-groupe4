@@ -14,6 +14,14 @@ vi.mock("../src/config/database.js", () => ({
   },
 }));
 
+const followNotificationMocks = vi.hoisted(() => ({
+  notifyFollowSafely: vi.fn(),
+}));
+
+vi.mock("../src/services/follow-notification.service.js", () => ({
+  notifyFollowSafely: followNotificationMocks.notifyFollowSafely,
+}));
+
 import prisma from "../src/config/database.js";
 import app from "../src/app.js";
 
@@ -44,6 +52,10 @@ describe("follow API", () => {
       expect(response.status).toBe(201);
       expect(response.body.follower_id).toBe("alice");
       expect(response.body.following_id).toBe("bob");
+      expect(followNotificationMocks.notifyFollowSafely).toHaveBeenCalledWith(
+        "alice",
+        "bob"
+      );
     });
 
     it("refuse un body incomplet", async () => {
@@ -82,6 +94,7 @@ describe("follow API", () => {
 
       expect(response.status).toBe(409);
       expect(response.body.error).toBe("Cet abonnement existe déjà");
+      expect(followNotificationMocks.notifyFollowSafely).not.toHaveBeenCalled();
     });
   });
 

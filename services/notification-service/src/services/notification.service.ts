@@ -17,7 +17,10 @@ export class NotificationError extends Error {
   }
 }
 
-const RESOURCE_TYPES = new Set<NotificationResourceType>(["post", "comment"]);
+const LIKE_MENTION_RESOURCE_TYPES = new Set<NotificationResourceType>([
+  "post",
+  "comment",
+]);
 
 function requireNonEmpty(value: string | undefined | null, fieldName: string) {
   const resolvedValue = typeof value === "string" ? value.trim() : "";
@@ -33,6 +36,10 @@ function buildMessage(
   type: NotificationType,
   resourceType: NotificationResourceType
 ): string {
+  if (type === "follow") {
+    return "Un utilisateur a commencé à vous suivre";
+  }
+
   if (type === "like") {
     if (resourceType === "post") {
       return "Un utilisateur a aimé votre post";
@@ -84,11 +91,21 @@ function validateCreateInput(input: CreateNotificationInput) {
   ) as NotificationResourceType;
   const resourceId = requireNonEmpty(input.resourceId, "resourceId");
 
-  if (type !== "like" && type !== "mention") {
-    throw new NotificationError("type doit être like ou mention", 400);
+  if (type !== "like" && type !== "mention" && type !== "follow") {
+    throw new NotificationError(
+      "type doit être like, mention ou follow",
+      400
+    );
   }
 
-  if (!RESOURCE_TYPES.has(resourceType)) {
+  if (type === "follow") {
+    if (resourceType !== "user") {
+      throw new NotificationError(
+        "resourceType doit être user pour un follow",
+        400
+      );
+    }
+  } else if (!LIKE_MENTION_RESOURCE_TYPES.has(resourceType)) {
     throw new NotificationError(
       "resourceType doit être post ou comment",
       400

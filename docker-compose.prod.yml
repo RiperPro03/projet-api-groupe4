@@ -126,6 +126,7 @@ services:
       PORT: 3004
       SERVICE_NAME: follow-service
       DATABASE_URL: postgresql://${FOLLOW_POSTGRES_USER:?Set FOLLOW_POSTGRES_USER}:${FOLLOW_POSTGRES_PASSWORD:?Set FOLLOW_POSTGRES_PASSWORD}@follow-postgres:5432/${FOLLOW_POSTGRES_DB:?Set FOLLOW_POSTGRES_DB}?schema=public
+      INTERNAL_NGINX_URL: http://nginx-internal
     depends_on:
       - follow-postgres
     networks:

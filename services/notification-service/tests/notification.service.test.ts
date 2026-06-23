@@ -30,6 +30,7 @@ import {
   NotificationError,
 } from "../src/services/notification.service.js";
 import {
+  createFollowNotificationInput,
   createLikeNotificationInput,
   createMentionNotificationInput,
   createNotificationDocument,
@@ -107,16 +108,16 @@ describe("notification.service", () => {
       await expect(
         createNotification(
           createLikeNotificationInput({
-            type: "follow" as "like",
+            type: "share" as "like",
           })
         )
       ).rejects.toMatchObject({
         statusCode: 400,
-        message: "type doit être like ou mention",
+        message: "type doit être like, mention ou follow",
       });
     });
 
-    it("refus un resourceType invalide", async () => {
+    it("refus un resourceType invalide pour un like", async () => {
       await expect(
         createNotification(
           createLikeNotificationInput({
@@ -126,6 +127,43 @@ describe("notification.service", () => {
       ).rejects.toMatchObject({
         statusCode: 400,
         message: "resourceType doit être post ou comment",
+      });
+    });
+
+    it("crée une notification de follow", async () => {
+      const document = createNotificationDocument({
+        type: "follow",
+        resourceType: "user",
+        resourceId: "user-a",
+        message: "Un utilisateur a commencé à vous suivre",
+      });
+      notificationMocks.create.mockResolvedValue(document);
+
+      const result = await createNotification(createFollowNotificationInput());
+
+      expect(result.message).toBe("Un utilisateur a commencé à vous suivre");
+      expect(notificationMocks.create).toHaveBeenCalledWith({
+        recipientId: "user-b",
+        actorId: "user-a",
+        type: "follow",
+        resourceType: "user",
+        resourceId: "user-a",
+        message: "Un utilisateur a commencé à vous suivre",
+        isRead: false,
+        readAt: null,
+      });
+    });
+
+    it("refuse un follow sans resourceType user", async () => {
+      await expect(
+        createNotification(
+          createFollowNotificationInput({
+            resourceType: "post" as "user",
+          })
+        )
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "resourceType doit être user pour un follow",
       });
     });
 

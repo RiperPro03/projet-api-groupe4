@@ -61,9 +61,9 @@ Collection MongoDB `notifications` :
 |-------|------|-------------|
 | `recipientId` | string | Utilisateur qui reçoit la notification |
 | `actorId` | string | Utilisateur à l'origine de l'action |
-| `type` | `"like"` \| `"mention"` | Type d'événement (Fx15 / Fx14) |
-| `resourceType` | `"post"` \| `"comment"` | Nature de la cible likée |
-| `resourceId` | string | ID du post ou du commentaire |
+| `type` | `"like"` \| `"mention"` \| `"follow"` | Type d'événement (Fx15 / Fx14 / follow) |
+| `resourceType` | `"post"` \| `"comment"` \| `"user"` | Nature de la cible (post, commentaire, profil) |
+| `resourceId` | string | ID du post, commentaire ou utilisateur (follower pour `follow`) |
 | `message` | string | Message affichable, généré côté service |
 | `isRead` | boolean | Lu ou non |
 | `readAt` | Date \| null | Date de lecture |
@@ -422,10 +422,47 @@ Cas couverts :
 
 ---
 
+## Follow — flux producteur
+
+Le producteur est **`follow-service`** (abonnement créé).
+
+```txt
+POST /follows { followerId, followingId }
+    ↓
+relation créée en base (Prisma)
+    ↓
+POST http://nginx-internal/notifications
+    { type: "follow", resourceType: "user", resourceId: followerId }
+```
+
+### Exemple body — follow
+
+```json
+{
+  "recipientId": "user-b",
+  "actorId": "user-a",
+  "type": "follow",
+  "resourceType": "user",
+  "resourceId": "user-a"
+}
+```
+
+Message généré : `"Un utilisateur a commencé à vous suivre"`
+
+Règles :
+
+- `recipientId` = `followingId` (celui qui est suivi) ;
+- `actorId` = `followerId` (celui qui suit) ;
+- self-follow refusé avant l'appel notification ;
+- unfollow ne supprime pas la notification existante (v1).
+
+---
+
 ## Dépendances inter-services
 
 | Service | Interaction |
 |---------|-------------|
+| **follow-service** | Producteur follow (abonnement) via `INTERNAL_NGINX_URL` |
 | **interaction-service** | Producteur Fx15 (likes) + Fx14 (mentions commentaire) |
 | **post-service** | Producteur Fx14 (mentions post) ; (indirect Fx15) fournit `authorId` |
 | **profile-service** | Résolution `@username` → `id_user` pour Fx14 |

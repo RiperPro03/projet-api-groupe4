@@ -18,6 +18,7 @@ import {
 import {
   FiArrowLeft,
   FiExternalLink,
+  FiFileMinus,
   FiFileText,
   FiFlag,
   FiRefreshCw,
@@ -27,6 +28,7 @@ import {
 } from "react-icons/fi";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
 import { getApiErrorMessage } from "@/lib/api/http-client";
+import { deletePost } from "@/lib/api/post.service";
 import { getProfileById, type PublicProfile } from "@/lib/api/profile.service";
 import {
   deleteContentReport,
@@ -52,6 +54,9 @@ export function AdminReportsTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingReportIds, setDeletingReportIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [deletingPostIds, setDeletingPostIds] = useState<Set<string>>(
     () => new Set()
   );
   const requestIdRef = useRef(0);
@@ -159,6 +164,62 @@ export function AdminReportsTable() {
       setDeletingReportIds((current) => {
         const next = new Set(current);
         next.delete(report.id);
+        return next;
+      });
+    }
+  };
+
+  const handleDeleteReportedPost = async (report: ContentReport) => {
+    if (!report.postId) {
+      return;
+    }
+
+    const postId = report.postId;
+    setDeletingPostIds((current) => new Set(current).add(postId));
+
+    try {
+      await deletePost(postId);
+      const relatedReportIds = Array.from(
+        new Set([
+          report.id,
+          ...reports
+            .filter((currentReport) => currentReport.postId === postId)
+            .map((currentReport) => currentReport.id),
+        ])
+      );
+
+      await Promise.all(
+        relatedReportIds.map((reportId) =>
+          deleteContentReport(reportId).catch(() => null)
+        )
+      );
+      setReports((currentReports) =>
+        currentReports.filter((currentReport) => currentReport.postId !== postId)
+      );
+      notify(
+        {
+          title: t("admin.reportPostDeleteSuccessTitle"),
+          description: t("admin.reportPostDeleteSuccessDescription"),
+          tone: "success",
+        },
+        { duration: 2500 }
+      );
+    } catch (deleteError) {
+      notify(
+        {
+          title: t("admin.reportPostDeleteErrorTitle"),
+          description: getApiErrorMessage(
+            deleteError,
+            t("admin.reportPostDeleteError")
+          ),
+          tone: "error",
+        },
+        { duration: 3500 }
+      );
+    } finally {
+      setDeletingPostIds((current) => {
+        const next = new Set(current);
+        next.delete(postId);
         return next;
       });
     }
@@ -279,6 +340,9 @@ export function AdminReportsTable() {
                     ? reportedProfiles.get(report.reportedUserId)
                     : null;
                   const isDeleting = deletingReportIds.has(report.id);
+                  const isDeletingPost = report.postId
+                    ? deletingPostIds.has(report.postId)
+                    : false;
                   const targetHref = profile
                     ? `/profile/${encodeURIComponent(profile.username)}`
                     : report.postId
@@ -347,6 +411,25 @@ export function AdminReportsTable() {
                               </ActionIcon>
                             </Tooltip>
                           )}
+                          {report.postId && (
+                            <Tooltip label={t("admin.reportDeletePostAria")}>
+                              <ActionIcon
+                                type="button"
+                                variant="subtle"
+                                color="red"
+                                radius="xl"
+                                aria-label={t("admin.reportDeletePostAria")}
+                                disabled={isDeletingPost}
+                                onClick={() => void handleDeleteReportedPost(report)}
+                              >
+                                {isDeletingPost ? (
+                                  <Loader size="xs" />
+                                ) : (
+                                  <FiFileMinus size={18} />
+                                )}
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
                           <Tooltip label={t("admin.reportDeleteAria")}>
                             <ActionIcon
                               type="button"
@@ -354,7 +437,7 @@ export function AdminReportsTable() {
                               color="red"
                               radius="xl"
                               aria-label={t("admin.reportDeleteAria")}
-                              disabled={isDeleting}
+                              disabled={isDeleting || isDeletingPost}
                               onClick={() => void handleDeleteReport(report)}
                             >
                               {isDeleting ? <Loader size="xs" /> : <FiTrash2 size={18} />}

@@ -2,9 +2,16 @@ export type UserNotification = {
   id: string;
   recipientId: string;
   actorId: string;
+  actor?: {
+    id: string;
+    name: string;
+    username: string;
+    avatarUrl?: string;
+  };
   type: "like" | "mention";
   resourceType: "post" | "comment";
   resourceId: string;
+  postId?: string;
   message: string;
   isRead: boolean;
   createdAt: string;

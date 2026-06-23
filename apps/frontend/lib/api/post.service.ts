@@ -12,6 +12,7 @@ type ApiPost = {
   likesCount?: number;
   commentsCount?: number;
   isLiked?: boolean;
+  likers?: Author[];
   createdAt: string;
   updatedAt?: string;
 };
@@ -50,6 +51,7 @@ function mapApiPost(post: ApiPost, likesCount = 0, commentsCount = 0): Post {
     likesCount: post.likesCount ?? likesCount,
     commentsCount: post.commentsCount ?? commentsCount,
     isLiked: post.isLiked ?? false,
+    likers: post.likers ?? [],
     createdAt: post.createdAt,
   };
 }

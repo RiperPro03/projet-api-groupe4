@@ -73,6 +73,23 @@ export async function removePostLike(
   }
 }
 
+/** Liste les userId des derniers likers d'un post. */
+export async function listPostLikers(
+  postId: string,
+  limit = 5
+): Promise<string[]> {
+  const resolvedPostId = requireNonEmpty(postId, "postId");
+  const resolvedLimit = Math.min(Math.max(limit, 1), 20);
+
+  const likes = await PostLike.find({ postId: resolvedPostId })
+    .sort({ createdAt: -1 })
+    .limit(resolvedLimit)
+    .select("userId")
+    .lean();
+
+  return likes.map((like) => like.userId);
+}
+
 /** Compte les likes d'un post. */
 export async function countPostLikes(postId: string): Promise<number> {
   const resolvedPostId = requireNonEmpty(postId, "postId");

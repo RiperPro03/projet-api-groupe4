@@ -1,16 +1,18 @@
 import { createMentionNotification } from "../clients/notification.client.js";
 import { getUserIdByUsername } from "../clients/profile.client.js";
-import { extractMentionUsernames } from "../utils/mention.utils.js";
+import { getUserIdsByRole } from "../clients/user.client.js";
+import {
+  extractIndividualMentionUsernames,
+  extractRoleMentions,
+} from "../utils/mention.utils.js";
 
-async function notifyCommentMentions(
+export async function resolveMentionedUserIds(
+  content: string,
   actorId: string,
-  commentId: string,
-  content: string
-): Promise<void> {
-  const usernames = extractMentionUsernames(content);
+): Promise<string[]> {
   const recipientIds = new Set<string>();
 
-  for (const username of usernames) {
+  for (const username of extractIndividualMentionUsernames(content)) {
     const userId = await getUserIdByUsername(username);
 
     if (!userId || userId === actorId) {
@@ -19,6 +21,26 @@ async function notifyCommentMentions(
 
     recipientIds.add(userId);
   }
+
+  for (const role of extractRoleMentions(content)) {
+    const userIds = await getUserIdsByRole(role);
+
+    for (const userId of userIds) {
+      if (userId !== actorId) {
+        recipientIds.add(userId);
+      }
+    }
+  }
+
+  return Array.from(recipientIds);
+}
+
+async function notifyCommentMentions(
+  actorId: string,
+  commentId: string,
+  content: string
+): Promise<void> {
+  const recipientIds = await resolveMentionedUserIds(content, actorId);
 
   for (const recipientId of recipientIds) {
     await createMentionNotification({

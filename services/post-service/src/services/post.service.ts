@@ -1,4 +1,5 @@
 import { Post } from "../models/post.model";
+import { deletePostInteractions } from "../clients/interaction.client";
 import {
     notifyPostMentionsSafely,
     resolveMentionedUserIds,
@@ -184,7 +185,7 @@ async function softDeletePost(
 ): Promise<PostResponse> {
     const post = await Post.findById(postId);
 
-    if (!post || post.deletedAt) {
+    if (!post) {
         throw new Error("POST_NOT_FOUND");
     }
 
@@ -192,8 +193,12 @@ async function softDeletePost(
         throw new Error("POST_FORBIDDEN");
     }
 
-    post.deletedAt = new Date();
-    await post.save();
+    if (!post.deletedAt) {
+        post.deletedAt = new Date();
+        await post.save();
+    }
+
+    await deletePostInteractions(postId);
 
     return sanitizePost(post);
 }

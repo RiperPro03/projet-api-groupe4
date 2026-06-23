@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Group, Paper, Stack, Text } from "@mantine/core";
 import CommentComposer from "@/components/comments/CommentComposer";
 import ContentCard from "@/components/feed/ContentCard";
@@ -22,6 +22,7 @@ import type { Comment } from "@/types/comment";
 type CommentThreadProps = {
   comments: Comment[];
   maxVisualDepth?: number;
+  highlightCommentId?: string | null;
   onReplySubmit?: (parentComment: Comment, content: string) => void | Promise<void>;
 };
 
@@ -60,6 +61,7 @@ function ThreadNode({
   depth,
   maxVisualDepth,
   activeReplyId,
+  highlightCommentId,
   onStartReply,
   onCancelReply,
   onReplySubmit,
@@ -68,13 +70,16 @@ function ThreadNode({
   depth: number;
   maxVisualDepth: number;
   activeReplyId: string | null;
+  highlightCommentId?: string | null;
   onStartReply: (comment: Comment) => void;
   onCancelReply: () => void;
   onReplySubmit?: (parentComment: Comment, content: string) => void | Promise<void>;
 }) {
   const { t } = useI18n();
+  const commentRef = useRef<HTMLDivElement | null>(null);
   const visualDepth = Math.min(depth, maxVisualDepth);
   const isReplying = activeReplyId === node.id;
+  const isHighlighted = highlightCommentId === node.id;
   const dispatch = useAppDispatch();
   const likeState = useAppSelector((state) =>
     selectLikeState(state, "comment", node.id)
@@ -93,6 +98,17 @@ function ThreadNode({
       })
     );
   }, [dispatch, node.id, node.isLiked, node.likesCount]);
+
+  useEffect(() => {
+    if (!isHighlighted || !commentRef.current) {
+      return;
+    }
+
+    commentRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, [isHighlighted]);
 
   async function handleLike() {
     if (isLikePending) {
@@ -132,10 +148,17 @@ function ThreadNode({
 
   return (
     <Box
+      ref={commentRef}
+      id={`comment-${node.id}`}
       pl={{ base: visualDepth * 14, sm: visualDepth * 22 }}
       style={{
         borderLeft:
           depth > 0 ? "1px solid var(--border)" : undefined,
+        borderRadius: isHighlighted ? 8 : undefined,
+        boxShadow: isHighlighted
+          ? "0 0 0 2px rgb(var(--breezy-green-rgb) / 0.45)"
+          : undefined,
+        transition: "box-shadow 0.2s ease",
       }}
     >
       <Stack gap="sm">
@@ -193,6 +216,7 @@ function ThreadNode({
             depth={depth + 1}
             maxVisualDepth={maxVisualDepth}
             activeReplyId={activeReplyId}
+            highlightCommentId={highlightCommentId}
             onStartReply={onStartReply}
             onCancelReply={onCancelReply}
             onReplySubmit={onReplySubmit}
@@ -206,6 +230,7 @@ function ThreadNode({
 export default function CommentThread({
   comments,
   maxVisualDepth = 3,
+  highlightCommentId = null,
   onReplySubmit,
 }: CommentThreadProps) {
   const { t } = useI18n();
@@ -229,6 +254,7 @@ export default function CommentThread({
           depth={0}
           maxVisualDepth={maxVisualDepth}
           activeReplyId={activeReplyId}
+          highlightCommentId={highlightCommentId}
           onStartReply={(comment) => setActiveReplyId(comment.id)}
           onCancelReply={() => setActiveReplyId(null)}
           onReplySubmit={onReplySubmit}

@@ -2,7 +2,11 @@ import type { NextFunction, Response } from "express";
 
 import type { AuthenticatedRequest } from "./auth.middleware";
 import { buildServiceUrl } from "../config/services";
-import type { UserRole } from "../services/user.service";
+import {
+  getUserStateByUserId,
+  isUserRole,
+  type UserRole,
+} from "../services/user.service";
 import { requestService } from "../utils/http-client";
 
 const forbiddenPayload = {
@@ -32,6 +36,12 @@ const getRouteValue = (value: unknown) => {
     ? resolvedValue.trim()
     : null;
 };
+
+const hasBodyField = (body: unknown, field: string) =>
+  typeof body === "object" &&
+  body !== null &&
+  !Array.isArray(body) &&
+  Object.prototype.hasOwnProperty.call(body, field);
 
 export const requireRoles =
   (roles: readonly UserRole[]) =>
@@ -116,6 +126,46 @@ export const requireBodyOwnerOrRoles =
 
     return res.status(403).json(forbiddenPayload);
   };
+
+export const forbidModeratorAdminUserAccess =
+  (targetParam: string) =>
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (req.authUser?.role !== "MODERATOR") {
+      return next();
+    }
+
+    const targetUserId = getRouteValue(req.params[targetParam]);
+    const updatesRole = hasBodyField(req.body, "role");
+
+    if (!targetUserId) {
+      return res.status(403).json(forbiddenPayload);
+    }
+
+    if (updatesRole && targetUserId === req.authUser.id) {
+      return res.status(403).json(forbiddenPayload);
+    }
+
+    if (getRouteValue(req.body?.role) === "ADMIN") {
+      return res.status(403).json(forbiddenPayload);
+    }
+
+    try {
+      const targetState = await getUserStateByUserId(
+        targetUserId,
+        req.header("authorization"),
+        req.header("x-request-id"),
+      );
+
+      if (isUserRole(targetState?.role) && targetState.role === "ADMIN") {
+        return res.status(403).json(forbiddenPayload);
+      }
+
+      return next();
+    } catch (error) {
+      return next(error);
+    }
+  };
+
 export const requirePostOwnerOrRoles =
   (roles: readonly UserRole[]) =>
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

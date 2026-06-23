@@ -1,27 +1,21 @@
 import "dotenv/config";
- 
-// Fonction utilitaire : lève une erreur si une variable d'env est manquante
+
 const requiredEnv = (key: string): string => {
-    const value = process.env[key];
- 
-    if (!value) {
-        throw new Error(`Missing environment variable: ${key}`);
-    }
- 
-    return value;
+  const value = process.env[key];
+
+  if (!value) {
+    throw new Error(`Missing environment variable: ${key}`);
+  }
+
+  return value;
 };
- 
+
 export const env = {
-    nodeEnv: process.env.NODE_ENV || "development",
-    port: Number(process.env.PORT || 3003),
-
-    // Connexion MongoDB (Mongoose)
-    mongoUri: requiredEnv("MONGO_URI"),
-
-    notificationServiceUrl: (
-        process.env.NOTIFICATION_SERVICE_URL || "http://localhost:3008"
-    ).replace(/\/+$/, ""),
-    profileServiceUrl: (
-        process.env.PROFILE_SERVICE_URL || "http://localhost:3006"
-    ).replace(/\/+$/, ""),
+  nodeEnv: process.env.NODE_ENV || "development",
+  port: Number(process.env.PORT || 3003),
+  mongoUri: requiredEnv("MONGO_URI"),
+  internalNginxUrl: (
+    process.env.INTERNAL_NGINX_URL ?? "http://nginx-internal"
+  ).replace(/\/+$/, ""),
+  requestTimeoutMs: Number(process.env.REQUEST_TIMEOUT_MS || 10_000),
 };

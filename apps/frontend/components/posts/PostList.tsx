@@ -16,12 +16,17 @@ import CommentComposer from "@/components/comments/CommentComposer";
 import CommentThread from "@/components/comments/CommentThread";
 import { AnimatedList } from "@/components/ui/animated-list";
 import { MagicCard } from "@/components/ui/magic-card";
+import { useNotifications } from "@/components/notifications/NotificationProvider";
+import { ReportDialog } from "@/components/reports/ReportDialog";
 import { usePostList, type FetchPostPage } from "@/hooks/usePostList";
 import { createComment } from "@/lib/api/comment.service";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { isApiStatusCode } from "@/lib/api/http-client";
 import { likePost, unlikePost } from "@/lib/api/interaction.service";
-import { createPost, fetchPostsByTag } from "@/lib/api/post.service";
+import { createPost, fetchPostsByTag, deletePost } from "@/lib/api/post.service";
+import { createContentReport } from "@/lib/api/report.service";
+import { getAuthenticatedUserId } from "@/lib/current-user-ids";
+import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   hydrateLike,
@@ -46,9 +51,15 @@ type PostListProps = {
 function PostFeedItem({
   post,
   fetchCommentsForPost,
+  currentUserId,
+  onDeletePost,
+  onReportPost,
 }: {
   post: Post;
   fetchCommentsForPost?: (postId: string) => Promise<Comment[]>;
+  currentUserId: string | null;
+  onDeletePost: (post: Post) => Promise<void>;
+  onReportPost: (post: Post) => void;
 }) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [showComments, setShowComments] = useState(false);
@@ -138,11 +149,13 @@ function PostFeedItem({
         media={post.media}
         createdAt={post.createdAt}
         likesCount={likesCount}
+        likers={post.likers}
         commentsCount={commentsCount}
         isLiked={isLiked}
         onComment={
           canOpenComments ? () => setShowComments((value) => !value) : undefined
         }
+        onReport={() => onReportPost(post)}
         onLike={async () => {
           if (isLikePending) {
             return;
@@ -212,9 +225,19 @@ export default function PostList({
   showCreateButton = true,
   showTagSearch = false,
 }: PostListProps) {
+  const { t } = useI18n();
+  const { notify } = useNotifications();
+  const listTitle = title ?? t("post.feedTitle");
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [postContent, setPostContent] = useState("");
+  const [selectedPostMedia, setSelectedPostMedia] = useState<File[]>([]);
+  const [postMediaPreviews, setPostMediaPreviews] = useState<string[]>([]);
+  const [createPostError, setCreatePostError] = useState<string | null>(null);
+  const [postActionError, setPostActionError] = useState<string | null>(null);
+  const [reportPost, setReportPost] = useState<Post | null>(null);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [isReportingPost, setIsReportingPost] = useState(false);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -256,6 +279,80 @@ export default function PostList({
       setIsCreatingPost(false);
     }
   }
+
+  async function handleDeletePost(post: Post) {
+    setPostActionError(null);
+    removePost(post.id);
+
+    try {
+      await deletePost(post.id);
+    } catch (deleteError) {
+      prependPost(post);
+      setPostActionError(
+        t("post.deleteImpossible", {
+          message: getApiErrorMessage(
+            deleteError,
+            t("common.unknownError"),
+            t("common.serverUnreachable")
+          ),
+        })
+      );
+    }
+  }
+
+  async function handleReportPost(message: string) {
+    if (!reportPost || isReportingPost) {
+      return;
+    }
+
+    setIsReportingPost(true);
+    setReportError(null);
+
+    try {
+      await createContentReport({
+        message,
+        postId: reportPost.id,
+      });
+      setReportPost(null);
+      notify({
+        title: t("report.successTitle"),
+        description: t("report.postSuccessDescription"),
+        tone: "success",
+      });
+    } catch (error) {
+      setReportError(
+        getApiErrorMessage(
+          error,
+          t("report.errorDescription"),
+          t("common.serverUnreachable")
+        )
+      );
+    } finally {
+      setIsReportingPost(false);
+    }
+  }
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getCurrentUserFromApi()
+      .then((currentUser) => {
+        if (isMounted) {
+          setCurrentUserId(getAuthenticatedUserId(currentUser));
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      mediaPreviewsRef.current.forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
+    };
+  }, []);
 
   useEffect(() => {
     const element = loadMoreRef.current;
@@ -442,16 +539,38 @@ export default function PostList({
             </Alert>
           )}
 
-          <Group justify="flex-end">
-            <RippleButton
-              type="button"
-              rippleColor="var(--foreground)"
-              disabled={isCreatingPost}
-              onClick={closeCreatePostModal}
-              className={secondaryButtonClassName}
-            >
-              {t("common.cancel")}
-            </RippleButton>
+      <ReportDialog
+        opened={reportPost !== null}
+        title={t("report.postTitle")}
+        description={t("report.postDescription")}
+        placeholder={t("report.postPlaceholder")}
+        error={reportError}
+        isSubmitting={isReportingPost}
+        onClose={() => {
+          if (!isReportingPost) {
+            setReportPost(null);
+            setReportError(null);
+          }
+        }}
+        onSubmit={handleReportPost}
+      />
+
+      <Group justify="space-between" align="center">
+        <Text fw={700} style={{ color: "var(--foreground)" }} size="lg">
+          {listTitle}
+        </Text>
+        {showCreateButton && (
+          <div className="relative rounded-full">
+            <ShineBorder
+              borderWidth="0.125rem"
+              duration={15}
+              shineColor={[
+                "var(--color-breezy-green)",
+                "var(--color-breezy-yellow)",
+                "var(--color-breezy-green)",
+              ]}
+              className="z-20"
+            />
             <RippleButton
               type="button"
               rippleColor="var(--color-breezy-black)"
@@ -549,6 +668,11 @@ export default function PostList({
               key={post.id}
               post={post}
               fetchCommentsForPost={fetchCommentsForPost}
+              onDeletePost={handleDeletePost}
+              onReportPost={(post) => {
+                setReportPost(post);
+                setReportError(null);
+              }}
             />
           ))}
         </AnimatedList>

@@ -1,0 +1,171 @@
+{
+  "defaultPassword": "BreezyDemo2026!",
+  "users": [
+    {
+      "key": "admin",
+      "email": "admin@breezy.local",
+      "role": "ADMIN",
+      "profile": {
+        "username": "breezy_admin",
+        "nickname": "Admin Breezy",
+        "bio": "Compte administrateur pour piloter la demonstration Breezy.",
+        "url_photo": ""
+      }
+    },
+    {
+      "key": "moderator",
+      "email": "moderator@breezy.local",
+      "role": "MODERATOR",
+      "profile": {
+        "username": "breezy_modo",
+        "nickname": "Moderateur Breezy",
+        "bio": "Compte moderateur pour verifier les contenus et les signalements.",
+        "url_photo": ""
+      }
+    },
+    {
+      "key": "lea",
+      "email": "lea.martin@breezy.local",
+      "role": "USER",
+      "profile": {
+        "username": "lea_martin",
+        "nickname": "Lea Martin",
+        "bio": "Product designer curieuse, toujours partante pour tester les nouveaux parcours.",
+        "url_photo": ""
+      }
+    },
+    {
+      "key": "noah",
+      "email": "noah.benali@breezy.local",
+      "role": "USER",
+      "profile": {
+        "username": "noah_benali",
+        "nickname": "Noah Benali",
+        "bio": "Developpeur full-stack qui aime transformer les idees floues en prototypes concrets.",
+        "url_photo": ""
+      }
+    },
+    {
+      "key": "ines",
+      "email": "ines.dupont@breezy.local",
+      "role": "USER",
+      "profile": {
+        "username": "ines_dupont",
+        "nickname": "Ines Dupont",
+        "bio": "Etudiante en communication, fan de veille produit et de retours utilisateurs.",
+        "url_photo": ""
+      }
+    },
+    {
+      "key": "hugo",
+      "email": "hugo.moreau@breezy.local",
+      "role": "USER",
+      "profile": {
+        "username": "hugo_moreau",
+        "nickname": "Hugo Moreau",
+        "bio": "Createur de contenus courts autour du sport, des apps et de la vie etudiante.",
+        "url_photo": ""
+      }
+    },
+    {
+      "key": "sara",
+      "email": "sara.bernard@breezy.local",
+      "role": "USER",
+      "profile": {
+        "username": "sara_bernard",
+        "nickname": "Sara Bernard",
+        "bio": "Community manager junior, attentive aux conversations et aux tendances locales.",
+        "url_photo": ""
+      }
+    }
+  ],
+  "posts": [
+    {
+      "key": "welcome",
+      "author": "admin",
+      "content": "Bienvenue sur Breezy. Cette demo montre les comptes, les profils, les posts et les interactions precharges.",
+      "tags": ["demo", "presentation", "breezy"],
+      "media": []
+    },
+    {
+      "key": "moderation",
+      "author": "moderator",
+      "content": "Petit rappel moderation: les signalements sont visibles par les roles MODERATOR et ADMIN pour garder un espace propre.",
+      "tags": ["moderation", "signalement"],
+      "media": []
+    },
+    {
+      "key": "design-feedback",
+      "author": "lea",
+      "content": "Je teste le feed Breezy: les profils enrichis rendent la navigation beaucoup plus naturelle pendant la presentation.",
+      "tags": ["ux", "feedback"],
+      "media": []
+    },
+    {
+      "key": "tech-note",
+      "author": "noah",
+      "content": "Le seed relancable est pratique: on peut remettre une base de demo propre avant chaque passage.",
+      "tags": ["dev", "seed"],
+      "media": []
+    },
+    {
+      "key": "community",
+      "author": "sara",
+      "content": "Objectif du jour: montrer une communaute deja vivante avec des likes, commentaires et profils coherents.",
+      "tags": ["community", "demo"],
+      "media": []
+    }
+  ],
+  "interactions": {
+    "postLikes": [
+      { "post": "welcome", "user": "moderator" },
+      { "post": "welcome", "user": "lea" },
+      { "post": "welcome", "user": "noah" },
+      { "post": "moderation", "user": "admin" },
+      { "post": "design-feedback", "user": "ines" },
+      { "post": "tech-note", "user": "hugo" },
+      { "post": "community", "user": "admin" },
+      { "post": "community", "user": "moderator" }
+    ],
+    "comments": [
+      {
+        "key": "welcome-modo",
+        "post": "welcome",
+        "author": "moderator",
+        "content": "Pret pour la presentation. Les roles sont deja en place."
+      },
+      {
+        "key": "welcome-lea",
+        "post": "welcome",
+        "author": "lea",
+        "content": "Super, on voit tout de suite les profils et le contexte produit."
+      },
+      {
+        "key": "welcome-admin-reply",
+        "post": "welcome",
+        "author": "admin",
+        "parent": "welcome-lea",
+        "content": "Merci Lea, ce fil servira d'exemple pendant la demo."
+      },
+      {
+        "key": "moderation-ines",
+        "post": "moderation",
+        "author": "ines",
+        "content": "La separation admin/moderateur est claire, c'est pratique a expliquer."
+      },
+      {
+        "key": "community-hugo",
+        "post": "community",
+        "author": "hugo",
+        "content": "Les interactions donnent vite l'impression d'un reseau actif."
+      }
+    ],
+    "commentLikes": [
+      { "comment": "welcome-modo", "user": "admin" },
+      { "comment": "welcome-lea", "user": "noah" },
+      { "comment": "welcome-admin-reply", "user": "lea" },
+      { "comment": "moderation-ines", "user": "moderator" },
+      { "comment": "community-hugo", "user": "sara" }
+    ]
+  }
+}

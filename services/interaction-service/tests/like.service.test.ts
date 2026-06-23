@@ -4,6 +4,7 @@ const postLikeMocks = vi.hoisted(() => ({
   create: vi.fn(),
   findOneAndDelete: vi.fn(),
   countDocuments: vi.fn(),
+  find: vi.fn(),
 }));
 
 const commentLikeMocks = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ vi.mock("../src/models/post-like.model.js", () => ({
     create: postLikeMocks.create,
     findOneAndDelete: postLikeMocks.findOneAndDelete,
     countDocuments: postLikeMocks.countDocuments,
+    find: postLikeMocks.find,
   },
 }));
 
@@ -34,6 +36,7 @@ import {
   countCommentLikes,
   countPostLikes,
   LikeError,
+  listPostLikers,
   removeCommentLike,
   removePostLike,
 } from "../src/services/like.service.js";
@@ -120,6 +123,28 @@ describe("like.service", () => {
       expect(postLikeMocks.countDocuments).toHaveBeenCalledWith({
         postId: "post-123",
       });
+    });
+  });
+
+  describe("listPostLikers", () => {
+    it("retourne les userId des derniers likers", async () => {
+      postLikeMocks.find.mockReturnValue({
+        sort: vi.fn().mockReturnValue({
+          limit: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              lean: vi.fn().mockResolvedValue([
+                { userId: "user-b" },
+                { userId: "user-a" },
+              ]),
+            }),
+          }),
+        }),
+      });
+
+      const result = await listPostLikers("post-123", 5);
+
+      expect(result).toEqual(["user-b", "user-a"]);
+      expect(postLikeMocks.find).toHaveBeenCalledWith({ postId: "post-123" });
     });
   });
 

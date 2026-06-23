@@ -7,6 +7,7 @@ import {
   countPostLikesHandler,
   hasCommentLikeHandler,
   hasPostLikeHandler,
+  listPostLikersHandler,
   removeCommentLikeHandler,
   removePostLikeHandler,
 } from "../controllers/like.controller.js";
@@ -15,6 +16,7 @@ const router = Router();
 
 router.post("/posts/likes", addPostLikeHandler);
 router.delete("/posts/likes", removePostLikeHandler);
+router.get("/posts/likes", listPostLikersHandler);
 router.get("/posts/likes/count", countPostLikesHandler);
 router.get("/posts/likes/status", hasPostLikeHandler);
 

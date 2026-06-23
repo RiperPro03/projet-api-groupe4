@@ -118,6 +118,25 @@ export async function fetchCommentReplies(commentId: string): Promise<Comment[]>
   return mapCommentsWithCounts(data.data.comments);
 }
 
+export async function fetchCommentById(
+  commentId: string
+): Promise<Comment | null> {
+  try {
+    const { data } = await httpClient.get<CommentResponse>(
+      `/comments/${encodeURIComponent(commentId)}`
+    );
+
+    return data.data.comment ? mapApiComment(data.data.comment) : null;
+  } catch (err: unknown) {
+    const error = err as { response?: { status?: number } };
+    if (error?.response?.status === 404) {
+      return null;
+    }
+
+    throw err;
+  }
+}
+
 export async function createComment({
   postId,
   content,

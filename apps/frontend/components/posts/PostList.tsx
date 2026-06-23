@@ -1,5 +1,6 @@
 "use client";
 
+import axios from "axios";
 import {
   ActionIcon,
   Alert,
@@ -102,16 +103,14 @@ async function uploadPostMedia(file: File, uploadError: string): Promise<Media> 
     }
   );
 
-  await fetch(presignedResponse.data.data.uploadUrl, {
-    method: "PUT",
+  await axios.put(presignedResponse.data.data.uploadUrl, file, {
     headers: {
       "Content-Type": file.type,
     },
-    body: file,
-  }).then((response) => {
-    if (!response.ok) {
-      throw new Error(`${uploadError} (${response.status})`);
-    }
+    withCredentials: false,
+  }).catch((error) => {
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    throw new Error(status ? `${uploadError} (${status})` : uploadError);
   });
 
   return {

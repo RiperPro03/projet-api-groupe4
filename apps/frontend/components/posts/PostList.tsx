@@ -1,17 +1,20 @@
 "use client";
 
 import {
+  ActionIcon,
   Alert,
-  Button,
+  Box,
   Group,
+  Image,
   Loader,
   Modal,
   Stack,
   Text,
   Textarea,
 } from "@mantine/core";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { FiPlus, FiSearch, FiSend, FiX, FiX } from "react-icons/fi";
+import { Dropzone } from "@mantine/dropzone";
+import { useEffect, useRef, useState } from "react";
+import { FiPlus, FiSend, FiTrash2, FiUpload, FiX } from "react-icons/fi";
 import CommentComposer from "@/components/comments/CommentComposer";
 import CommentThread from "@/components/comments/CommentThread";
 import { AnimatedList } from "@/components/ui/animated-list";
@@ -21,9 +24,9 @@ import { ReportDialog } from "@/components/reports/ReportDialog";
 import { usePostList, type FetchPostPage } from "@/hooks/usePostList";
 import { createComment } from "@/lib/api/comment.service";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
-import { isApiStatusCode } from "@/lib/api/http-client";
+import { getApiErrorMessage, httpClient, isApiStatusCode } from "@/lib/api/http-client";
 import { likePost, unlikePost } from "@/lib/api/interaction.service";
-import { createPost, fetchPostsByTag, deletePost } from "@/lib/api/post.service";
+import { createPost, deletePost } from "@/lib/api/post.service";
 import { createContentReport } from "@/lib/api/report.service";
 import { getAuthenticatedUserId } from "@/lib/current-user-ids";
 import { useI18n } from "@/lib/i18n/client";
@@ -35,8 +38,10 @@ import {
   selectLikeState,
 } from "@/store/likesSlice";
 import type { Comment } from "@/types/comment";
-import type { Post } from "@/types/post";
+import type { Media, Post } from "@/types/post";
 import ContentCard from "@/components/feed/ContentCard";
+import { RippleButton } from "@/components/ui/ripple-button";
+import { ShineBorder } from "@/components/ui/shine-border";
 
 type PostListProps = {
   fetchPosts: FetchPostPage;
@@ -45,8 +50,99 @@ type PostListProps = {
   pageSize?: number;
   title?: string;
   showCreateButton?: boolean;
-  showTagSearch?: boolean;
 };
+
+const postMediaMimeTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "video/mp4",
+  "video/webm",
+];
+const postImageMaxSize = 100 * 1024 * 1024;
+const postVideoMaxSize = 10000 * 1024 * 1024;
+const postMediaMaxFiles = 4;
+const secondaryButtonClassName =
+  "rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60";
+const greenButtonClassName =
+  "rounded-full border-0 bg-breezy-green px-5 py-2.5 text-sm font-semibold text-black shadow-lg shadow-breezy-green/20 transition-colors hover:bg-breezy-green/90 disabled:cursor-not-allowed disabled:opacity-60";
+const destructiveButtonClassName =
+  "rounded-full border-0 bg-destructive px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-destructive/20 transition-colors hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-60";
+const addPostButtonClassName =
+  "relative z-10 rounded-full border border-transparent bg-transparent px-5 py-2.5 text-sm font-bold text-foreground shadow-lg shadow-black/20 transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60";
+
+type PresignedUrlResponse = {
+  status: "success";
+  data: {
+    uploadUrl: string;
+    objectKey: string;
+    publicUrl: string;
+    expiresIn: number;
+  };
+};
+
+function getPostMediaType(file: File): Media["type"] {
+  return file.type.startsWith("video/") ? "video" : "image";
+}
+
+function isPostMediaSizeValid(file: File) {
+  return file.size <= (getPostMediaType(file) === "video" ? postVideoMaxSize : postImageMaxSize);
+}
+
+async function uploadPostMedia(file: File, uploadError: string): Promise<Media> {
+  const presignedResponse = await httpClient.post<PresignedUrlResponse>(
+    "/media/presigned-url",
+    {
+      filename: file.name,
+      mimeType: file.type,
+      size: file.size,
+      alt: file.name,
+      usage: "post",
+    }
+  );
+
+  await fetch(presignedResponse.data.data.uploadUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": file.type,
+    },
+    body: file,
+  }).then((response) => {
+    if (!response.ok) {
+      throw new Error(`${uploadError} (${response.status})`);
+    }
+  });
+
+  return {
+    id: presignedResponse.data.data.objectKey,
+    type: getPostMediaType(file),
+    url: presignedResponse.data.data.publicUrl,
+    alt: file.name,
+  };
+}
+
+async function deleteUploadedPostMedia(media: Media) {
+  await httpClient.delete(`/media/${encodeURIComponent(media.id)}`).catch(() => undefined);
+}
+
+function getCreatePostErrorMessage(
+  error: unknown,
+  fallbackMessage: string,
+  serverUnreachableMessage: string
+) {
+  const apiErrorMessage = getApiErrorMessage(
+    error,
+    fallbackMessage,
+    serverUnreachableMessage
+  );
+
+  if (apiErrorMessage !== fallbackMessage) {
+    return apiErrorMessage;
+  }
+
+  return error instanceof Error ? error.message : fallbackMessage;
+}
 
 function PostFeedItem({
   post,
@@ -61,12 +157,16 @@ function PostFeedItem({
   onDeletePost: (post: Post) => Promise<void>;
   onReportPost: (post: Post) => void;
 }) {
+  const { t } = useI18n();
   const [comments, setComments] = useState<Comment[]>([]);
   const [showComments, setShowComments] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [isLikePending, setIsLikePending] = useState(false);
+  const [isDeletingPost, setIsDeletingPost] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount);
   const canOpenComments = Boolean(fetchCommentsForPost);
+  const canDeletePost = currentUserId !== null && post.author.id === currentUserId;
   const dispatch = useAppDispatch();
   const likeState = useAppSelector((state) =>
     selectLikeState(state, "post", post.id)
@@ -91,8 +191,6 @@ function PostFeedItem({
     }
 
     let isMounted = true;
-    setIsLoadingComments(true);
-
     fetchCommentsForPost(post.id)
       .then((items) => {
         if (isMounted) {
@@ -140,8 +238,77 @@ function PostFeedItem({
     );
   }
 
+  function handleToggleComments() {
+    const nextShowComments = !showComments;
+
+    if (nextShowComments && comments.length === 0) {
+      setIsLoadingComments(true);
+    }
+
+    setShowComments(nextShowComments);
+  }
+
+  async function confirmDeletePost() {
+    if (isDeletingPost) {
+      return;
+    }
+
+    setIsDeletingPost(true);
+    try {
+      await onDeletePost(post);
+    } finally {
+      setIsDeletingPost(false);
+      setIsDeleteConfirmOpen(false);
+    }
+  }
+
   return (
     <Stack gap="sm">
+      <Modal
+        opened={isDeleteConfirmOpen}
+        onClose={() => {
+          if (!isDeletingPost) {
+            setIsDeleteConfirmOpen(false);
+          }
+        }}
+        title={t("post.deleteTitle")}
+        centered
+        radius={8}
+        closeOnClickOutside={!isDeletingPost}
+        closeOnEscape={!isDeletingPost}
+        overlayProps={{ backgroundOpacity: 0.72, blur: 2 }}
+      >
+        <Stack gap="md">
+          <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
+            {t("post.deleteDescription")}
+          </Text>
+
+          <Group justify="flex-end">
+            <RippleButton
+              type="button"
+              rippleColor="var(--foreground)"
+              disabled={isDeletingPost}
+              onClick={() => setIsDeleteConfirmOpen(false)}
+              className={secondaryButtonClassName}
+            >
+              {t("common.cancel")}
+            </RippleButton>
+            <RippleButton
+              type="button"
+              rippleColor="var(--foreground)"
+              disabled={isDeletingPost}
+              onClick={confirmDeletePost}
+              className={destructiveButtonClassName}
+            >
+              <span className="flex items-center gap-2">
+                <FiTrash2 size={16} />
+                {isDeletingPost ? t("post.deleting") : t("common.delete")}
+              </span>
+            </RippleButton>
+          </Group>
+        </Stack>
+      </Modal>
+
       <ContentCard
         type="post"
         author={post.author}
@@ -153,7 +320,19 @@ function PostFeedItem({
         commentsCount={commentsCount}
         isLiked={isLiked}
         onComment={
-          canOpenComments ? () => setShowComments((value) => !value) : undefined
+          canOpenComments ? handleToggleComments : undefined
+        }
+        isDeleting={isDeletingPost}
+        onDelete={
+          canDeletePost
+            ? () => {
+                if (isDeletingPost) {
+                  return;
+                }
+
+                setIsDeleteConfirmOpen(true);
+              }
+            : undefined
         }
         onReport={() => onReportPost(post)}
         onLike={async () => {
@@ -162,10 +341,7 @@ function PostFeedItem({
           }
 
           const currentUser = await getCurrentUserFromApi();
-          const userId =
-            currentUser.profile?.id_user ??
-            currentUser.user?.id_user ??
-            currentUser.auth.id;
+          const userId = getAuthenticatedUserId(currentUser);
 
           setIsLikePending(true);
 
@@ -221,14 +397,14 @@ export default function PostList({
   fetchUpdatedPosts,
   fetchCommentsForPost,
   pageSize = 5,
-  title = "Fil d'actualite",
+  title,
   showCreateButton = true,
-  showTagSearch = false,
 }: PostListProps) {
   const { t } = useI18n();
   const { notify } = useNotifications();
   const listTitle = title ?? t("post.feedTitle");
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const mediaPreviewsRef = useRef<string[]>([]);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [postContent, setPostContent] = useState("");
   const [selectedPostMedia, setSelectedPostMedia] = useState<File[]>([]);
@@ -239,14 +415,7 @@ export default function PostList({
   const [reportError, setReportError] = useState<string | null>(null);
   const [isReportingPost, setIsReportingPost] = useState(false);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
-  const [tagInput, setTagInput] = useState("");
-  const [activeTag, setActiveTag] = useState<string | null>(null);
-
-  const effectiveFetchPosts: FetchPostPage = useMemo(() => {
-    if (activeTag) return fetchPostsByTag(activeTag);
-    return fetchPosts;
-  }, [activeTag, fetchPosts]);
-
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const {
     posts,
     isLoading,
@@ -254,12 +423,77 @@ export default function PostList({
     hasMore,
     error,
     prependPost,
+    removePost,
     loadMore,
   } = usePostList({
-    fetchPosts: effectiveFetchPosts,
-    fetchUpdatedPosts: activeTag ? undefined : fetchUpdatedPosts,
+    fetchPosts,
+    fetchUpdatedPosts,
     pageSize,
   });
+
+  function setPreviewUrls(updater: (current: string[]) => string[]) {
+    setPostMediaPreviews((current) => {
+      const next = updater(current);
+      mediaPreviewsRef.current = next;
+      return next;
+    });
+  }
+
+  function addSelectedPostMedia(files: File[]) {
+    const remainingSlots = postMediaMaxFiles - selectedPostMedia.length;
+    const validFiles = files.filter(isPostMediaSizeValid);
+    const nextFiles = validFiles.slice(0, remainingSlots);
+
+    if (nextFiles.length === 0) {
+      if (files.length > 0) {
+        setCreatePostError(t("post.fileTooLarge"));
+      }
+
+      return;
+    }
+
+    setCreatePostError(
+      validFiles.length === files.length
+        ? null
+        : t("post.ignoredFiles")
+    );
+    setSelectedPostMedia((current) => [...current, ...nextFiles]);
+    setPreviewUrls((current) => [
+      ...current,
+      ...nextFiles.map((file) => URL.createObjectURL(file)),
+    ]);
+  }
+
+  function removeSelectedPostMedia(index: number) {
+    setSelectedPostMedia((current) => current.filter((_, itemIndex) => itemIndex !== index));
+    setPreviewUrls((current) => {
+      const previewUrl = current[index];
+
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+
+      return current.filter((_, itemIndex) => itemIndex !== index);
+    });
+  }
+
+  function resetCreatePostForm() {
+    mediaPreviewsRef.current.forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
+    mediaPreviewsRef.current = [];
+    setPostContent("");
+    setSelectedPostMedia([]);
+    setPostMediaPreviews([]);
+    setCreatePostError(null);
+  }
+
+  function closeCreatePostModal() {
+    if (isCreatingPost) {
+      return;
+    }
+
+    resetCreatePostForm();
+    setIsCreatePostOpen(false);
+  }
 
   async function handleCreatePost() {
     const trimmedContent = postContent.trim();
@@ -269,12 +503,30 @@ export default function PostList({
     }
 
     setIsCreatingPost(true);
+    setCreatePostError(null);
+    const uploadedMedia: Media[] = [];
 
     try {
-      const post = await createPost({ content: trimmedContent });
+      for (const media of selectedPostMedia) {
+        uploadedMedia.push(await uploadPostMedia(media, t("post.uploadError")));
+      }
+
+      const post = await createPost({
+        content: trimmedContent,
+        media: uploadedMedia,
+      });
       prependPost(post);
-      setPostContent("");
+      resetCreatePostForm();
       setIsCreatePostOpen(false);
+    } catch (error) {
+      await Promise.all(uploadedMedia.map(deleteUploadedPostMedia));
+      setCreatePostError(
+        getCreatePostErrorMessage(
+          error,
+          t("post.createErrorFallback"),
+          t("common.serverUnreachable")
+        )
+      );
     } finally {
       setIsCreatingPost(false);
     }
@@ -390,154 +642,211 @@ export default function PostList({
       <Modal
         opened={isCreatePostOpen}
         onClose={closeCreatePostModal}
-        title={t("post.modalTitle")}
         centered
         radius={8}
         padding={0}
         withCloseButton={false}
         overlayProps={{ backgroundOpacity: 0.72, blur: 2 }}
       >
-        <Stack gap="md">
-          <Textarea
-            value={postContent}
-            onChange={(event) => setPostContent(event.currentTarget.value)}
-            placeholder={t("post.composerPlaceholder")}
-            autosize
-            minRows={4}
-            maxRows={10}
-          />
-          <Dropzone
-            accept={postMediaMimeTypes}
-            maxFiles={postMediaMaxFiles}
-            maxSize={postVideoMaxSize}
-            multiple
-            disabled={isCreatingPost || selectedPostMedia.length >= postMediaMaxFiles}
-            onDrop={addSelectedPostMedia}
-            onReject={() => {
-              setCreatePostError(t("post.fileReject"));
-            }}
-            style={{
-              border: "1px dashed var(--border)",
-              borderRadius: 8,
-              background: "var(--muted)",
-              padding: 0,
-            }}
-          >
-            <Group gap="sm" p="md" wrap="nowrap">
-              <Box
+        <MagicCard className="border-0 shadow-2xl">
+          <Stack gap={0}>
+            <Group justify="space-between" gap="md" className="border-b border-border px-5 py-4">
+              <Text fw={700} size="lg" style={{ color: "var(--foreground)" }}>
+                {t("post.modalTitle")}
+              </Text>
+              <ActionIcon
+                aria-label={t("common.close")}
+                variant="subtle"
+                radius="xl"
+                disabled={isCreatingPost}
+                onClick={closeCreatePostModal}
+                style={{ color: "var(--muted-foreground)" }}
+              >
+                <FiX size={18} />
+              </ActionIcon>
+            </Group>
+
+            <Stack gap="md" p="md">
+              <Textarea
+                value={postContent}
+                onChange={(event) => setPostContent(event.currentTarget.value)}
+                placeholder={t("post.composerPlaceholder")}
+                autosize
+                minRows={4}
+                maxRows={10}
+                classNames={{
+                  input:
+                    "border-border bg-muted text-foreground placeholder:text-muted-foreground selection:bg-breezy-green/25 selection:text-foreground",
+                }}
+                styles={{
+                  wrapper: {
+                    "--input-bd-focus": "rgb(var(--breezy-green-rgb) / 0.65)",
+                  },
+                  input: {
+                    caretColor: "var(--color-breezy-green)",
+                  },
+                }}
+              />
+              <Dropzone
+                accept={postMediaMimeTypes}
+                maxFiles={postMediaMaxFiles}
+                maxSize={postVideoMaxSize}
+                multiple
+                disabled={isCreatingPost || selectedPostMedia.length >= postMediaMaxFiles}
+                onDrop={addSelectedPostMedia}
+                onReject={() => {
+                  setCreatePostError(t("post.fileReject"));
+                }}
                 style={{
-                  alignItems: "center",
-                  background: "var(--card)",
-                  border: "1px solid var(--border)",
+                  border: "1px dashed var(--border)",
                   borderRadius: 8,
-                  display: "flex",
-                  height: 44,
-                  justifyContent: "center",
-                  width: 44,
+                  background: "var(--muted)",
+                  padding: 0,
                 }}
               >
-                <FiUpload size={20} />
-              </Box>
-              <Box style={{ minWidth: 0 }}>
-                <Text fw={600} size="sm" style={{ color: "var(--foreground)" }}>
-                  {t("post.addFiles")}
-                </Text>
-                <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
-                  {t("post.fileHint")}
-                </Text>
-              </Box>
-            </Group>
-          </Dropzone>
-
-          {postMediaPreviews.length > 0 && (
-            <Box
-              style={{
-                display: "grid",
-                gap: 8,
-                gridTemplateColumns:
-                  postMediaPreviews.length === 1
-                    ? "1fr"
-                    : "repeat(2, minmax(0, 1fr))",
-              }}
-            >
-              {postMediaPreviews.map((previewUrl, index) => {
-                const file = selectedPostMedia[index];
-                const isVideo = file?.type.startsWith("video/");
-
-                return (
+                <Group gap="sm" p="md" wrap="nowrap">
                   <Box
-                    key={previewUrl}
-                    pos="relative"
                     style={{
-                      aspectRatio: postMediaPreviews.length === 1 ? "16 / 10" : "1 / 1",
+                      alignItems: "center",
+                      background: "var(--card)",
                       border: "1px solid var(--border)",
                       borderRadius: 8,
-                      overflow: "hidden",
+                      display: "flex",
+                      height: 44,
+                      justifyContent: "center",
+                      width: 44,
                     }}
                   >
-                    {isVideo ? (
-                      <video
-                        controls
-                        muted
-                        preload="metadata"
-                        aria-label={file?.name ?? t("post.videoAlt")}
-                        src={previewUrl}
-                        style={{
-                          display: "block",
-                          height: "100%",
-                          objectFit: "cover",
-                          width: "100%",
-                        }}
-                      />
-                    ) : (
-                      <Image
-                        src={previewUrl}
-                        alt={file?.name ?? t("post.imageAlt")}
-                        h="100%"
-                        w="100%"
-                        fit="cover"
-                      />
-                    )}
-                    <ActionIcon
-                      aria-label={t("post.removeFile")}
-                      radius="xl"
-                      size="sm"
-                      variant="filled"
-                      onClick={() => removeSelectedPostMedia(index)}
-                      style={{
-                        backgroundColor: "var(--destructive)",
-                        color: "white",
-                        position: "absolute",
-                        right: 8,
-                        top: 8,
-                      }}
-                    >
-                      <FiTrash2 size={14} />
-                    </ActionIcon>
+                    <FiUpload size={20} />
                   </Box>
-                );
-              })}
-            </Box>
-          )}
+                  <Box style={{ minWidth: 0 }}>
+                    <Text fw={600} size="sm" style={{ color: "var(--foreground)" }}>
+                      {t("post.addFiles")}
+                    </Text>
+                    <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
+                      {t("post.fileHint")}
+                    </Text>
+                  </Box>
+                </Group>
+              </Dropzone>
 
-          {selectedPostMedia.length >= postMediaMaxFiles && (
-            <Text size="xs" style={{ color: "var(--muted-foreground)" }}>
-              {t("post.maxFiles")}
-            </Text>
-          )}
+              {postMediaPreviews.length > 0 && (
+                <Box
+                  style={{
+                    display: "grid",
+                    gap: 8,
+                    gridTemplateColumns:
+                      postMediaPreviews.length === 1
+                        ? "1fr"
+                        : "repeat(2, minmax(0, 1fr))",
+                  }}
+                >
+                  {postMediaPreviews.map((previewUrl, index) => {
+                    const file = selectedPostMedia[index];
+                    const isVideo = file?.type.startsWith("video/");
 
-          {createPostError && (
-            <Alert
-              variant="light"
-              style={{
-                backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
-                borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
-                color: "var(--destructive)",
-              }}
-            >
-              {createPostError}
-            </Alert>
-          )}
+                    return (
+                      <Box
+                        key={previewUrl}
+                        pos="relative"
+                        style={{
+                          aspectRatio: postMediaPreviews.length === 1 ? "16 / 10" : "1 / 1",
+                          border: "1px solid var(--border)",
+                          borderRadius: 8,
+                          overflow: "hidden",
+                        }}
+                      >
+                        {isVideo ? (
+                          <video
+                            controls
+                            muted
+                            preload="metadata"
+                            aria-label={file?.name ?? t("post.videoAlt")}
+                            src={previewUrl}
+                            style={{
+                              display: "block",
+                              height: "100%",
+                              objectFit: "cover",
+                              width: "100%",
+                            }}
+                          />
+                        ) : (
+                          <Image
+                            src={previewUrl}
+                            alt={file?.name ?? t("post.imageAlt")}
+                            h="100%"
+                            w="100%"
+                            fit="cover"
+                          />
+                        )}
+                        <ActionIcon
+                          aria-label={t("post.removeFile")}
+                          radius="xl"
+                          size="sm"
+                          variant="filled"
+                          onClick={() => removeSelectedPostMedia(index)}
+                          style={{
+                            backgroundColor: "var(--destructive)",
+                            color: "white",
+                            position: "absolute",
+                            right: 8,
+                            top: 8,
+                          }}
+                        >
+                          <FiTrash2 size={14} />
+                        </ActionIcon>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
+
+              {selectedPostMedia.length >= postMediaMaxFiles && (
+                <Text size="xs" style={{ color: "var(--muted-foreground)" }}>
+                  {t("post.maxFiles")}
+                </Text>
+              )}
+
+              {createPostError && (
+                <Alert
+                  variant="light"
+                  style={{
+                    backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+                    borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+                    color: "var(--destructive)",
+                  }}
+                >
+                  {createPostError}
+                </Alert>
+              )}
+
+              <Group justify="flex-end">
+                <RippleButton
+                  type="button"
+                  rippleColor="var(--foreground)"
+                  disabled={isCreatingPost}
+                  onClick={closeCreatePostModal}
+                  className={secondaryButtonClassName}
+                >
+                  {t("common.cancel")}
+                </RippleButton>
+                <RippleButton
+                  type="button"
+                  rippleColor="var(--color-breezy-black)"
+                  disabled={!postContent.trim() || isCreatingPost}
+                  onClick={handleCreatePost}
+                  className={greenButtonClassName}
+                >
+                  <span className="flex items-center gap-2">
+                    <FiSend size={16} />
+                    {isCreatingPost ? t("common.publishing") : t("common.publish")}
+                  </span>
+                </RippleButton>
+              </Group>
+            </Stack>
+          </Stack>
+        </MagicCard>
+      </Modal>
 
       <ReportDialog
         opened={reportPost !== null}
@@ -573,93 +882,48 @@ export default function PostList({
             />
             <RippleButton
               type="button"
-              rippleColor="var(--color-breezy-black)"
-              disabled={!postContent.trim() || isCreatingPost}
-              onClick={handleCreatePost}
-              className={greenButtonClassName}
+              rippleColor="var(--color-breezy-green)"
+              onClick={() => setIsCreatePostOpen(true)}
+              className={addPostButtonClassName}
             >
               <span className="flex items-center gap-2">
-                <FiSend size={16} />
-                {isCreatingPost ? t("common.publishing") : t("common.publish")}
+                <FiPlus size={16} />
+                {t("post.add")}
               </span>
             </RippleButton>
-          </Group>
-        </Stack>
-      </Modal>
-
-      <Group justify="space-between" align="center">
-        <Text fw={700} style={{ color: "var(--foreground)" }} size="lg">
-          {title}
-          {activeTag && (
-            <Text component="span" size="sm" fw={400} ml="xs" style={{ color: "var(--muted-foreground)" }}>
-              — #{activeTag}
-            </Text>
-          )}
-        </Text>
-        {showCreateButton && (
-          <Button
-            leftSection={<FiPlus size={16} />}
-            variant="light"
-            color="green"
-            radius="xl"
-            onClick={() => setIsCreatePostOpen(true)}
-          >
-            Ajouter un post
-          </Button>
+          </div>
         )}
       </Group>
 
-      {showTagSearch && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const t = tagInput.trim().replace(/^#/, "");
-            setActiveTag(t || null);
+      {error && (
+        <Alert
+          variant="light"
+          style={{
+            backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+            borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+            color: "var(--destructive)",
           }}
         >
-          <Group gap="xs">
-            <div className="group relative flex-1 rounded-xl border border-input bg-background transition-shadow focus-within:border-transparent focus-within:shadow-[0_0_1.25rem_rgba(0,146,62,0.28)]">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
-                <FiSearch size={15} aria-hidden />
-              </span>
-              <input
-                type="search"
-                value={tagInput}
-                onChange={(e) => {
-                  setTagInput(e.target.value);
-                  if (!e.target.value.trim()) setActiveTag(null);
-                }}
-                placeholder="Filtrer par tag…"
-                aria-label="Rechercher par tag"
-                className="w-full rounded-xl bg-transparent py-2 pl-9 pr-9 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-              />
-              {tagInput && (
-                <button
-                  type="button"
-                  onClick={() => { setTagInput(""); setActiveTag(null); }}
-                  aria-label="Effacer le filtre"
-                  className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <FiX size={14} />
-                </button>
-              )}
-            </div>
-            <Button type="submit" variant="light" color="green" radius="xl" size="sm">
-              Filtrer
-            </Button>
-          </Group>
-        </form>
+          {error}
+        </Alert>
       )}
 
-      {error && (
-        <Alert color="red" variant="light">
-          {error}
+      {postActionError && (
+        <Alert
+          variant="light"
+          style={{
+            backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+            borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+            color: "var(--destructive)",
+          }}
+        >
+          {postActionError}
         </Alert>
       )}
 
       {posts.length === 0 ? (
         <Text style={{ color: "var(--muted-foreground)" }} ta="center" py="xl">
-          Aucun post pour le moment.
+          {t("post.noPosts")}
         </Text>
       ) : (
         <AnimatedList delay={0} reverseOrder={false} className="gap-3">
@@ -667,6 +931,7 @@ export default function PostList({
             <PostFeedItem
               key={post.id}
               post={post}
+              currentUserId={currentUserId}
               fetchCommentsForPost={fetchCommentsForPost}
               onDeletePost={handleDeletePost}
               onReportPost={(post) => {
@@ -688,7 +953,7 @@ export default function PostList({
 
       {!hasMore && posts.length > 0 && (
         <Text style={{ color: "var(--muted-foreground)" }} ta="center" size="sm" py="sm">
-          Vous avez atteint la fin du feed.
+          {t("post.endFeed")}
         </Text>
       )}
     </Stack>

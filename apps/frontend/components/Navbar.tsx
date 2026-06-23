@@ -3,10 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FiBell, FiHome, FiSearch, FiShield, FiUser } from "react-icons/fi";
+import { FiBell, FiHome, FiMessageCircle, FiSearch, FiShield, FiUser } from "react-icons/fi";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
 import { ThemedLogo } from "@/components/branding/ThemedLogo";
 import { getUnreadCount } from "@/lib/api/notification.service";
+import {
+    CHAT_STORAGE_CHANGE_EVENT,
+    getTotalUnreadChatCount,
+} from "@/lib/chat/chat-storage";
 import { useI18n } from "@/lib/i18n/client";
 import type { CurrentUser } from "@/lib/current-user";
 
@@ -19,6 +23,7 @@ export default function Navbar({
     const { t } = useI18n();
     const [logoAnimationKey, setLogoAnimationKey] = useState(0);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
     // Current profile display data
     const profileName =
@@ -55,6 +60,48 @@ export default function Navbar({
 
     const displayedUnreadCount = currentUser ? unreadCount : 0;
 
+    useEffect(() => {
+        if (!currentUser) {
+            setChatUnreadCount(0);
+            return;
+        }
+
+        const currentUserId = currentUser.auth.id;
+        const refreshChatUnreadCount = () => {
+            setChatUnreadCount(getTotalUnreadChatCount(currentUserId));
+        };
+        const handleChatStorageChange = (event: Event) => {
+            const customEvent = event as CustomEvent<{ currentUserId?: string }>;
+
+            if (
+                customEvent.detail?.currentUserId &&
+                customEvent.detail.currentUserId !== currentUserId
+            ) {
+                return;
+            }
+
+            refreshChatUnreadCount();
+        };
+        const handleBrowserStorageChange = (event: StorageEvent) => {
+            if (!event.key?.startsWith("breezy.chat.")) {
+                return;
+            }
+
+            refreshChatUnreadCount();
+        };
+
+        refreshChatUnreadCount();
+        window.addEventListener(CHAT_STORAGE_CHANGE_EVENT, handleChatStorageChange);
+        window.addEventListener("storage", handleBrowserStorageChange);
+
+        return () => {
+            window.removeEventListener(CHAT_STORAGE_CHANGE_EVENT, handleChatStorageChange);
+            window.removeEventListener("storage", handleBrowserStorageChange);
+        };
+    }, [currentUser, pathname]);
+
+    const displayedChatUnreadCount = currentUser ? chatUnreadCount : 0;
+
     // Navigation link permissions
     const canAccessAdmin =
         currentUser?.user?.role === "ADMIN" ||
@@ -63,6 +110,7 @@ export default function Navbar({
     const links = [
         { href: "/", label: t("nav.home"), icon: FiHome },
         { href: "/search", label: t("nav.search"), icon: FiSearch },
+        { href: "/chat", label: "Messages", icon: FiMessageCircle },
         { href: "/notif", label: t("nav.notifications"), icon: FiBell },
         ...(canAccessAdmin
             ? [{ href: "/admin", label: t("nav.admin"), icon: FiShield }]
@@ -136,6 +184,11 @@ export default function Navbar({
                                         {href === "/notif" && displayedUnreadCount > 0 && (
                                             <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-breezy-green px-1 text-[10px] font-bold leading-4 text-black">
                                                 {displayedUnreadCount > 99 ? "99+" : displayedUnreadCount}
+                                            </span>
+                                        )}
+                                        {href === "/chat" && displayedChatUnreadCount > 0 && (
+                                            <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-breezy-green px-1 text-[10px] font-bold leading-4 text-black">
+                                                {displayedChatUnreadCount > 99 ? "99+" : displayedChatUnreadCount}
                                             </span>
                                         )}
                                     </>

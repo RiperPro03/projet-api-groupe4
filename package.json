@@ -16,6 +16,7 @@
     "dev:feed": "pnpm --filter feed-service dev",
     "dev:interaction": "pnpm --filter interaction-service dev",
     "dev:notification": "pnpm --filter notification-service dev",
+    "dev:chat": "pnpm --filter chat-service dev",
     "seed:demo": "node scripts/seed-demo-data.mjs"
   },
   "keywords": [

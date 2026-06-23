@@ -318,6 +318,7 @@ function PostFeedItem({
         likers={post.likers}
         commentsCount={commentsCount}
         isLiked={isLiked}
+        showDiscussionAction={canOpenComments}
         onComment={
           canOpenComments ? handleToggleComments : undefined
         }

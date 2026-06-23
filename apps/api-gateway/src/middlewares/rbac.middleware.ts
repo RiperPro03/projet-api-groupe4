@@ -29,6 +29,14 @@ type PostResponse = {
   };
 };
 
+type CommentResponse = {
+  data?: {
+    comment?: {
+      authorId?: string;
+    } | null;
+  };
+};
+
 const getRouteValue = (value: unknown) => {
   const resolvedValue = Array.isArray(value) ? value[0] : value;
 
@@ -194,6 +202,46 @@ export const requirePostOwnerOrRoles =
       });
 
       if (response.data.data?.post?.authorId === userId) {
+        return next();
+      }
+
+      return res.status(403).json(forbiddenPayload);
+    } catch (error) {
+      return next(error);
+    }
+  };
+
+export const requireCommentOwnerOrRoles =
+  (roles: readonly UserRole[]) =>
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const role = req.authUser?.role;
+
+    if (role && roles.includes(role as UserRole)) {
+      return next();
+    }
+
+    const userId = req.authUser?.id;
+    const commentId = getRouteValue(req.params.commentId);
+
+    if (!userId || !commentId) {
+      return res.status(403).json(forbiddenPayload);
+    }
+
+    try {
+      const response = await requestService<CommentResponse>("interactions", {
+        method: "GET",
+        url: buildServiceUrl(
+          "interactions",
+          `/comments/${encodeURIComponent(commentId)}`
+        ),
+        headers: {
+          ...(req.header("x-request-id")
+            ? { "x-request-id": req.header("x-request-id") as string }
+            : {}),
+        },
+      });
+
+      if (response.data.data?.comment?.authorId === userId) {
         return next();
       }
 

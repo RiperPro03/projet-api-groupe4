@@ -18,6 +18,7 @@ const commentLikeMocks = vi.hoisted(() => ({
 
 const commentMocks = vi.hoisted(() => ({
   deleteMany: vi.fn(),
+  findOne: vi.fn(),
 }));
 
 const likeNotificationMocks = vi.hoisted(() => ({
@@ -47,6 +48,7 @@ vi.mock("../src/models/comment-like.model.js", () => ({
 vi.mock("../src/models/comment.model.js", () => ({
   Comment: {
     deleteMany: commentMocks.deleteMany,
+    findOne: commentMocks.findOne,
   },
 }));
 
@@ -323,6 +325,59 @@ describe("like API", () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({ count: 2 });
+    });
+  });
+
+  describe("DELETE /comments/:commentId", () => {
+    it("soft delete un commentaire de l'auteur", async () => {
+      const comment = {
+        _id: "comment-456",
+        postId: "post-123",
+        authorId: "alice",
+        parentCommentId: null,
+        content: "Bonjour",
+        createdAt: new Date("2026-01-01T10:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T10:00:00.000Z"),
+        deletedAt: null,
+        save: vi.fn().mockResolvedValue(undefined),
+      };
+      commentMocks.findOne.mockResolvedValue(comment);
+
+      const response = await request(app)
+        .delete("/comments/comment-456")
+        .set("x-user-id", "alice");
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe("Comment deleted");
+      expect(commentMocks.findOne).toHaveBeenCalledWith({
+        _id: "comment-456",
+        deletedAt: null,
+      });
+      expect(comment.deletedAt).toBeInstanceOf(Date);
+      expect(comment.save).toHaveBeenCalledOnce();
+    });
+
+    it("refuse la suppression par un autre utilisateur", async () => {
+      const comment = {
+        _id: "comment-456",
+        postId: "post-123",
+        authorId: "alice",
+        parentCommentId: null,
+        content: "Bonjour",
+        createdAt: new Date("2026-01-01T10:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T10:00:00.000Z"),
+        deletedAt: null,
+        save: vi.fn().mockResolvedValue(undefined),
+      };
+      commentMocks.findOne.mockResolvedValue(comment);
+
+      const response = await request(app)
+        .delete("/comments/comment-456")
+        .set("x-user-id", "bob");
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe("Forbidden");
+      expect(comment.save).not.toHaveBeenCalled();
     });
   });
 });

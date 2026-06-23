@@ -124,3 +124,27 @@ export async function getCommentById(
 
   return mapComment(comment);
 }
+
+export async function softDeleteComment(
+  commentId: string,
+  requesterId?: string | null
+): Promise<CommentResponse> {
+  const resolvedCommentId = requireNonEmpty(commentId, "commentId");
+  const comment = await Comment.findOne({
+    _id: resolvedCommentId,
+    deletedAt: null,
+  });
+
+  if (!comment) {
+    throw new CommentError("Commentaire introuvable", 404);
+  }
+
+  if (requesterId && comment.authorId !== requesterId) {
+    throw new CommentError("Forbidden", 403);
+  }
+
+  comment.deletedAt = new Date();
+  await comment.save();
+
+  return mapComment(comment);
+}

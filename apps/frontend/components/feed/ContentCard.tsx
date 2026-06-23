@@ -36,6 +36,7 @@ type ContentCardProps = {
   onDelete?: () => void;
   onReport?: () => void;
   isDeleting?: boolean;
+  showDiscussionAction?: boolean;
 };
 
 const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -199,6 +200,7 @@ export default function ContentCard({
   onDelete,
   onReport,
   isDeleting = false,
+  showDiscussionAction = true,
 }: ContentCardProps) {
   const { dateLocale, t } = useI18n();
   const discussionCount = type === "post" ? commentsCount : repliesCount;
@@ -210,6 +212,8 @@ export default function ContentCard({
     .toUpperCase();
   const shouldUseFullWidthBody = type === "post" && !isReply;
   const profileHref = `/profile/${encodeURIComponent(author.username)}`;
+  const deleteLabel =
+    type === "post" ? t("content.deletePost") : t("content.deleteComment");
 
   const metaContent = (
     <Group gap={6} wrap="wrap">
@@ -247,14 +251,16 @@ export default function ContentCard({
       <MediaGrid media={media} />
 
       <Group gap="xl" mt={4} align="center">
-        <ActionButton
-          label={type === "post" ? t("content.comment") : t("content.reply")}
-          count={discussionCount}
-          onClick={onComment}
-          locale={dateLocale}
-        >
-          <FiMessageCircle size={18} />
-        </ActionButton>
+        {showDiscussionAction && (
+          <ActionButton
+            label={type === "post" ? t("content.comment") : t("content.reply")}
+            count={discussionCount}
+            onClick={onComment}
+            locale={dateLocale}
+          >
+            <FiMessageCircle size={18} />
+          </ActionButton>
+        )}
         <ActionButton
           label={isLiked ? t("content.unlike") : t("content.like")}
           count={likesCount}
@@ -291,9 +297,9 @@ export default function ContentCard({
       }}
     >
       {onDelete && (
-        <Tooltip label={t("content.deletePost")}>
+        <Tooltip label={deleteLabel}>
           <ActionIcon
-            aria-label={t("content.deletePost")}
+            aria-label={deleteLabel}
             disabled={isDeleting}
             loading={isDeleting}
             onClick={onDelete}
@@ -355,7 +361,14 @@ export default function ContentCard({
             </Avatar>
           </Link>
 
-          <Stack gap={8} style={{ flex: 1, minWidth: 0 }}>
+          <Stack
+            gap={8}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              paddingRight: onDelete ? 36 : undefined,
+            }}
+          >
             {metaContent}
             {bodyContent}
           </Stack>

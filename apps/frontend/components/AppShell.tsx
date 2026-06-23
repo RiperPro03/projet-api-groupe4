@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import ChatPresenceClient from "@/components/chat/ChatPresenceClient";
 import Navbar from "@/components/Navbar";
 import { Particles } from "@/components/ui/particles";
 import { ScrollProgress } from "@/components/ui/scroll-progress";
@@ -25,6 +26,7 @@ export default function AppShell({
   return (
     <>
       <ScrollProgress className="z-[60] h-1 bg-linear-to-r from-breezy-green via-breezy-yellow to-breezy-green md:left-20" />
+      <ChatPresenceClient currentUserId={currentUser?.auth.id ?? null} />
       <Navbar currentUser={currentUser} />
       <main className="relative flex-1 overflow-hidden bg-background pb-16 md:pb-0 md:pl-20">
         <Particles

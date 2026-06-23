@@ -7,6 +7,7 @@ import { ActionIcon, Avatar, Card, Group, Loader, Menu, Stack, Text } from "@man
 import {
   FiArrowLeft,
   FiFlag,
+  FiMessageCircle,
   FiMoreVertical,
   FiSlash,
   FiUserCheck,
@@ -344,7 +345,17 @@ export default function PublicProfilePage() {
 
           {/* Bouton Suivre / Suivi — masqué si c'est son propre profil */}
           {!isOwnProfile && (
-            <Group gap="xs" align="flex-start" wrap="nowrap">
+            <Group gap="xs" align="flex-start" wrap="wrap">
+              <Link href={`/chat/${encodeURIComponent(profile.id_user)}`}>
+                <RippleButton
+                  rippleColor="rgb(var(--breezy-green-rgb) / 0.25)"
+                  className="mt-1 inline-flex h-10 items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-4 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-accent"
+                >
+                  <FiMessageCircle className="h-4 w-4" aria-hidden />
+                  Message
+                </RippleButton>
+              </Link>
+
               <RippleButton
                 type="button"
                 onClick={handleFollowToggle}

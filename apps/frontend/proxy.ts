@@ -21,7 +21,7 @@ type CurrentUserResponse = {
 };
 
 const AUTH_ROUTES = ["/login", "/register"];
-const PROTECTED_ROUTES = ["/", "/profile", "/admin"];
+const PROTECTED_ROUTES = ["/", "/profile", "/admin", "/chat"];
 const TOKEN_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
 // Route matching helpers

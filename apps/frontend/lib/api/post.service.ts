@@ -147,6 +147,27 @@ export function fetchUserPosts(userId: string): FetchPostPage {
   };
 }
 
+export function fetchPostsByTag(tag: string): FetchPostPage {
+  return async (params) => {
+    const { data } = await httpClient.get<PostsResponse>(
+      `/posts/tag/${encodeURIComponent(tag)}`,
+      {
+        params: {
+          limit: params.limit,
+          cursor: params.cursor,
+        },
+      }
+    );
+    const items = await mapPostsWithCounts(data.data.posts);
+
+    return {
+      items,
+      nextCursor: data.data.nextCursor ?? fallbackPage(items, params).nextCursor,
+      hasMore: data.data.hasMore ?? fallbackPage(items, params).hasMore,
+    };
+  };
+}
+
 export async function fetchPostById(postId: string): Promise<Post | null> {
   const { data } = await httpClient.get<PostResponse>(`/posts/${postId}`);
 

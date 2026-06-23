@@ -66,11 +66,18 @@ export const pt = {
   search: {
     title: "Pesquisar",
     placeholder: "Pesquisar um utilizador...",
+    userPlaceholder: "Pesquisar um utilizador...",
     inputAria: "Pesquisar um utilizador pelo nome",
     clear: "Limpar pesquisa",
     loadError: "Não foi possível carregar os resultados. Tente novamente.",
     noResults: "Nenhum utilizador encontrado para « {query} »",
     initial: "Digite um nome de utilizador para começar",
+    tabUsers: "Utilizadores",
+    tabTags: "Tags",
+    tagPlaceholder: "Pesquisar uma tag...",
+    tagInputAria: "Pesquisar publicações por tag",
+    tagSearch: "Pesquisar",
+    tagInitial: "Introduza uma tag para ver publicações relacionadas",
   },
   admin: {
     title: "Administração",

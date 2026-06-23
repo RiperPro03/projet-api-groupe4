@@ -1,5 +1,7 @@
 import { httpClient } from "./http-client";
 import { getCurrentUserFromApi } from "./current-user.service";
+import { getAuthenticatedUserId } from "@/lib/current-user-ids";
+import type { CurrentUser } from "@/lib/current-user";
 import type { FetchPostPage, PostPage, PostPageParams } from "@/hooks/usePostList";
 import type { Author, Media, Post } from "@/types/post";
 
@@ -8,8 +10,8 @@ type ApiPost = {
   authorId: string;
   content: string;
   author?: Author;
-  tags?: string[];
   media?: Media[];
+  tags?: string[];
   likesCount?: number;
   commentsCount?: number;
   isLiked?: boolean;
@@ -36,14 +38,32 @@ type PostResponse = {
 
 type CreatePostInput = {
   content: string;
-  tags?: string[];
   media?: Media[];
+  tags?: string[];
 };
 
-function mapApiPost(post: ApiPost, likesCount = 0, commentsCount = 0): Post {
+function getCurrentUserAuthor(currentUser: CurrentUser, authorId: string): Author {
+  const username = currentUser.profile?.username?.trim() || authorId.slice(0, 12);
+  const name = currentUser.profile?.nickname?.trim() || username;
+  const avatarUrl = currentUser.profile?.url_photo?.trim() || undefined;
+
+  return {
+    id: authorId,
+    name,
+    username,
+    avatarUrl,
+  };
+}
+
+function mapApiPost(
+  post: ApiPost,
+  likesCount = 0,
+  commentsCount = 0,
+  authorOverride?: Author
+): Post {
   return {
     id: post.id,
-    author: post.author ?? {
+    author: authorOverride ?? post.author ?? {
       id: post.authorId,
       name: `Utilisateur ${post.authorId.slice(0, 8)}`,
       username: post.authorId.slice(0, 12),
@@ -88,7 +108,9 @@ export const fetchFollowedUsersPosts: FetchPostPage = async (params) => {
 
 export const fetchFollowedUsersPostsWithNewItems = fetchFollowedUsersPosts;
 
-export function fetchFeedPosts(_userId: string): FetchPostPage {
+export function fetchFeedPosts(userId: string): FetchPostPage {
+  void userId;
+
   return async (params) => {
     const { data } = await httpClient.get<PostsResponse>("/posts/feed", {
       params: {
@@ -125,24 +147,6 @@ export function fetchUserPosts(userId: string): FetchPostPage {
   };
 }
 
-export function fetchPostsByTag(tag: string): FetchPostPage {
-  return async (params) => {
-    const { data } = await httpClient.get<PostsResponse>(`/posts/tag/${encodeURIComponent(tag)}`, {
-      params: {
-        limit: params.limit,
-        cursor: params.cursor,
-      },
-    });
-    const items = await mapPostsWithCounts(data.data.posts);
-
-    return {
-      items,
-      nextCursor: data.data.nextCursor ?? fallbackPage(items, params).nextCursor,
-      hasMore: data.data.hasMore ?? fallbackPage(items, params).hasMore,
-    };
-  };
-}
-
 export async function fetchPostById(postId: string): Promise<Post | null> {
   const { data } = await httpClient.get<PostResponse>(`/posts/${postId}`);
 
@@ -153,25 +157,24 @@ export async function fetchPostById(postId: string): Promise<Post | null> {
   return mapApiPost(data.data.post);
 }
 
-export async function createPost({ content, tags, media }: CreatePostInput): Promise<Post> {
+export async function deletePost(postId: string) {
+  await httpClient.delete(`/posts/${postId}`);
+}
+
+export async function createPost({ content, media, tags }: CreatePostInput): Promise<Post> {
   const currentUser = await getCurrentUserFromApi();
-  const authorId =
-    currentUser.profile?.id_user ?? currentUser.user?.id_user ?? currentUser.auth.id;
+  const authorId = getAuthenticatedUserId(currentUser);
 
   const { data } = await httpClient.post<PostResponse>("/posts", {
     authorId,
     content,
-    tags,
     media,
+    tags,
   });
 
   if (!data.data.post) {
     throw new Error("Post creation failed");
   }
 
-  return mapApiPost(data.data.post);
-}
-
-export async function deletePost(postId: string): Promise<void> {
-  await httpClient.delete(`/posts/${encodeURIComponent(postId)}`);
+  return mapApiPost(data.data.post, 0, 0, getCurrentUserAuthor(currentUser, authorId));
 }

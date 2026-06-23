@@ -61,11 +61,6 @@ router.get(
 );
 
 router.get(
-    "/tag/:tag",
-    postController.getPostsByTag
-);
-
-router.get(
     "/:id",
     postController.getPostById
 );

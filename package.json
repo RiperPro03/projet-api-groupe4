@@ -14,7 +14,9 @@
     "dev:post": "pnpm --filter post-service dev",
     "dev:follow": "pnpm --filter follow-service dev",
     "dev:feed": "pnpm --filter feed-service dev",
-    "dev:interaction": "pnpm --filter interaction-service dev"
+    "dev:interaction": "pnpm --filter interaction-service dev",
+    "dev:notification": "pnpm --filter notification-service dev",
+    "seed:demo": "node scripts/seed-demo-data.mjs"
   },
   "keywords": [
     "microservices",

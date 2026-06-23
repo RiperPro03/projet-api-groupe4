@@ -5,6 +5,7 @@ const postLikeMocks = vi.hoisted(() => ({
   create: vi.fn(),
   findOneAndDelete: vi.fn(),
   countDocuments: vi.fn(),
+  find: vi.fn(),
 }));
 
 const commentLikeMocks = vi.hoisted(() => ({
@@ -13,11 +14,17 @@ const commentLikeMocks = vi.hoisted(() => ({
   countDocuments: vi.fn(),
 }));
 
+const likeNotificationMocks = vi.hoisted(() => ({
+  notifyPostLikeSafely: vi.fn(),
+  notifyCommentLikeSafely: vi.fn(),
+}));
+
 vi.mock("../src/models/post-like.model.js", () => ({
   PostLike: {
     create: postLikeMocks.create,
     findOneAndDelete: postLikeMocks.findOneAndDelete,
     countDocuments: postLikeMocks.countDocuments,
+    find: postLikeMocks.find,
   },
 }));
 
@@ -27,6 +34,11 @@ vi.mock("../src/models/comment-like.model.js", () => ({
     findOneAndDelete: commentLikeMocks.findOneAndDelete,
     countDocuments: commentLikeMocks.countDocuments,
   },
+}));
+
+vi.mock("../src/services/like-notification.service.js", () => ({
+  notifyPostLikeSafely: likeNotificationMocks.notifyPostLikeSafely,
+  notifyCommentLikeSafely: likeNotificationMocks.notifyCommentLikeSafely,
 }));
 
 import app from "../src/app.js";
@@ -60,6 +72,10 @@ describe("like API", () => {
       expect(response.status).toBe(201);
       expect(response.body.userId).toBe("alice");
       expect(response.body.postId).toBe("post-123");
+      expect(likeNotificationMocks.notifyPostLikeSafely).toHaveBeenCalledWith(
+        "alice",
+        "post-123"
+      );
     });
 
     it("refuse un body incomplet", async () => {
@@ -131,6 +147,28 @@ describe("like API", () => {
     });
   });
 
+  describe("GET /posts/likes", () => {
+    it("retourne les userId des derniers likers", async () => {
+      postLikeMocks.find.mockReturnValue({
+        sort: vi.fn().mockReturnValue({
+          limit: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              lean: vi.fn().mockResolvedValue([
+                { userId: "user-b" },
+                { userId: "user-a" },
+              ]),
+            }),
+          }),
+        }),
+      });
+
+      const response = await request(app).get("/posts/likes?postId=post-123&limit=5");
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ userIds: ["user-b", "user-a"] });
+    });
+  });
+
   describe("POST /comments/likes", () => {
     it("crée un like sur un commentaire racine", async () => {
       const record = createCommentLikeRecord({
@@ -150,6 +188,10 @@ describe("like API", () => {
 
       expect(response.status).toBe(201);
       expect(response.body.commentId).toBe("comment-456");
+      expect(likeNotificationMocks.notifyCommentLikeSafely).toHaveBeenCalledWith(
+        "alice",
+        "comment-456"
+      );
     });
 
     it("crée un like sur une réponse via commentId", async () => {

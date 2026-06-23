@@ -49,7 +49,6 @@ export const AnimatedList = React.memo(
       let timeout: ReturnType<typeof setTimeout> | null = null
 
       if (delay <= 0) {
-        setIndex(Math.max(childrenArray.length - 1, 0))
         return
       }
 
@@ -67,10 +66,13 @@ export const AnimatedList = React.memo(
     }, [index, delay, childrenArray.length])
 
     const itemsToShow = useMemo(() => {
-      const result = childrenArray.slice(0, index + 1)
+      const visibleIndex = delay <= 0
+        ? Math.max(childrenArray.length - 1, 0)
+        : index
+      const result = childrenArray.slice(0, visibleIndex + 1)
 
       return reverseOrder ? result.reverse() : result
-    }, [index, childrenArray, reverseOrder])
+    }, [index, delay, childrenArray, reverseOrder])
 
     return (
       <div

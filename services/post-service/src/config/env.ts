@@ -14,8 +14,14 @@ const requiredEnv = (key: string): string => {
 export const env = {
     nodeEnv: process.env.NODE_ENV || "development",
     port: Number(process.env.PORT || 3003),
- 
+
     // Connexion MongoDB (Mongoose)
     mongoUri: requiredEnv("MONGO_URI"),
- 
+
+    notificationServiceUrl: (
+        process.env.NOTIFICATION_SERVICE_URL || "http://localhost:3008"
+    ).replace(/\/+$/, ""),
+    profileServiceUrl: (
+        process.env.PROFILE_SERVICE_URL || "http://localhost:3006"
+    ).replace(/\/+$/, ""),
 };

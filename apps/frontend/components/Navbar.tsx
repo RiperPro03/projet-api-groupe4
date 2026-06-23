@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { FiBell, FiHome, FiMail, FiSearch, FiUser } from "react-icons/fi";
+import { useEffect, useState } from "react";
+import { FiBell, FiHome, FiSearch, FiShield, FiUser } from "react-icons/fi";
 import { DiaTextReveal } from "@/components/ui/dia-text-reveal";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { ThemedLogo } from "@/components/branding/ThemedLogo";
+import { getUnreadCount } from "@/lib/api/notification.service";
+import { useI18n } from "@/lib/i18n/client";
 import type { CurrentUser } from "@/lib/current-user";
 
 export default function Navbar({
@@ -15,7 +16,11 @@ export default function Navbar({
     currentUser: CurrentUser | null;
 }) {
     const pathname = usePathname();
+    const { t } = useI18n();
     const [logoAnimationKey, setLogoAnimationKey] = useState(0);
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    // Current profile display data
     const profileName =
         currentUser?.profile?.nickname ||
         currentUser?.profile?.username ||
@@ -24,14 +29,48 @@ export default function Navbar({
     const profileInitials = profileName.slice(0, 2).toUpperCase();
     const profilePhoto = currentUser?.profile?.url_photo;
 
+    // Notification badge state
+    useEffect(() => {
+        if (!currentUser) {
+            return;
+        }
+
+        let isMounted = true;
+        getUnreadCount(currentUser.auth.id)
+            .then((count) => {
+                if (isMounted) {
+                    setUnreadCount(count);
+                }
+            })
+            .catch(() => {
+                if (isMounted) {
+                    setUnreadCount(0);
+                }
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [currentUser, pathname]);
+
+    const displayedUnreadCount = currentUser ? unreadCount : 0;
+
+    // Navigation link permissions
+    const canAccessAdmin =
+        currentUser?.user?.role === "ADMIN" ||
+        currentUser?.user?.role === "MODERATOR";
+
     const links = [
-        { href: "/", label: "Accueil", icon: FiHome },
-        { href: "/search", label: "Recherche", icon: FiSearch },
-        { href: "/notif", label: "Notifications", icon: FiBell },
-        { href: "/msg", label: "Messages", icon: FiMail },
-        { href: "/profile", label: "Profil", icon: FiUser },
+        { href: "/", label: t("nav.home"), icon: FiHome },
+        { href: "/search", label: t("nav.search"), icon: FiSearch },
+        { href: "/notif", label: t("nav.notifications"), icon: FiBell },
+        ...(canAccessAdmin
+            ? [{ href: "/admin", label: t("nav.admin"), icon: FiShield }]
+            : []),
+        { href: "/profile", label: t("nav.profile"), icon: FiUser },
     ];
 
+    // Responsive navigation rendering
     return (
         <nav
             className="group fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:inset-y-0 md:left-0 md:right-auto md:w-20 md:overflow-hidden md:border-r md:border-t-0 md:pb-0 md:transition-[width] md:duration-300 md:ease-out md:hover:w-64"
@@ -41,7 +80,7 @@ export default function Navbar({
                 <Link
                     href="/"
                     className="mb-4 hidden h-fit items-center whitespace-nowrap rounded-xl px-1 py-1 text-2xl font-bold text-breezy-green hover:bg-accent md:flex"
-                    aria-label="Breezyl - Accueil"
+                    aria-label={t("nav.brandHome")}
                 >
                     <ThemedLogo
                         size={40}
@@ -78,7 +117,7 @@ export default function Navbar({
                                     : "text-foreground hover:text-breezy-yellow"
                             }`}
                         >
-                            <span className="flex w-6 shrink-0 justify-center">
+                            <span className="relative flex w-6 shrink-0 justify-center">
                                 {href === "/profile" && currentUser ? (
                                     <span
                                         className="flex size-8 shrink-0 items-center justify-center rounded-full bg-breezy-green bg-cover bg-center text-xs font-bold text-black"
@@ -92,7 +131,14 @@ export default function Navbar({
                                         {!profilePhoto && profileInitials}
                                     </span>
                                 ) : (
-                                    <Icon className="h-6 w-6" aria-hidden="true" />
+                                    <>
+                                        <Icon className="h-6 w-6" aria-hidden="true" />
+                                        {href === "/notif" && displayedUnreadCount > 0 && (
+                                            <span className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-breezy-green px-1 text-[10px] font-bold leading-4 text-black">
+                                                {displayedUnreadCount > 99 ? "99+" : displayedUnreadCount}
+                                            </span>
+                                        )}
+                                    </>
                                 )}
                             </span>
                             <span className="ml-5 hidden whitespace-nowrap opacity-0 transition-opacity duration-300 md:inline group-hover:opacity-100">
@@ -101,7 +147,6 @@ export default function Navbar({
                         </Link>
                     );
                 })}
-                <ThemeToggle className="ml-1 hidden shrink-0 md:mt-auto md:flex" />
             </div>
         </nav>
     );

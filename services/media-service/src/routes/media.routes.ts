@@ -25,7 +25,7 @@ const ALLOWED_MIME_TYPES = [
 
 // Valide le body de POST /media/presigned-url
 function validatePresignedUrl(req: Request, res: Response, next: NextFunction) {
-    const { filename, mimeType, size } = req.body;
+    const { filename, mimeType, size, usage } = req.body;
 
     if (!filename || typeof filename !== "string") {
         return res.status(400).json({
@@ -48,12 +48,25 @@ function validatePresignedUrl(req: Request, res: Response, next: NextFunction) {
         });
     }
 
-    // Limite à 100 Mo
-    const MAX_SIZE = 100 * 1024 * 1024;
-    if (size > MAX_SIZE) {
+    // Limite selon le type de fichier.
+    const isVideo = typeof mimeType === "string" && mimeType.startsWith("video/");
+    const maxSize = isVideo ? 10000 * 1024 * 1024 : 100 * 1024 * 1024;
+    const maxSizeLabel = isVideo ? "10GB" : "100MB";
+
+    if (size > maxSize) {
         return res.status(400).json({
             status: "error",
-            message: "File size cannot exceed 100MB",
+            message: `File size cannot exceed ${maxSizeLabel}`,
+        });
+    }
+
+    if (
+        usage !== undefined &&
+        !["profile", "post", "comment", "general"].includes(usage)
+    ) {
+        return res.status(400).json({
+            status: "error",
+            message: "usage must be one of: profile, post, comment, general",
         });
     }
 

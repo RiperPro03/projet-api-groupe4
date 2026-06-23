@@ -10,9 +10,14 @@ import {
   LikeError,
   listLikedCommentIds,
   listLikedPostIds,
+  listPostLikers,
   removeCommentLike,
   removePostLike,
 } from "../services/like.service.js";
+import {
+  notifyCommentLikeSafely,
+  notifyPostLikeSafely,
+} from "../services/like-notification.service.js";
 
 function getTrimmedString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -91,6 +96,7 @@ export const addPostLikeHandler: RequestHandler = async (req, res, next) => {
     }
 
     const like = await addPostLike(body.userId, body.postId);
+    notifyPostLikeSafely(body.userId, body.postId);
     res.status(201).json(like);
   } catch (error) {
     next(error);
@@ -106,6 +112,26 @@ export const removePostLikeHandler: RequestHandler = async (req, res, next) => {
 
     await removePostLike(body.userId, body.postId);
     res.status(200).json({ message: "Like supprimé" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const listPostLikersHandler: RequestHandler = async (req, res, next) => {
+  try {
+    const postId = getField(req, "postId");
+    if (!postId) {
+      throw new LikeError("postId est requis", 400);
+    }
+
+    const limitValue = getField(req, "limit");
+    const limit = limitValue ? Number.parseInt(limitValue, 10) : 5;
+    const userIds = await listPostLikers(
+      postId,
+      Number.isFinite(limit) ? limit : 5
+    );
+
+    res.status(200).json({ userIds });
   } catch (error) {
     next(error);
   }
@@ -160,6 +186,7 @@ export const addCommentLikeHandler: RequestHandler = async (req, res, next) => {
     }
 
     const like = await addCommentLike(body.userId, body.commentId, body.postId);
+    notifyCommentLikeSafely(body.userId, body.commentId);
     res.status(201).json(like);
   } catch (error) {
     next(error);

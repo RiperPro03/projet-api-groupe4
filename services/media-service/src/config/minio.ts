@@ -1,6 +1,9 @@
 import * as Minio from "minio";
 import { env } from "./env";
 
+const publicMinioUrl = new URL(env.minio.publicUrl);
+const normalizedPublicBasePath = publicMinioUrl.pathname.replace(/\/$/, "");
+
 // Client MinIO — réutilisé dans tout le service
 export const minioClient = new Minio.Client({
     endPoint: env.minio.endPoint,
@@ -9,6 +12,38 @@ export const minioClient = new Minio.Client({
     accessKey: env.minio.accessKey,
     secretKey: env.minio.secretKey,
 });
+
+export const publicMinioClient = new Minio.Client({
+    endPoint: publicMinioUrl.hostname,
+    port: publicMinioUrl.port
+        ? Number(publicMinioUrl.port)
+        : publicMinioUrl.protocol === "https:"
+            ? 443
+            : 80,
+    useSSL: publicMinioUrl.protocol === "https:",
+    region: "us-east-1",
+    accessKey: env.minio.accessKey,
+    secretKey: env.minio.secretKey,
+});
+
+export function toBrowserMinioUrl(url: string): string {
+    const parsedUrl = new URL(url);
+
+    if (normalizedPublicBasePath && !parsedUrl.pathname.startsWith(`${normalizedPublicBasePath}/`)) {
+        parsedUrl.pathname = `${normalizedPublicBasePath}${parsedUrl.pathname}`;
+    }
+
+    return parsedUrl.toString();
+}
+
+export function buildPublicObjectUrl(bucket: string, objectKey: string): string {
+    const encodedObjectKey = objectKey
+        .split("/")
+        .map((segment) => encodeURIComponent(segment))
+        .join("/");
+
+    return toBrowserMinioUrl(`${publicMinioUrl.origin}/${bucket}/${encodedObjectKey}`);
+}
 
 // Vérifie que le bucket existe, le crée sinon
 export async function ensureBucket(): Promise<void> {

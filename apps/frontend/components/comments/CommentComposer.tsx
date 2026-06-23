@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Avatar, Button, Group, Paper, Textarea } from "@mantine/core";
+import { Avatar, Group, Paper, Textarea } from "@mantine/core";
 import { FiSend } from "react-icons/fi";
+import { RippleButton } from "@/components/ui/ripple-button";
+import { useI18n } from "@/lib/i18n/client";
 
 type CommentComposerProps = {
   placeholder?: string;
@@ -10,9 +12,10 @@ type CommentComposerProps = {
 };
 
 export default function CommentComposer({
-  placeholder = "Ecrire un commentaire...",
+  placeholder,
   onSubmit,
 }: CommentComposerProps) {
+  const { t } = useI18n();
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -38,8 +41,8 @@ export default function CommentComposer({
       withBorder
       radius={8}
       p="sm"
-      bg="rgba(9, 12, 11, 0.92)"
-      style={{ borderColor: "rgba(255, 255, 255, 0.12)" }}
+      bg="var(--card)"
+      style={{ borderColor: "var(--border)" }}
     >
       <Group align="flex-start" wrap="nowrap">
         <Avatar radius="xl" color="green">
@@ -48,30 +51,29 @@ export default function CommentComposer({
         <Textarea
           value={content}
           onChange={(event) => setContent(event.currentTarget.value)}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t("comment.placeholder")}
           autosize
           minRows={2}
           maxRows={6}
           variant="unstyled"
           styles={{
             input: {
-              color: "white",
+              color: "var(--foreground)",
             },
           }}
           style={{ flex: 1 }}
         />
-        <Button
-          aria-label="Publier le commentaire"
-          title="Publier"
-          radius="xl"
-          color="green"
-          px="sm"
-          disabled={!content.trim()}
-          loading={isSubmitting}
+        <RippleButton
+          aria-label={t("comment.publishAria")}
+          title={t("comment.publishTitle")}
+          type="button"
+          rippleColor="var(--color-breezy-black)"
+          disabled={!content.trim() || isSubmitting}
           onClick={handleSubmit}
+          className="size-10 shrink-0 rounded-full border-0 bg-breezy-green p-0 text-black shadow-lg shadow-breezy-green/20 transition-colors hover:bg-breezy-green/90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <FiSend size={18} />
-        </Button>
+        </RippleButton>
       </Group>
     </Paper>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useI18n } from "@/lib/i18n/client";
 import type { Comment } from "@/types/comment";
 
 type UseCommentListOptions = {
@@ -8,6 +9,7 @@ type UseCommentListOptions = {
 };
 
 export function useCommentList({ fetchComments }: UseCommentListOptions) {
+  const { t } = useI18n();
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +28,7 @@ export function useCommentList({ fetchComments }: UseCommentListOptions) {
         }
       } catch {
         if (isMounted) {
-          setError("Impossible de charger les commentaires.");
+          setError(t("comment.loadError"));
         }
       } finally {
         if (isMounted) {
@@ -40,7 +42,7 @@ export function useCommentList({ fetchComments }: UseCommentListOptions) {
     return () => {
       isMounted = false;
     };
-  }, [fetchComments]);
+  }, [fetchComments, t]);
 
   return {
     comments,

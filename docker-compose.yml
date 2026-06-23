@@ -10,6 +10,7 @@ services:
     depends_on:
       - api-gateway
       - frontend
+      - minio
     networks:
       - breezy-network
 
@@ -25,8 +26,10 @@ services:
       - user-service
       - profile-service
       - post-service
+      - media-service
       - follow-service
       - interaction-service
+      - notification-service
     networks:
       - breezy-network
 
@@ -114,6 +117,22 @@ services:
       - "27020:27017"
     volumes:
       - interaction_mongodb_data:/data/db
+    networks:
+      - breezy-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  notification-mongodb:
+    image: mongo:8
+    container_name: notification-mongodb
+    restart: unless-stopped
+    ports:
+      - "27023:27017"
+    volumes:
+      - notification_mongodb_data:/data/db
     networks:
       - breezy-network
     healthcheck:
@@ -248,8 +267,26 @@ services:
       PORT: 3007
       SERVICE_NAME: interaction-service
       MONGO_URI: mongodb://interaction-mongodb:27017/interaction_db
+      INTERNAL_NGINX_URL: http://nginx-internal
     depends_on:
       interaction-mongodb:
+        condition: service_healthy
+    networks:
+      - breezy-network
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3008"
+    environment:
+      PORT: 3008
+      SERVICE_NAME: notification-service
+      MONGO_URI: mongodb://notification-mongodb:27017/notification_db
+    depends_on:
+      notification-mongodb:
         condition: service_healthy
     networks:
       - breezy-network
@@ -267,6 +304,8 @@ services:
       PORT: 3003
       MONGO_URI: mongodb://post-mongodb:27017/post_db
       SERVICE_NAME: post-service
+      NOTIFICATION_SERVICE_URL: http://notification-service:3008
+      PROFILE_SERVICE_URL: http://profile-service:3006
     depends_on:
       post-mongodb:
         condition: service_healthy
@@ -305,8 +344,8 @@ services:
 
   media-service:
     build:
-      context: .
-      dockerfile: ./services/media-service/Dockerfile
+      context: ./services/media-service
+      dockerfile: Dockerfile
     restart: unless-stopped
     expose:
       - "3005"
@@ -320,7 +359,7 @@ services:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       MINIO_BUCKET: breezy-media
-      MINIO_PUBLIC_URL: http://localhost:9000
+      MINIO_PUBLIC_URL: http://localhost:8080/minio
     depends_on:
       media-mongodb:
         condition: service_healthy
@@ -335,6 +374,7 @@ volumes:
   follow_postgres_data:
   profile_mongodb_data:
   interaction_mongodb_data:
+  notification_mongodb_data:
   post_mongodb_data:
   minio_data:
   media_mongodb_data:

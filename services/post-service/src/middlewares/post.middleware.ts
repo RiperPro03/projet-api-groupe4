@@ -30,7 +30,7 @@ function requiredFields(fieldsRequired: string[]) {
 
 // Middleware de validation spécifique à la création d'un post (Fx3)
 function validateCreatePost(req: Request, res: Response, next: NextFunction) {
-    const { content } = req.body;
+    const { content, media } = req.body;
 
     if (typeof content !== "string") {
         return res.status(400).json({
@@ -52,6 +52,37 @@ function validateCreatePost(req: Request, res: Response, next: NextFunction) {
             status: "error",
             message: "content cannot exceed 280 characters",
         });
+    }
+
+    if (media !== undefined) {
+        if (!Array.isArray(media)) {
+            return res.status(400).json({
+                status: "error",
+                message: "media must be an array",
+            });
+        }
+
+        const isValidMedia = media.every((item) => (
+            item &&
+            typeof item.id === "string" &&
+            ["image", "video"].includes(item.type) &&
+            typeof item.url === "string" &&
+            (item.alt === undefined || typeof item.alt === "string")
+        ));
+
+        if (!isValidMedia) {
+            return res.status(400).json({
+                status: "error",
+                message: "media items must include id, type and url",
+            });
+        }
+
+        if (media.length > 4) {
+            return res.status(400).json({
+                status: "error",
+                message: "media cannot exceed 4 items",
+            });
+        }
     }
 
     next();

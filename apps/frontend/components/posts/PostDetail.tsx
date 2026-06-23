@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Alert, Group, Loader, Stack, Text } from "@mantine/core";
 import CommentComposer from "@/components/comments/CommentComposer";
 import CommentThread from "@/components/comments/CommentThread";
@@ -10,6 +11,8 @@ import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { isApiStatusCode } from "@/lib/api/http-client";
 import { likePost, unlikePost } from "@/lib/api/interaction.service";
 import { fetchPostById } from "@/lib/api/post.service";
+import { getAuthenticatedUserId } from "@/lib/current-user-ids";
+import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   hydrateLike,
@@ -25,6 +28,9 @@ type PostDetailProps = {
 };
 
 export default function PostDetail({ postId }: PostDetailProps) {
+  const { t } = useI18n();
+  const searchParams = useSearchParams();
+  const highlightCommentId = searchParams.get("comment");
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,7 +73,7 @@ export default function PostDetail({ postId }: PostDetailProps) {
         }
       } catch {
         if (isMounted) {
-          setError("Impossible de charger le detail du post.");
+          setError(t("post.detailLoadError"));
         }
       } finally {
         if (isMounted) {
@@ -81,7 +87,7 @@ export default function PostDetail({ postId }: PostDetailProps) {
     return () => {
       isMounted = false;
     };
-  }, [dispatch, postId]);
+  }, [dispatch, postId, t]);
 
   if (isLoading) {
     return (
@@ -93,7 +99,14 @@ export default function PostDetail({ postId }: PostDetailProps) {
 
   if (error) {
     return (
-      <Alert color="red" variant="light">
+      <Alert
+        variant="light"
+        style={{
+          backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+          borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+          color: "var(--destructive)",
+        }}
+      >
         {error}
       </Alert>
     );
@@ -102,7 +115,7 @@ export default function PostDetail({ postId }: PostDetailProps) {
   if (!post) {
     return (
       <Text c="gray.5" ta="center" py="xl">
-        Post introuvable.
+        {t("post.notFound")}
       </Text>
     );
   }
@@ -143,6 +156,7 @@ export default function PostDetail({ postId }: PostDetailProps) {
         media={post.media}
         createdAt={post.createdAt}
         likesCount={likesCount}
+        likers={post.likers}
         commentsCount={comments.filter((comment) => !comment.parentCommentId).length}
         isLiked={isLiked}
         onLike={async () => {
@@ -151,10 +165,7 @@ export default function PostDetail({ postId }: PostDetailProps) {
           }
 
           const currentUser = await getCurrentUserFromApi();
-          const userId =
-            currentUser.profile?.id_user ??
-            currentUser.user?.id_user ??
-            currentUser.auth.id;
+          const userId = getAuthenticatedUserId(currentUser);
 
           setIsLikePending(true);
 
@@ -185,7 +196,11 @@ export default function PostDetail({ postId }: PostDetailProps) {
         }}
       />
       <CommentComposer onSubmit={handleCommentSubmit} />
-      <CommentThread comments={comments} onReplySubmit={handleReplySubmit} />
+      <CommentThread
+        comments={comments}
+        highlightCommentId={highlightCommentId}
+        onReplySubmit={handleReplySubmit}
+      />
     </Stack>
   );
 }

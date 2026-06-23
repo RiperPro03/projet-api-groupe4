@@ -7,10 +7,14 @@ import {
   mantineHtmlProps,
 } from "@mantine/core";
 import "@mantine/core/styles.css";
+import "@mantine/dropzone/styles.css";
 
 import AppShell from "@/components/AppShell";
 import { NotificationProvider } from "@/components/notifications/NotificationProvider";
 import ReduxProvider from "@/components/providers/ReduxProvider";
+import { I18nProvider } from "@/lib/i18n/client";
+import { getLanguage } from "@/lib/i18n/config";
+import { getServerLocale } from "@/lib/i18n/server";
 import { getCurrentUser } from "@/lib/current-user";
 
 const geistSans = Geist({
@@ -33,11 +37,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const currentUser = await getCurrentUser().catch(() => null);
+  const [currentUser, locale] = await Promise.all([
+    getCurrentUser().catch(() => null),
+    getServerLocale(),
+  ]);
+  const language = getLanguage(locale);
 
   return (
     <html
-      lang="fr"
+      lang={locale}
+      dir={language.dir}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       {...mantineHtmlProps}
     >
@@ -47,9 +56,11 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col">
         <MantineProvider defaultColorScheme="dark">
           <ReduxProvider>
-            <NotificationProvider>
-              <AppShell currentUser={currentUser}>{children}</AppShell>
-            </NotificationProvider>
+            <I18nProvider initialLocale={locale}>
+              <NotificationProvider>
+                <AppShell currentUser={currentUser}>{children}</AppShell>
+              </NotificationProvider>
+            </I18nProvider>
           </ReduxProvider>
         </MantineProvider>
       </body>

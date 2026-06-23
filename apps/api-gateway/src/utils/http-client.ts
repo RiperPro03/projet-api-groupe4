@@ -49,6 +49,7 @@ const getRequestBody = (req: Request) => {
 
 const getForwardHeaders = (req: Request): RawAxiosRequestHeaders => {
   const headers: RawAxiosRequestHeaders = {};
+  const authUser = (req as Request & { authUser?: { id?: unknown; role?: unknown } }).authUser;
 
   for (const [headerName, headerValue] of Object.entries(req.headers)) {
     const normalizedHeaderName = headerName.toLowerCase();
@@ -60,6 +61,14 @@ const getForwardHeaders = (req: Request): RawAxiosRequestHeaders => {
     headers[headerName] = Array.isArray(headerValue)
       ? headerValue.join(", ")
       : headerValue;
+  }
+
+  if (typeof authUser?.id === "string" && authUser.id.length > 0) {
+    headers["x-user-id"] = authUser.id;
+  }
+
+  if (typeof authUser?.role === "string" && authUser.role.length > 0) {
+    headers["x-user-role"] = authUser.role;
   }
 
   return headers;

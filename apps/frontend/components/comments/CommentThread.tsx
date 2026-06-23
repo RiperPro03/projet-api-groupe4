@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Box, Button, Group, Paper, Stack, Text } from "@mantine/core";
+import { useEffect, useRef, useState } from "react";
+import { Box, Group, Paper, Stack, Text } from "@mantine/core";
 import CommentComposer from "@/components/comments/CommentComposer";
 import ContentCard from "@/components/feed/ContentCard";
+import { RippleButton } from "@/components/ui/ripple-button";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { isApiStatusCode } from "@/lib/api/http-client";
 import { likeComment, unlikeComment } from "@/lib/api/interaction.service";
+import { getAuthenticatedUserId } from "@/lib/current-user-ids";
+import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   hydrateLike,
@@ -19,6 +22,7 @@ import type { Comment } from "@/types/comment";
 type CommentThreadProps = {
   comments: Comment[];
   maxVisualDepth?: number;
+  highlightCommentId?: string | null;
   onReplySubmit?: (parentComment: Comment, content: string) => void | Promise<void>;
 };
 
@@ -57,6 +61,7 @@ function ThreadNode({
   depth,
   maxVisualDepth,
   activeReplyId,
+  highlightCommentId,
   onStartReply,
   onCancelReply,
   onReplySubmit,
@@ -65,12 +70,16 @@ function ThreadNode({
   depth: number;
   maxVisualDepth: number;
   activeReplyId: string | null;
+  highlightCommentId?: string | null;
   onStartReply: (comment: Comment) => void;
   onCancelReply: () => void;
   onReplySubmit?: (parentComment: Comment, content: string) => void | Promise<void>;
 }) {
+  const { t } = useI18n();
+  const commentRef = useRef<HTMLDivElement | null>(null);
   const visualDepth = Math.min(depth, maxVisualDepth);
   const isReplying = activeReplyId === node.id;
+  const isHighlighted = highlightCommentId === node.id;
   const dispatch = useAppDispatch();
   const likeState = useAppSelector((state) =>
     selectLikeState(state, "comment", node.id)
@@ -90,16 +99,24 @@ function ThreadNode({
     );
   }, [dispatch, node.id, node.isLiked, node.likesCount]);
 
+  useEffect(() => {
+    if (!isHighlighted || !commentRef.current) {
+      return;
+    }
+
+    commentRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, [isHighlighted]);
+
   async function handleLike() {
     if (isLikePending) {
       return;
     }
 
     const currentUser = await getCurrentUserFromApi();
-    const userId =
-      currentUser.profile?.id_user ??
-      currentUser.user?.id_user ??
-      currentUser.auth.id;
+    const userId = getAuthenticatedUserId(currentUser);
 
     setIsLikePending(true);
 
@@ -131,10 +148,17 @@ function ThreadNode({
 
   return (
     <Box
+      ref={commentRef}
+      id={`comment-${node.id}`}
       pl={{ base: visualDepth * 14, sm: visualDepth * 22 }}
       style={{
         borderLeft:
-          depth > 0 ? "1px solid rgba(255, 255, 255, 0.12)" : undefined,
+          depth > 0 ? "1px solid var(--border)" : undefined,
+        borderRadius: isHighlighted ? 8 : undefined,
+        boxShadow: isHighlighted
+          ? "0 0 0 2px rgb(var(--breezy-green-rgb) / 0.45)"
+          : undefined,
+        transition: "box-shadow 0.2s ease",
       }}
     >
       <Stack gap="sm">
@@ -157,24 +181,26 @@ function ThreadNode({
             withBorder
             radius={8}
             p="sm"
-            bg="rgba(0, 146, 62, 0.08)"
-            style={{ borderColor: "rgba(0, 146, 62, 0.32)" }}
+            bg="rgb(var(--breezy-green-rgb) / 0.08)"
+            style={{ borderColor: "rgb(var(--breezy-green-rgb) / 0.32)" }}
           >
             <Group justify="space-between" align="center" mb="xs">
               <Text size="sm" c="green.3" fw={600}>
-                Reponse a @{node.author.username}
+                {t("comment.replyTo", { username: node.author.username })}
               </Text>
-              <Button
-                variant="subtle"
-                color="gray"
-                size="compact-sm"
+              <RippleButton
+                type="button"
+                rippleColor="var(--foreground)"
                 onClick={onCancelReply}
+                className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent"
               >
-                Annuler
-              </Button>
+                {t("common.cancel")}
+              </RippleButton>
             </Group>
             <CommentComposer
-              placeholder={`Repondre a @${node.author.username}...`}
+              placeholder={t("comment.replyPlaceholder", {
+                username: node.author.username,
+              })}
               onSubmit={async (content) => {
                 await onReplySubmit?.(node, content);
                 onCancelReply();
@@ -190,6 +216,7 @@ function ThreadNode({
             depth={depth + 1}
             maxVisualDepth={maxVisualDepth}
             activeReplyId={activeReplyId}
+            highlightCommentId={highlightCommentId}
             onStartReply={onStartReply}
             onCancelReply={onCancelReply}
             onReplySubmit={onReplySubmit}
@@ -203,15 +230,17 @@ function ThreadNode({
 export default function CommentThread({
   comments,
   maxVisualDepth = 3,
+  highlightCommentId = null,
   onReplySubmit,
 }: CommentThreadProps) {
+  const { t } = useI18n();
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const tree = buildCommentTree(comments);
 
   if (tree.length === 0) {
     return (
-      <Text c="gray.5" ta="center" py="xl">
-        Aucun commentaire pour le moment.
+      <Text style={{ color: "var(--muted-foreground)" }} ta="center" py="xl">
+        {t("comment.noComments")}
       </Text>
     );
   }
@@ -225,6 +254,7 @@ export default function CommentThread({
           depth={0}
           maxVisualDepth={maxVisualDepth}
           activeReplyId={activeReplyId}
+          highlightCommentId={highlightCommentId}
           onStartReply={(comment) => setActiveReplyId(comment.id)}
           onCancelReply={() => setActiveReplyId(null)}
           onReplySubmit={onReplySubmit}

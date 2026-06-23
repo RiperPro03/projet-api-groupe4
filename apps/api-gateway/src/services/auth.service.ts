@@ -25,11 +25,26 @@ type RegisterGatewayInput = {
   password?: string;
 };
 
+type LoginGatewayInput = {
+  email?: string;
+  password?: string;
+};
+
 type RegisterGatewayResponse = {
   status: string;
   message?: string;
   data: {
     user: AuthenticatedUser;
+  };
+};
+
+type LoginGatewayResponse = {
+  status: string;
+  message?: string;
+  data?: {
+    user?: AuthenticatedUser;
+    accessToken?: string;
+    refreshToken?: string;
   };
 };
 
@@ -103,4 +118,57 @@ export const registerAuthUser = async (
   }
 
   return response.data;
+};
+
+export const loginAuthUser = async (
+  payload: LoginGatewayInput,
+  requestId?: string,
+) => {
+  const response = await requestService<LoginGatewayResponse>("auth", {
+    method: "POST",
+    url: buildServiceUrl("auth", "/login"),
+    headers: {
+      "Content-Type": "application/json",
+      ...(requestId ? { "x-request-id": requestId } : {}),
+    },
+    data: payload,
+  });
+
+  const user = response.data.data?.user;
+  const accessToken = response.data.data?.accessToken;
+  const refreshToken = response.data.data?.refreshToken;
+
+  if (!user?.id || !accessToken || !refreshToken) {
+    throw new ServiceError("auth", 502, "Invalid response from auth-service", {
+      status: "error",
+      message: "Invalid response from auth-service",
+    });
+  }
+
+  return {
+    ...response.data,
+    data: {
+      user,
+      accessToken,
+      refreshToken,
+    },
+  };
+};
+
+export const logoutAuthUser = async (
+  authorization: string,
+  refreshToken: string,
+  requestId?: string,
+) => {
+  await requestService("auth", {
+    method: "POST",
+    url: buildServiceUrl("auth", "/logout"),
+    headers: {
+      "Content-Type": "application/json",
+      ...buildAuthHeaders(authorization, requestId),
+    },
+    data: {
+      refreshToken,
+    },
+  });
 };

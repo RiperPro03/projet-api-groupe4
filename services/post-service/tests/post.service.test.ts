@@ -12,6 +12,10 @@ const mentionMocks = vi.hoisted(() => ({
   notifyPostMentionsSafely: vi.fn(),
 }));
 
+const interactionMocks = vi.hoisted(() => ({
+  deletePostInteractions: vi.fn(),
+}));
+
 vi.mock("../src/models/post.model", () => ({
   Post: {
     create: postMocks.create,
@@ -24,6 +28,10 @@ vi.mock("../src/models/post.model", () => ({
 vi.mock("../src/services/mention-notification.service", () => ({
   resolveMentionedUserIds: mentionMocks.resolveMentionedUserIds,
   notifyPostMentionsSafely: mentionMocks.notifyPostMentionsSafely,
+}));
+
+vi.mock("../src/clients/interaction.client", () => ({
+  deletePostInteractions: interactionMocks.deletePostInteractions,
 }));
 
 import postService from "../src/services/post.service";
@@ -53,6 +61,7 @@ describe("post.service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mentionMocks.resolveMentionedUserIds.mockResolvedValue([]);
+    interactionMocks.deletePostInteractions.mockResolvedValue(undefined);
   });
 
   it("cree un post, trim le contenu et notifie les mentions", async () => {
@@ -143,6 +152,23 @@ describe("post.service", () => {
 
     expect(post.deletedAt).toBeInstanceOf(Date);
     expect(document.save).toHaveBeenCalled();
+    expect(interactionMocks.deletePostInteractions).toHaveBeenCalledWith(
+      "post-123",
+    );
+  });
+
+  it("nettoie les interactions meme si le post est deja supprime", async () => {
+    const deletedAt = new Date("2026-06-23T10:00:00.000Z");
+    const document = createPostDocument({ deletedAt });
+    postMocks.findById.mockResolvedValue(document);
+
+    const post = await postService.softDeletePost("post-123", "user-a");
+
+    expect(post.deletedAt).toBe(deletedAt);
+    expect(document.save).not.toHaveBeenCalled();
+    expect(interactionMocks.deletePostInteractions).toHaveBeenCalledWith(
+      "post-123",
+    );
   });
 
   it("refuse le soft delete par un autre auteur", async () => {
@@ -151,5 +177,6 @@ describe("post.service", () => {
     await expect(
       postService.softDeletePost("post-123", "user-b"),
     ).rejects.toThrow("POST_FORBIDDEN");
+    expect(interactionMocks.deletePostInteractions).not.toHaveBeenCalled();
   });
 });

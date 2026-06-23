@@ -76,7 +76,7 @@ const close = (server: Server) =>
     });
   });
 
-describe("user gateway report RBAC routes", () => {
+describe("user gateway RBAC routes", () => {
   let server: Server;
   let baseUrl: string;
 
@@ -171,4 +171,153 @@ describe("user gateway report RBAC routes", () => {
       }
     },
   );
+
+  it("forbids moderators from reading admin user states", async () => {
+    httpClientMocks.requestService.mockResolvedValueOnce({
+      data: {
+        data: {
+          id_user: "admin-1",
+          role: "ADMIN",
+          statuts: "ACTIVE",
+        },
+      },
+    });
+
+    const response = await fetch(`${baseUrl}/users/admin-1`, {
+      headers: {
+        "x-test-role": "MODERATOR",
+        "x-test-user-id": "moderator-1",
+      },
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      status: "error",
+      message: "Forbidden",
+    });
+    expect(httpClientMocks.forwardHandler).not.toHaveBeenCalled();
+  });
+
+  it("allows admins to read admin user states", async () => {
+    const response = await fetch(`${baseUrl}/users/admin-1`, {
+      headers: {
+        "x-test-role": "ADMIN",
+        "x-test-user-id": "admin-1",
+      },
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      status: "forwarded",
+      method: "GET",
+      path: "/admin-1",
+    });
+    expect(httpClientMocks.requestService).not.toHaveBeenCalled();
+  });
+
+  it("allows moderators to update non-admin user states", async () => {
+    httpClientMocks.requestService.mockResolvedValueOnce({
+      data: {
+        data: {
+          id_user: "user-2",
+          role: "USER",
+          statuts: "ACTIVE",
+        },
+      },
+    });
+
+    const response = await fetch(`${baseUrl}/users/user-2`, {
+      method: "PUT",
+      headers: {
+        "content-type": "application/json",
+        "x-test-role": "MODERATOR",
+        "x-test-user-id": "moderator-1",
+      },
+      body: JSON.stringify({
+        statuts: "INACTIVE",
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      status: "forwarded",
+      method: "PUT",
+      path: "/user-2",
+    });
+  });
+
+  it("forbids moderators from promoting user states to admin", async () => {
+    const response = await fetch(`${baseUrl}/users/user-2`, {
+      method: "PUT",
+      headers: {
+        "content-type": "application/json",
+        "x-test-role": "MODERATOR",
+        "x-test-user-id": "moderator-1",
+      },
+      body: JSON.stringify({
+        role: "ADMIN",
+      }),
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      status: "error",
+      message: "Forbidden",
+    });
+    expect(httpClientMocks.requestService).not.toHaveBeenCalled();
+    expect(httpClientMocks.forwardHandler).not.toHaveBeenCalled();
+  });
+
+  it("forbids moderators from changing their own role", async () => {
+    const response = await fetch(`${baseUrl}/users/moderator-1`, {
+      method: "PUT",
+      headers: {
+        "content-type": "application/json",
+        "x-test-role": "MODERATOR",
+        "x-test-user-id": "moderator-1",
+      },
+      body: JSON.stringify({
+        role: "USER",
+      }),
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      status: "error",
+      message: "Forbidden",
+    });
+    expect(httpClientMocks.requestService).not.toHaveBeenCalled();
+    expect(httpClientMocks.forwardHandler).not.toHaveBeenCalled();
+  });
+
+  it("allows moderators to update their own status", async () => {
+    httpClientMocks.requestService.mockResolvedValueOnce({
+      data: {
+        data: {
+          id_user: "moderator-1",
+          role: "MODERATOR",
+          statuts: "ACTIVE",
+        },
+      },
+    });
+
+    const response = await fetch(`${baseUrl}/users/moderator-1`, {
+      method: "PUT",
+      headers: {
+        "content-type": "application/json",
+        "x-test-role": "MODERATOR",
+        "x-test-user-id": "moderator-1",
+      },
+      body: JSON.stringify({
+        statuts: "INACTIVE",
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      status: "forwarded",
+      method: "PUT",
+      path: "/moderator-1",
+    });
+  });
 });

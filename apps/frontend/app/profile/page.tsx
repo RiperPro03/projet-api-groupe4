@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { FiCalendar } from "react-icons/fi";
 import ProfileActivityTabs from "@/components/profil/ProfileActivityTabs";
 import ProfileSettingsMenu from "@/components/profil/ProfileSettingsMenu";
 import ProfileSocialStats from "@/components/profil/ProfileSocialStats";
@@ -22,7 +21,7 @@ export default async function ProfilePage() {
     getCurrentUser(),
     getServerI18n(),
   ]);
-  const { language, t } = i18n;
+  const { t } = i18n;
 
   if (!currentUser) {
     redirect("/login?redirect=/profile");
@@ -32,12 +31,6 @@ export default async function ProfilePage() {
   const username = profile?.username || auth.email.split("@")[0];
   const displayName = profile?.nickname || username;
   const profileUserId = getProfileUserId(currentUser);
-  const joinedAtSource = profile?.createdAt || auth.createdAt;
-  const joinedAt = new Intl.DateTimeFormat(language.dateLocale, {
-    month: "long",
-    year: "numeric",
-  }).format(new Date(joinedAtSource));
-
   return (
     <section className="relative min-h-[calc(100svh-64px)] overflow-hidden bg-transparent px-5 py-8 text-foreground md:min-h-svh">
       <div className="mx-auto w-full max-w-2xl">

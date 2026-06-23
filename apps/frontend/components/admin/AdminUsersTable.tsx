@@ -14,7 +14,7 @@ import {
   Table,
   Text,
 } from "@mantine/core";
-import { FiSearch, FiUser, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiFlag, FiSearch, FiUser, FiX } from "react-icons/fi";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
 import { ShineBorder } from "@/components/ui/shine-border";
 import {
@@ -328,21 +328,37 @@ export function AdminUsersTable() {
         <Group justify="space-between" align="flex-start" gap="md" mb="lg">
           <Stack gap={4}>
             <Text component="h1" fw={700} size="xl" style={{ color: "var(--foreground)" }}>
-              {t("admin.title")}
+              {t("admin.overviewUsersTitle")}
             </Text>
             <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
               {t("admin.description")}
             </Text>
           </Stack>
-          <Badge
-            variant="light"
-            color="green"
-            radius={8}
-            size="lg"
-            className="shrink-0"
-          >
-            {t("admin.userCount", { count: users.length })}
-          </Badge>
+          <Group gap="sm">
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground outline-none transition-colors hover:border-breezy-green hover:text-breezy-green focus-visible:ring-2 focus-visible:ring-breezy-green"
+            >
+              <FiArrowLeft className="h-4 w-4" aria-hidden />
+              {t("admin.backDashboard")}
+            </Link>
+            <Link
+              href="/admin/reports"
+              className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground outline-none transition-colors hover:border-breezy-green hover:text-breezy-green focus-visible:ring-2 focus-visible:ring-breezy-green"
+            >
+              <FiFlag className="h-4 w-4" aria-hidden />
+              {t("admin.overviewReportsTitle")}
+            </Link>
+            <Badge
+              variant="light"
+              color="green"
+              radius={8}
+              size="lg"
+              className="shrink-0"
+            >
+              {t("admin.userCount", { count: users.length })}
+            </Badge>
+          </Group>
         </Group>
 
         <div className={`${fieldContainerClassName} mb-6`}>
@@ -428,28 +444,44 @@ export function AdminUsersTable() {
                   {users.map(({ profile, state, stateLoadError }) => {
                     const displayName = profile.nickname || profile.username;
                     const isUpdating = updatingUserIds.has(profile.id_user);
+                    const profileHref = `/profile/${encodeURIComponent(profile.username)}`;
 
                     return (
                       <Table.Tr key={profile.id_user}>
                         <Table.Td>
                           <Group gap="sm" wrap="nowrap">
-                            <Avatar
-                              src={profile.url_photo || null}
-                              alt={displayName}
-                              radius="xl"
-                              size={44}
-                              color="green"
+                            <Link
+                              href={profileHref}
+                              aria-label={t("profile.openProfileAria", {
+                                username: profile.username,
+                              })}
+                              className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-breezy-green"
                             >
-                              {displayName.slice(0, 2).toUpperCase()}
-                            </Avatar>
+                              <Avatar
+                                src={profile.url_photo || null}
+                                alt={displayName}
+                                radius="xl"
+                                size={44}
+                                color="green"
+                              >
+                                {displayName.slice(0, 2).toUpperCase()}
+                              </Avatar>
+                            </Link>
                             <Stack gap={2} style={{ minWidth: 0 }}>
                               <Link
-                                href={`/profile/${encodeURIComponent(profile.username)}`}
+                                href={profileHref}
                                 className="text-sm font-bold text-foreground outline-none hover:text-breezy-green focus-visible:rounded focus-visible:ring-2 focus-visible:ring-breezy-green"
                               >
                                 {displayName}
                               </Link>
-                              <Text size="sm" truncate style={{ color: "var(--muted-foreground)" }}>
+                              <Text
+                                component={Link}
+                                href={profileHref}
+                                size="sm"
+                                truncate
+                                style={{ color: "var(--muted-foreground)" }}
+                                className="outline-none hover:text-breezy-green focus-visible:rounded focus-visible:ring-2 focus-visible:ring-breezy-green"
+                              >
                                 @{profile.username}
                               </Text>
                             </Stack>

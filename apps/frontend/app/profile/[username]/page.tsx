@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Avatar, Card, Group, Loader, Stack, Text } from "@mantine/core";
+import { ActionIcon, Avatar, Card, Group, Loader, Menu, Stack, Text } from "@mantine/core";
 import {
   FiArrowLeft,
-  FiCalendar,
+  FiFlag,
+  FiMoreVertical,
+  FiSlash,
   FiUserCheck,
   FiUserMinus,
   FiUserPlus,
@@ -14,6 +16,7 @@ import {
 import ProfileActivityTabs from "@/components/profil/ProfileActivityTabs";
 import ProfileSocialStats from "@/components/profil/ProfileSocialStats";
 import { RippleButton } from "@/components/ui/ripple-button";
+import { ReportDialog } from "@/components/reports/ReportDialog";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
 import {
   getProfileByUsername,
@@ -23,6 +26,9 @@ import {
   type PublicProfile,
 } from "@/lib/api/profile.service";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
+import { getApiErrorMessage } from "@/lib/api/http-client";
+import { createContentReport } from "@/lib/api/report.service";
+import { updateUserStatus } from "@/lib/api/user-state.service";
 import { getAuthenticatedUserId } from "@/lib/current-user-ids";
 import { useI18n } from "@/lib/i18n/client";
 
@@ -34,6 +40,7 @@ type PageState =
       status: "ready";
       profile: PublicProfile;
       currentUserId: string | null;
+      currentUserRole: "USER" | "MODERATOR" | "ADMIN" | null;
       isOwnProfile: boolean;
     };
 
@@ -48,13 +55,18 @@ const followingButtonClassName =
 
 export default function PublicProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const username = decodeURIComponent(params.username as string);
   const { notify } = useNotifications();
-  const { dateLocale, t } = useI18n();
+  const { t } = useI18n();
 
   const [state, setState] = useState<PageState>({ status: "loading" });
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isReportingUser, setIsReportingUser] = useState(false);
+  const [isBanningUser, setIsBanningUser] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
   const [socialRefreshKey, setSocialRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -87,7 +99,13 @@ export default function PublicProfilePage() {
 
         if (cancelled) return;
 
-        setState({ status: "ready", profile, currentUserId, isOwnProfile: isOwn });
+        setState({
+          status: "ready",
+          profile,
+          currentUserId,
+          currentUserRole: currentUser?.user?.role ?? null,
+          isOwnProfile: isOwn,
+        });
         setIsFollowing(following);
       } catch {
         if (!cancelled)
@@ -139,6 +157,85 @@ export default function PublicProfilePage() {
       setFollowLoading(false);
     }
   }, [state, isFollowing, notify, t]);
+
+  const handleReportUser = useCallback(
+    async (message: string) => {
+      if (state.status !== "ready" || isReportingUser) {
+        return;
+      }
+
+      setIsReportingUser(true);
+      setReportError(null);
+
+      try {
+        await createContentReport({
+          message,
+          reportedUserId: state.profile.id_user,
+        });
+        setIsReportOpen(false);
+        notify({
+          title: t("report.successTitle"),
+          description: t("report.userSuccessDescription", {
+            username: state.profile.username,
+          }),
+          tone: "success",
+        });
+      } catch (error) {
+        setReportError(
+          getApiErrorMessage(
+            error,
+            t("report.errorDescription"),
+            t("common.serverUnreachable")
+          )
+        );
+      } finally {
+        setIsReportingUser(false);
+      }
+    },
+    [isReportingUser, notify, state, t]
+  );
+
+  const handleBanUser = useCallback(async () => {
+    if (state.status !== "ready" || isBanningUser) {
+      return;
+    }
+
+    const canBan =
+      state.currentUserRole === "ADMIN" || state.currentUserRole === "MODERATOR";
+
+    if (!canBan) {
+      return;
+    }
+
+    if (!window.confirm(t("profile.banConfirm", { username: state.profile.username }))) {
+      return;
+    }
+
+    setIsBanningUser(true);
+
+    try {
+      await updateUserStatus(state.profile.id_user, "INACTIVE");
+      notify({
+        title: t("profile.banSuccessTitle"),
+        description: t("profile.banSuccessDescription", {
+          username: state.profile.username,
+        }),
+        tone: "success",
+      });
+    } catch (error) {
+      notify({
+        title: t("profile.banErrorTitle"),
+        description: getApiErrorMessage(
+          error,
+          t("profile.banErrorDescription"),
+          t("common.serverUnreachable")
+        ),
+        tone: "error",
+      });
+    } finally {
+      setIsBanningUser(false);
+    }
+  }, [isBanningUser, notify, state, t]);
 
   /* ── Loading ── */
   if (state.status === "loading") {
@@ -200,22 +297,37 @@ export default function PublicProfilePage() {
   /* ── Profil chargé ── */
   const { profile, isOwnProfile } = state;
   const displayName = profile.nickname || profile.username;
-  const joinedAt = new Intl.DateTimeFormat(dateLocale, {
-    month: "long",
-    year: "numeric",
-  }).format(new Date(profile.createdAt));
+  const canModerateProfile =
+    state.currentUserRole === "ADMIN" || state.currentUserRole === "MODERATOR";
 
   return (
     <section className="relative min-h-[calc(100svh-64px)] overflow-hidden bg-transparent px-5 py-8 text-foreground md:min-h-svh">
+      <ReportDialog
+        opened={isReportOpen}
+        title={t("report.userTitle")}
+        description={t("report.userDescription", { username: profile.username })}
+        placeholder={t("report.userPlaceholder")}
+        error={reportError}
+        isSubmitting={isReportingUser}
+        onClose={() => {
+          if (!isReportingUser) {
+            setIsReportOpen(false);
+            setReportError(null);
+          }
+        }}
+        onSubmit={handleReportUser}
+      />
+
       <div className="mx-auto w-full max-w-2xl">
         {/* Retour */}
-        <Link
-          href="/search"
+        <button
+          type="button"
+          onClick={() => router.back()}
           className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <FiArrowLeft className="h-4 w-4" aria-hidden />
-          {t("profile.backSearch")}
-        </Link>
+          {t("profile.back")}
+        </button>
 
         {/* En-tête : avatar + bouton action */}
         <div className="flex items-start justify-between gap-4">
@@ -232,57 +344,99 @@ export default function PublicProfilePage() {
 
           {/* Bouton Suivre / Suivi — masqué si c'est son propre profil */}
           {!isOwnProfile && (
-            <RippleButton
-              type="button"
-              onClick={handleFollowToggle}
-              disabled={followLoading}
-              aria-pressed={isFollowing}
-              aria-label={
-                isFollowing
-                  ? t("profile.unfollowAria", { username: profile.username })
-                  : t("profile.followAria", { username: profile.username })
-              }
-              rippleColor={
-                isFollowing
-                  ? "var(--destructive)"
-                  : "rgb(var(--breezy-green-rgb) / 0.25)"
-              }
-              className={`${followButtonBaseClassName} ${
-                isFollowing
-                  ? followingButtonClassName
-                  : followButtonClassName
-              }`}
-            >
-              {followLoading ? (
-                <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap">
-                  <Loader
-                    size="xs"
-                    color={isFollowing ? "var(--destructive)" : "dark"}
-                  />
-                  <span>
-                    {isFollowing
-                      ? t("profile.unfollowLoading")
-                      : t("profile.followLoading")}
+            <Group gap="xs" align="flex-start" wrap="nowrap">
+              <RippleButton
+                type="button"
+                onClick={handleFollowToggle}
+                disabled={followLoading}
+                aria-pressed={isFollowing}
+                aria-label={
+                  isFollowing
+                    ? t("profile.unfollowAria", { username: profile.username })
+                    : t("profile.followAria", { username: profile.username })
+                }
+                rippleColor={
+                  isFollowing
+                    ? "var(--destructive)"
+                    : "rgb(var(--breezy-green-rgb) / 0.25)"
+                }
+                className={`${followButtonBaseClassName} ${
+                  isFollowing
+                    ? followingButtonClassName
+                    : followButtonClassName
+                }`}
+              >
+                {followLoading ? (
+                  <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap">
+                    <Loader
+                      size="xs"
+                      color={isFollowing ? "var(--destructive)" : "dark"}
+                    />
+                    <span>
+                      {isFollowing
+                        ? t("profile.unfollowLoading")
+                        : t("profile.followLoading")}
+                    </span>
                   </span>
-                </span>
-              ) : isFollowing ? (
-                <>
-                  <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap group-hover:hidden">
-                    <FiUserCheck className="h-4 w-4" aria-hidden />
-                    {t("profile.following")}
+                ) : isFollowing ? (
+                  <>
+                    <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap group-hover:hidden">
+                      <FiUserCheck className="h-4 w-4" aria-hidden />
+                      {t("profile.following")}
+                    </span>
+                    <span className="hidden items-center justify-center gap-2 whitespace-nowrap group-hover:inline-flex">
+                      <FiUserMinus className="h-4 w-4" aria-hidden />
+                      {t("profile.unfollow")}
+                    </span>
+                  </>
+                ) : (
+                  <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap">
+                    <FiUserPlus className="h-4 w-4" aria-hidden />
+                    {t("profile.follow")}
                   </span>
-                  <span className="hidden items-center justify-center gap-2 whitespace-nowrap group-hover:inline-flex">
-                    <FiUserMinus className="h-4 w-4" aria-hidden />
-                    {t("profile.unfollow")}
-                  </span>
-                </>
-              ) : (
-                <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap">
-                  <FiUserPlus className="h-4 w-4" aria-hidden />
-                  {t("profile.follow")}
-                </span>
-              )}
-            </RippleButton>
+                )}
+              </RippleButton>
+
+              <Menu position="bottom-end" shadow="md" width={210}>
+                <Menu.Target>
+                  <ActionIcon
+                    aria-label={t("profile.moreActions")}
+                    variant="subtle"
+                    radius="xl"
+                    size={40}
+                    className="mt-1 border border-border bg-card/90 text-foreground hover:bg-accent"
+                  >
+                    <FiMoreVertical className="h-5 w-5" aria-hidden />
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item
+                    leftSection={<FiFlag className="h-4 w-4" aria-hidden />}
+                    disabled={isReportingUser}
+                    onClick={() => {
+                      setReportError(null);
+                      setIsReportOpen(true);
+                    }}
+                  >
+                    {t("report.userAction")}
+                  </Menu.Item>
+
+                  {canModerateProfile && (
+                    <>
+                      <Menu.Divider />
+                      <Menu.Item
+                        color="red"
+                        leftSection={<FiSlash className="h-4 w-4" aria-hidden />}
+                        disabled={isBanningUser}
+                        onClick={() => void handleBanUser()}
+                      >
+                        {isBanningUser ? t("profile.banLoading") : t("profile.banUser")}
+                      </Menu.Item>
+                    </>
+                  )}
+                </Menu.Dropdown>
+              </Menu>
+            </Group>
           )}
 
           {isOwnProfile && (

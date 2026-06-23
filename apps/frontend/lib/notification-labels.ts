@@ -25,12 +25,37 @@ export function matchesNotificationFilter(
   return notification.type === filter;
 }
 
+export function getNotificationDisplayMessage(
+  notification: UserNotification
+): string {
+  const actorName = notification.actor?.name?.trim();
+
+  if (!actorName) {
+    return notification.message;
+  }
+
+  if (notification.type === "like") {
+    return notification.resourceType === "post"
+      ? `${actorName} a aimé votre post`
+      : `${actorName} a aimé votre commentaire`;
+  }
+
+  return notification.resourceType === "post"
+    ? `${actorName} vous a mentionné dans un post`
+    : `${actorName} vous a mentionné dans un commentaire`;
+}
+
 export function getNotificationAriaLabel(
   notification: UserNotification
 ): string {
   const typeLabel = getNotificationTypeLabel(notification.type);
   const resourceLabel = getResourceTypeLabel(notification.resourceType);
   const readState = notification.isRead ? "lue" : "non lue";
+  const actorName = notification.actor?.name?.trim();
+
+  if (actorName) {
+    return `${actorName}, ${typeLabel.toLowerCase()} dans un ${resourceLabel.toLowerCase()}, ${readState}`;
+  }
 
   return `${typeLabel} dans un ${resourceLabel.toLowerCase()}, ${readState}`;
 }

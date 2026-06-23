@@ -5,6 +5,8 @@ export type Author = {
   avatarUrl?: string;
 };
 
+export type PostLiker = Author;
+
 export type MediaType = "image" | "video";
 
 export type Media = {
@@ -21,6 +23,7 @@ export type Post = {
   media: Media[];
   likesCount: number;
   isLiked?: boolean;
+  likers?: Author[];
   commentsCount: number;
   createdAt: string;
 };

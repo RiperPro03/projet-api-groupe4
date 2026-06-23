@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Alert, Group, Loader, Stack, Text } from "@mantine/core";
 import CommentComposer from "@/components/comments/CommentComposer";
 import CommentThread from "@/components/comments/CommentThread";
@@ -28,6 +29,8 @@ type PostDetailProps = {
 
 export default function PostDetail({ postId }: PostDetailProps) {
   const { t } = useI18n();
+  const searchParams = useSearchParams();
+  const highlightCommentId = searchParams.get("comment");
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -153,6 +156,7 @@ export default function PostDetail({ postId }: PostDetailProps) {
         media={post.media}
         createdAt={post.createdAt}
         likesCount={likesCount}
+        likers={post.likers}
         commentsCount={comments.filter((comment) => !comment.parentCommentId).length}
         isLiked={isLiked}
         onLike={async () => {
@@ -192,7 +196,11 @@ export default function PostDetail({ postId }: PostDetailProps) {
         }}
       />
       <CommentComposer onSubmit={handleCommentSubmit} />
-      <CommentThread comments={comments} onReplySubmit={handleReplySubmit} />
+      <CommentThread
+        comments={comments}
+        highlightCommentId={highlightCommentId}
+        onReplySubmit={handleReplySubmit}
+      />
     </Stack>
   );
 }

@@ -304,8 +304,7 @@ services:
       PORT: 3003
       MONGO_URI: mongodb://post-mongodb:27017/post_db
       SERVICE_NAME: post-service
-      NOTIFICATION_SERVICE_URL: http://notification-service:3008
-      PROFILE_SERVICE_URL: http://profile-service:3006
+      INTERNAL_NGINX_URL: http://nginx-internal
     depends_on:
       post-mongodb:
         condition: service_healthy

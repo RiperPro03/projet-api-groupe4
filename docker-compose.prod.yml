@@ -152,8 +152,10 @@ services:
       PORT: 3003
       SERVICE_NAME: post-service
       MONGO_URI: mongodb://post-mongodb:27017/${POST_MONGO_DB:-post_db}
+      INTERNAL_NGINX_URL: http://nginx-internal
     depends_on:
       - post-mongodb
+      - nginx-internal
     networks:
       - breezy-network
     deploy: *replicated-service

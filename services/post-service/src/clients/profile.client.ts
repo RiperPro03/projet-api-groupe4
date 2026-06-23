@@ -1,4 +1,4 @@
-import { env } from "../config/env.js";
+import { internalHttpClient } from "./internal-http.client.js";
 
 type ProfileResponseBody = {
   status?: string;
@@ -17,22 +17,14 @@ export async function getUserIdByUsername(
     return null;
   }
 
-  const response = await fetch(
-    `${env.profileServiceUrl}/profiles/username/${encodeURIComponent(normalizedUsername)}`,
-    {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-    }
-  );
+  try {
+    const { data } = await internalHttpClient.get<ProfileResponseBody>(
+      `/profiles/username/${encodeURIComponent(normalizedUsername)}`
+    );
+    const userId = data.data?.id_user?.trim();
 
-  if (!response.ok) {
+    return userId || null;
+  } catch {
     return null;
   }
-
-  const body = (await response.json()) as ProfileResponseBody;
-  const userId = body.data?.id_user?.trim();
-
-  return userId || null;
 }

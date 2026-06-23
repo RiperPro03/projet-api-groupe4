@@ -5,6 +5,7 @@ import {
   getFeedPostsController,
   getPostByIdController,
   getPostsByAuthorController,
+  getPostsByTagController,
 } from "../controllers/content.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { createForwardHandler } from "../utils/http-client";
@@ -17,7 +18,7 @@ router.use(authMiddleware);
 router.get("/", getPostsByAuthorController);
 router.get("/all", getAllPostsController);
 router.get("/feed", getFeedPostsController);
-router.get("/tag/:tag", forwardPostRequest);
+router.get("/tag/:tag", getPostsByTagController);
 router.get("/:id", getPostByIdController);
 router.use(forwardPostRequest);
 

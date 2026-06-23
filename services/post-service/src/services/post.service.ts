@@ -1,22 +1,26 @@
 import { Post } from "../models/post.model";
+import {
+    notifyPostMentionsSafely,
+    resolveMentionedUserIds,
+} from "./mention-notification.service";
+import { mergeTagsWithHashtags } from "../utils/tags.utils";
 import type {
     CreatePostInput,
     PostPageResponse,
     PostResponse,
-    PostMedia,
 } from "../types/post.types";
 
 function sanitizePost(post: InstanceType<typeof Post>): PostResponse {
     return {
-    id: String(post._id),
-    authorId: post.authorId,
-    content: post.content,
-    tags: post.tags,
-    media: post.media ?? [],
-    createdAt: post.createdAt as Date,
-    updatedAt: post.updatedAt as Date,
-    deletedAt: post.deletedAt,
-};
+        id: String(post._id),
+        authorId: post.authorId,
+        content: post.content,
+        tags: post.tags,
+        media: post.media ?? [],
+        createdAt: post.createdAt as Date,
+        updatedAt: post.updatedAt as Date,
+        deletedAt: post.deletedAt,
+    };
 }
 
 function mapLeanPost(post: {
@@ -24,7 +28,7 @@ function mapLeanPost(post: {
     authorId: string;
     content: string;
     tags?: string[];
-    media?: PostMedia[];
+    media?: PostResponse["media"];
     createdAt: Date;
     updatedAt: Date;
     deletedAt?: Date | null;
@@ -81,12 +85,17 @@ async function createPost(
     authorId: string,
     data: CreatePostInput
 ): Promise<PostResponse> {
+    const content = data.content.trim();
+    const mentions = await resolveMentionedUserIds(content, authorId);
+    const tags = mergeTagsWithHashtags(content, data.tags);
     const post = await Post.create({
         authorId,
-        content: data.content.trim(),
-        tags: data.tags ?? [],
+        content,
+        tags,
         media: data.media ?? [],
     });
+
+    notifyPostMentionsSafely(authorId, String(post._id), content);
 
     return sanitizePost(post);
 }
@@ -137,9 +146,12 @@ async function updatePost(
     postId: string,
     data: Partial<CreatePostInput>
 ): Promise<PostResponse> {
+    const tags = data.content !== undefined
+        ? mergeTagsWithHashtags(data.content, data.tags)
+        : data.tags;
     const post = await Post.findByIdAndUpdate(
         postId,
-        { content: data.content, tags: data.tags, media: data.media },
+        { content: data.content, tags, media: data.media },
         { returnDocument: "after", runValidators: true }
     );
 
@@ -162,19 +174,26 @@ async function getPostsByTag(
     limit = 5,
     cursor?: string | null
 ): Promise<PostPageResponse> {
-    return findPostPage({ tags: tag }, limit, cursor);
+    const normalizedTag = tag.trim().toLowerCase().replace(/^#/, "");
+    return findPostPage({ tags: normalizedTag }, limit, cursor);
 }
 
-async function softDeletePost(postId: string): Promise<PostResponse> {
-    const post = await Post.findByIdAndUpdate(
-        postId,
-        { deletedAt: new Date() },
-        { returnDocument: "after" }
-    );
+async function softDeletePost(
+    postId: string,
+    requesterId?: string | null
+): Promise<PostResponse> {
+    const post = await Post.findById(postId);
 
-    if (!post) {
+    if (!post || post.deletedAt) {
         throw new Error("POST_NOT_FOUND");
     }
+
+    if (requesterId && post.authorId !== requesterId) {
+        throw new Error("POST_FORBIDDEN");
+    }
+
+    post.deletedAt = new Date();
+    await post.save();
 
     return sanitizePost(post);
 }
@@ -183,8 +202,8 @@ const postService = {
     createPost,
     getPostsByAuthor,
     getPostsByAuthors,
-    getAllPosts,
     getPostsByTag,
+    getAllPosts,
     getPostById,
     updatePost,
     softDeletePost,

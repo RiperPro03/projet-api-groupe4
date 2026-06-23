@@ -12,8 +12,9 @@ import {
   Text,
   Tooltip,
 } from "@mantine/core";
+import Link from "next/link";
 import type { ReactNode } from "react";
-import { FiHeart, FiMessageCircle, FiTrash2 } from "react-icons/fi";
+import { FiFlag, FiHeart, FiMessageCircle, FiTrash2 } from "react-icons/fi";
 import { useI18n } from "@/lib/i18n/client";
 import PostLikersAvatars from "@/components/posts/PostLikersAvatars";
 import type { Author, Media } from "@/types/post";
@@ -33,6 +34,7 @@ type ContentCardProps = {
   onComment?: () => void;
   onLike?: () => void;
   onDelete?: () => void;
+  onReport?: () => void;
   isDeleting?: boolean;
 };
 
@@ -195,6 +197,7 @@ export default function ContentCard({
   onComment,
   onLike,
   onDelete,
+  onReport,
   isDeleting = false,
 }: ContentCardProps) {
   const { dateLocale, t } = useI18n();
@@ -206,13 +209,27 @@ export default function ContentCard({
     .slice(0, 2)
     .toUpperCase();
   const shouldUseFullWidthBody = type === "post" && !isReply;
+  const profileHref = `/profile/${encodeURIComponent(author.username)}`;
 
   const metaContent = (
     <Group gap={6} wrap="wrap">
-      <Text fw={700} style={{ color: "var(--foreground)" }} size="sm">
+      <Text
+        component={Link}
+        href={profileHref}
+        fw={700}
+        style={{ color: "var(--foreground)" }}
+        size="sm"
+        className="outline-none hover:text-breezy-green focus-visible:rounded focus-visible:ring-2 focus-visible:ring-breezy-green"
+      >
         {author.name}
       </Text>
-      <Text style={{ color: "var(--muted-foreground)" }} size="sm">
+      <Text
+        component={Link}
+        href={profileHref}
+        style={{ color: "var(--muted-foreground)" }}
+        size="sm"
+        className="outline-none hover:text-breezy-green focus-visible:rounded focus-visible:ring-2 focus-visible:ring-breezy-green"
+      >
         @{author.username}
       </Text>
       <Text style={{ color: "var(--muted-foreground)" }} size="sm">
@@ -238,25 +255,25 @@ export default function ContentCard({
         >
           <FiMessageCircle size={18} />
         </ActionButton>
-        <Group gap="sm" wrap="nowrap" align="center">
+        <ActionButton
+          label={isLiked ? t("content.unlike") : t("content.like")}
+          count={likesCount}
+          onClick={onLike}
+          locale={dateLocale}
+        >
+          <Box c={isLiked ? "green.4" : undefined} component="span" lh={0}>
+            <FiHeart size={18} />
+          </Box>
+        </ActionButton>
+        {onReport && (
           <ActionButton
-            label={isLiked ? t("content.unlike") : t("content.like")}
-            count={likesCount}
-            onClick={onLike}
+            label={type === "post" ? t("content.reportPost") : t("content.reportContent")}
+            onClick={onReport}
             locale={dateLocale}
           >
-            <Box c={isLiked ? "green.4" : undefined} component="span" lh={0}>
-              <FiHeart size={18} />
-            </Box>
+            <FiFlag size={18} />
           </ActionButton>
-          {type === "post" && likers.length > 0 && (
-            <PostLikersAvatars
-              likers={likers}
-              likesCount={likesCount}
-              size="sm"
-            />
-          )}
-        </Group>
+        )}
       </Group>
     </>
   );
@@ -303,9 +320,17 @@ export default function ContentCard({
             wrap="nowrap"
             style={{ paddingRight: onDelete ? 36 : undefined }}
           >
-            <Avatar src={author.avatarUrl} alt={author.name} radius="xl" size={44}>
-              {initials}
-            </Avatar>
+            <Link
+              href={profileHref}
+              aria-label={t("profile.openProfileAria", {
+                username: author.username,
+              })}
+              className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-breezy-green"
+            >
+              <Avatar src={author.avatarUrl} alt={author.name} radius="xl" size={44}>
+                {initials}
+              </Avatar>
+            </Link>
 
             <Box style={{ flex: 1, minWidth: 0 }}>
               {metaContent}
@@ -318,9 +343,17 @@ export default function ContentCard({
         </Stack>
       ) : (
         <Group align="flex-start" gap="sm" wrap="nowrap">
-          <Avatar src={author.avatarUrl} alt={author.name} radius="xl" size={44}>
-            {initials}
-          </Avatar>
+          <Link
+            href={profileHref}
+            aria-label={t("profile.openProfileAria", {
+              username: author.username,
+            })}
+            className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-breezy-green"
+          >
+            <Avatar src={author.avatarUrl} alt={author.name} radius="xl" size={44}>
+              {initials}
+            </Avatar>
+          </Link>
 
           <Stack gap={8} style={{ flex: 1, minWidth: 0 }}>
             {metaContent}

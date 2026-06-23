@@ -18,6 +18,7 @@ on:
       - "services/interaction-service/**"
       - "services/media-service/**"
       - "services/notification-service/**"
+      - "services/chat-service/**"
       - "services/post-service/**"
       - "apps/api-gateway/**"
       - ".github/workflows/github-CICD.yml"
@@ -33,6 +34,7 @@ on:
       - "services/interaction-service/**"
       - "services/media-service/**"
       - "services/notification-service/**"
+      - "services/chat-service/**"
       - "services/post-service/**"
       - "apps/api-gateway/**"
       - ".github/workflows/github-CICD.yml"
@@ -53,6 +55,7 @@ jobs:
       interaction: ${{ steps.filter.outputs.interaction }}
       media: ${{ steps.filter.outputs.media }}
       notification: ${{ steps.filter.outputs.notification }}
+      chat: ${{ steps.filter.outputs.chat }}
       post: ${{ steps.filter.outputs.post }}
       api_gateway: ${{ steps.filter.outputs.api_gateway }}
 
@@ -84,6 +87,8 @@ jobs:
               - "services/media-service/**"
             notification:
               - "services/notification-service/**"
+            chat:
+              - "services/chat-service/**"
             post:
               - "services/post-service/**"
             api_gateway:
@@ -410,7 +415,7 @@ jobs:
         run: pnpm test:coverage
 
   post-service:
-    name: Stage 8 - Post Service
+    name: Stage 9 - Post Service
     needs: changes
     if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.post == 'true' }}
     runs-on: ubuntu-latest
@@ -423,6 +428,46 @@ jobs:
       MONGO_URI: mongodb://localhost:27021/post_service_test
       NOTIFICATION_SERVICE_URL: http://localhost:3008
       PROFILE_SERVICE_URL: http://localhost:3006
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript build
+        run: pnpm build
+
+      - name: Run Vitest with coverage
+        run: pnpm test:coverage
+
+  chat-service:
+    name: Stage 8 - Chat Service
+    needs: changes
+    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.chat == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/chat-service
+    env:
+      NODE_ENV: test
+      SERVICE_NAME: chat-service-test
+      AUTH_VERIFY_URL: http://localhost:3001/auth/verify
+      SOCKET_PATH: /chat/socket.io
+      MESSAGE_MAX_LENGTH: "1000"
 
     steps:
       - name: Checkout repository

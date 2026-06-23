@@ -3,6 +3,7 @@ import type {
   CreateUserStateInput,
   UpdateUserStateInput,
   UserState,
+  UserStateRole,
 } from "../models/user.model";
 
 const userStateSelect = {
@@ -33,6 +34,21 @@ export class HttpError extends Error {
     this.name = "HttpError";
   }
 }
+
+export const getUserStatesByRole = async (
+  role: UserStateRole,
+): Promise<UserState[]> => {
+  return prisma.user_state.findMany({
+    where: {
+      role,
+      statuts: "ACTIVE",
+    },
+    select: userStateSelect,
+    orderBy: {
+      id_user: "asc",
+    },
+  });
+};
 
 export const getUserStateById = async (
   id_user: string,

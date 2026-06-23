@@ -17,6 +17,13 @@ const controllerMocks = vi.hoisted(() => ({
       id_user: req.params.id_user,
     }),
   ),
+  getUserStatesByRoleController: vi.fn((req, res) =>
+    res.status(200).json({
+      route: "getByRole",
+      method: req.method,
+      role: req.params.role,
+    }),
+  ),
   updateUserStateController: vi.fn((req, res) =>
     res.status(200).json({
       route: "update",
@@ -149,6 +156,30 @@ describe("user routes", () => {
       id_user: "user-42",
     });
     expect(controllerMocks.getUserStateByIdController).toHaveBeenCalledTimes(1);
+  });
+
+  it("routes GET /by-role/:role to getUserStatesByRoleController", async () => {
+    const response = await request(app).get("/users-state/by-role/ADMIN");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      route: "getByRole",
+      method: "GET",
+      role: "ADMIN",
+    });
+    expect(controllerMocks.getUserStatesByRoleController).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects GET /by-role/:role when role is invalid", async () => {
+    const response = await request(app).get("/users-state/by-role/INVALID");
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      status: "error",
+      message: "Invalid request data",
+      errors: [expect.objectContaining({ path: "role" })],
+    });
+    expect(controllerMocks.getUserStatesByRoleController).not.toHaveBeenCalled();
   });
 
   it("rejects PUT /:id_user when no update field is provided", async () => {

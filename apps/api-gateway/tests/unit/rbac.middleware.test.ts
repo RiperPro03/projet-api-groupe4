@@ -13,6 +13,7 @@ vi.mock("../../src/utils/http-client", () => ({
 
 import {
   allowVisitorOrRoles,
+  forbidModeratorAdminUserAccess,
   requireBodyOwnerOrRoles,
   requireOwnerOrRoles,
   requireParamOwnerOrRoles,
@@ -199,6 +200,180 @@ describe("RBAC middleware", () => {
     expect(res.status).toHaveBeenCalledWith(403);
     expect(res.json).toHaveBeenCalledWith(forbiddenPayload);
     expect(next).not.toHaveBeenCalled();
+  });
+
+  it("forbids moderators from accessing admin user targets", async () => {
+    httpClientMocks.requestService.mockResolvedValueOnce({
+      data: {
+        data: {
+          id_user: "admin-1",
+          role: "ADMIN",
+          statuts: "ACTIVE",
+        },
+      },
+    });
+    const req = createRequest({
+      authUser: {
+        id: "moderator-1",
+        role: "MODERATOR",
+      },
+      headers: {
+        authorization: "Bearer token",
+        "x-request-id": "request-1",
+      },
+      params: {
+        id_user: "admin-1",
+      },
+    });
+    const res = createResponse();
+    const next = vi.fn() as NextFunction;
+
+    await forbidModeratorAdminUserAccess("id_user")(req, res, next);
+
+    expect(httpClientMocks.requestService).toHaveBeenCalledWith(
+      "users",
+      expect.objectContaining({
+        method: "GET",
+        url: expect.stringContaining("/users/admin-1"),
+        headers: {
+          Authorization: "Bearer token",
+          "x-request-id": "request-1",
+        },
+      }),
+    );
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(forbiddenPayload);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("allows moderators to access non-admin user targets", async () => {
+    httpClientMocks.requestService.mockResolvedValueOnce({
+      data: {
+        data: {
+          id_user: "user-2",
+          role: "USER",
+          statuts: "ACTIVE",
+        },
+      },
+    });
+    const req = createRequest({
+      authUser: {
+        id: "moderator-1",
+        role: "MODERATOR",
+      },
+      params: {
+        id_user: "user-2",
+      },
+    });
+    const res = createResponse();
+    const next = vi.fn() as NextFunction;
+
+    await forbidModeratorAdminUserAccess("id_user")(req, res, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it("allows admins to access admin user targets without target lookup", async () => {
+    const req = createRequest({
+      authUser: {
+        id: "admin-1",
+        role: "ADMIN",
+      },
+      body: {
+        role: "ADMIN",
+      },
+      params: {
+        id_user: "admin-2",
+      },
+    });
+    const res = createResponse();
+    const next = vi.fn() as NextFunction;
+
+    await forbidModeratorAdminUserAccess("id_user")(req, res, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(httpClientMocks.requestService).not.toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it("forbids moderators from promoting user targets to admin", async () => {
+    const req = createRequest({
+      authUser: {
+        id: "moderator-1",
+        role: "MODERATOR",
+      },
+      body: {
+        role: "ADMIN",
+      },
+      params: {
+        id_user: "user-2",
+      },
+    });
+    const res = createResponse();
+    const next = vi.fn() as NextFunction;
+
+    await forbidModeratorAdminUserAccess("id_user")(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(forbiddenPayload);
+    expect(httpClientMocks.requestService).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("forbids moderators from updating their own role", async () => {
+    const req = createRequest({
+      authUser: {
+        id: "moderator-1",
+        role: "MODERATOR",
+      },
+      body: {
+        role: "USER",
+      },
+      params: {
+        id_user: "moderator-1",
+      },
+    });
+    const res = createResponse();
+    const next = vi.fn() as NextFunction;
+
+    await forbidModeratorAdminUserAccess("id_user")(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(forbiddenPayload);
+    expect(httpClientMocks.requestService).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("allows moderators to update their own status", async () => {
+    httpClientMocks.requestService.mockResolvedValueOnce({
+      data: {
+        data: {
+          id_user: "moderator-1",
+          role: "MODERATOR",
+          statuts: "ACTIVE",
+        },
+      },
+    });
+    const req = createRequest({
+      authUser: {
+        id: "moderator-1",
+        role: "MODERATOR",
+      },
+      body: {
+        statuts: "INACTIVE",
+      },
+      params: {
+        id_user: "moderator-1",
+      },
+    });
+    const res = createResponse();
+    const next = vi.fn() as NextFunction;
+
+    await forbidModeratorAdminUserAccess("id_user")(req, res, next);
+
+    expect(next).toHaveBeenCalledOnce();
+    expect(res.status).not.toHaveBeenCalled();
   });
 
   it("allows moderators and admins to bypass post owner lookup", async () => {

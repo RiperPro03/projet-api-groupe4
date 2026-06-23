@@ -6,12 +6,18 @@ const postLikeMocks = vi.hoisted(() => ({
   findOneAndDelete: vi.fn(),
   countDocuments: vi.fn(),
   find: vi.fn(),
+  deleteMany: vi.fn(),
 }));
 
 const commentLikeMocks = vi.hoisted(() => ({
   create: vi.fn(),
   findOneAndDelete: vi.fn(),
   countDocuments: vi.fn(),
+  deleteMany: vi.fn(),
+}));
+
+const commentMocks = vi.hoisted(() => ({
+  deleteMany: vi.fn(),
 }));
 
 const likeNotificationMocks = vi.hoisted(() => ({
@@ -25,6 +31,7 @@ vi.mock("../src/models/post-like.model.js", () => ({
     findOneAndDelete: postLikeMocks.findOneAndDelete,
     countDocuments: postLikeMocks.countDocuments,
     find: postLikeMocks.find,
+    deleteMany: postLikeMocks.deleteMany,
   },
 }));
 
@@ -33,6 +40,13 @@ vi.mock("../src/models/comment-like.model.js", () => ({
     create: commentLikeMocks.create,
     findOneAndDelete: commentLikeMocks.findOneAndDelete,
     countDocuments: commentLikeMocks.countDocuments,
+    deleteMany: commentLikeMocks.deleteMany,
+  },
+}));
+
+vi.mock("../src/models/comment.model.js", () => ({
+  Comment: {
+    deleteMany: commentMocks.deleteMany,
   },
 }));
 
@@ -166,6 +180,36 @@ describe("like API", () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({ userIds: ["user-b", "user-a"] });
+    });
+  });
+
+  describe("DELETE /posts/:postId/interactions", () => {
+    it("supprime les commentaires et likes associes au post", async () => {
+      commentMocks.deleteMany.mockResolvedValue({ deletedCount: 2 });
+      postLikeMocks.deleteMany.mockResolvedValue({ deletedCount: 3 });
+      commentLikeMocks.deleteMany.mockResolvedValue({ deletedCount: 4 });
+
+      const response = await request(app).delete("/posts/post-123/interactions");
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        status: "success",
+        message: "Post interactions deleted",
+        data: {
+          commentsDeletedCount: 2,
+          postLikesDeletedCount: 3,
+          commentLikesDeletedCount: 4,
+        },
+      });
+      expect(commentMocks.deleteMany).toHaveBeenCalledWith({
+        postId: "post-123",
+      });
+      expect(postLikeMocks.deleteMany).toHaveBeenCalledWith({
+        postId: "post-123",
+      });
+      expect(commentLikeMocks.deleteMany).toHaveBeenCalledWith({
+        postId: "post-123",
+      });
     });
   });
 

@@ -11,6 +11,7 @@ services:
       - api-gateway
       - frontend
       - minio
+      - chat-service
     networks:
       - breezy-network
 
@@ -30,6 +31,7 @@ services:
       - follow-service
       - interaction-service
       - notification-service
+      - chat-service
     networks:
       - breezy-network
 
@@ -290,7 +292,26 @@ services:
         condition: service_healthy
     networks:
       - breezy-network
-        
+
+  chat-service:
+    build:
+      context: ./services/chat-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3009"
+    environment:
+      PORT: 3009
+      SERVICE_NAME: chat-service
+      CORS_ORIGIN: http://localhost:8080,http://localhost:4000
+      AUTH_VERIFY_URL: http://auth-service:3001/auth/verify
+      SOCKET_PATH: /chat/socket.io
+      MESSAGE_MAX_LENGTH: 1000
+    depends_on:
+      - auth-service
+    networks:
+      - breezy-network
+         
   post-service:
     build:
       context: ./services/post-service
@@ -304,8 +325,7 @@ services:
       PORT: 3003
       MONGO_URI: mongodb://post-mongodb:27017/post_db
       SERVICE_NAME: post-service
-      NOTIFICATION_SERVICE_URL: http://notification-service:3008
-      PROFILE_SERVICE_URL: http://profile-service:3006
+      INTERNAL_NGINX_URL: http://nginx-internal
     depends_on:
       post-mongodb:
         condition: service_healthy

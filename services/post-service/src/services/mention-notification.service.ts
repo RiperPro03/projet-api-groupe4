@@ -1,15 +1,18 @@
 import { createMentionNotification } from "../clients/notification.client.js";
 import { getUserIdByUsername } from "../clients/profile.client.js";
-import { extractMentionUsernames } from "../utils/mention.utils.js";
+import { getUserIdsByRole } from "../clients/user.client.js";
+import {
+  extractIndividualMentionUsernames,
+  extractRoleMentions,
+} from "../utils/mention.utils.js";
 
 export async function resolveMentionedUserIds(
   content: string,
   actorId: string
 ): Promise<string[]> {
-  const usernames = extractMentionUsernames(content);
   const recipientIds = new Set<string>();
 
-  for (const username of usernames) {
+  for (const username of extractIndividualMentionUsernames(content)) {
     const userId = await getUserIdByUsername(username);
 
     if (!userId || userId === actorId) {
@@ -17,6 +20,16 @@ export async function resolveMentionedUserIds(
     }
 
     recipientIds.add(userId);
+  }
+
+  for (const role of extractRoleMentions(content)) {
+    const userIds = await getUserIdsByRole(role);
+
+    for (const userId of userIds) {
+      if (userId !== actorId) {
+        recipientIds.add(userId);
+      }
+    }
   }
 
   return Array.from(recipientIds);

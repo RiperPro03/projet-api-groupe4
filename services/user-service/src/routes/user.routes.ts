@@ -5,14 +5,16 @@ import {
   createUserStateController,
   deleteUserStateController,
   getUserStateByIdController,
+  getUserStatesByRoleController,
   updateUserStateController,
 } from "../controllers/user.controller";
 import {
   validateCreateUserState,
   validateUpdateUserState,
   validateUserStateParams,
+  validateUserStateRoleParams,
 } from "../middlewares/user-state.validator";
-import type { UserStateParams } from "../models/user.model";
+import type { UserStateParams, UserStateRoleParams } from "../models/user.model";
 
 const router = Router();
 
@@ -50,6 +52,12 @@ router.post(
   "/",
   validateCreateUserState,
   createUserStateController,
+);
+
+router.get<UserStateRoleParams>(
+  "/by-role/:role",
+  validateUserStateRoleParams,
+  getUserStatesByRoleController,
 );
 
 router.get<UserStateParams>(

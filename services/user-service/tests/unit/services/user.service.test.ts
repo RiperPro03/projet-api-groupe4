@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const prismaMocks = vi.hoisted(() => ({
   findUnique: vi.fn(),
+  findMany: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
   delete: vi.fn(),
@@ -17,6 +18,7 @@ import {
   createUserState,
   deleteUserState,
   getUserStateById,
+  getUserStatesByRole,
   HttpError,
   updateUserState,
 } from "../../../src/services/user.service";
@@ -24,6 +26,50 @@ import {
 describe("user.service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("getUserStatesByRole returns active users for the requested role", async () => {
+    prismaMocks.findMany.mockResolvedValue([
+      {
+        id_user: "admin-1",
+        role: "ADMIN",
+        statuts: "ACTIVE",
+      },
+      {
+        id_user: "admin-2",
+        role: "ADMIN",
+        statuts: "ACTIVE",
+      },
+    ]);
+
+    const result = await getUserStatesByRole("ADMIN");
+
+    expect(prismaMocks.findMany).toHaveBeenCalledWith({
+      where: {
+        role: "ADMIN",
+        statuts: "ACTIVE",
+      },
+      select: {
+        id_user: true,
+        role: true,
+        statuts: true,
+      },
+      orderBy: {
+        id_user: "asc",
+      },
+    });
+    expect(result).toEqual([
+      {
+        id_user: "admin-1",
+        role: "ADMIN",
+        statuts: "ACTIVE",
+      },
+      {
+        id_user: "admin-2",
+        role: "ADMIN",
+        statuts: "ACTIVE",
+      },
+    ]);
   });
 
   it("getUserStateById returns the matching user state", async () => {

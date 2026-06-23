@@ -66,11 +66,18 @@ export const es = {
   search: {
     title: "Buscar",
     placeholder: "Buscar un usuario...",
+    userPlaceholder: "Buscar un usuario...",
     inputAria: "Buscar un usuario por su nombre",
     clear: "Borrar búsqueda",
     loadError: "No se pueden cargar los resultados. Inténtalo de nuevo.",
     noResults: "No se encontró ningún usuario para « {query} »",
     initial: "Escribe un nombre de usuario para empezar",
+    tabUsers: "Usuarios",
+    tabTags: "Etiquetas",
+    tagPlaceholder: "Buscar una etiqueta...",
+    tagInputAria: "Buscar publicaciones por etiqueta",
+    tagSearch: "Buscar",
+    tagInitial: "Introduce una etiqueta para ver publicaciones relacionadas",
   },
   admin: {
     title: "Administración",

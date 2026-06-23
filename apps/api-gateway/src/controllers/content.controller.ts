@@ -111,6 +111,32 @@ export const getPostByIdController = async (
   return res.status(200).json(post);
 };
 
+export const getPostsByTagController = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  const userId = req.authUser?.id;
+  const tag = getRouteParam(req.params.tag);
+
+  if (!userId) {
+    return res.status(401).json({ status: "error", message: "Unauthorized" });
+  }
+
+  if (!tag) {
+    return res.status(400).json({
+      status: "error",
+      message: "tag param is required",
+    });
+  }
+
+  const page = await getPostPage(`/tag/${encodeURIComponent(tag)}`, {
+    limit: getLimit(req.query.limit),
+    cursor: getCursor(req.query.cursor),
+  }, userId);
+
+  return res.status(200).json(page);
+};
+
 export const getCommentsController = async (
   req: AuthenticatedRequest,
   res: Response

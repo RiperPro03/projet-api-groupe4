@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Avatar, Card, Group, Stack, Text } from "@mantine/core";
-import { FiSearch, FiUser, FiX } from "react-icons/fi";
+import { Avatar, Card, Group, Stack, Tabs, Text } from "@mantine/core";
+import { FiHash, FiSearch, FiUser, FiX } from "react-icons/fi";
+import PostList from "@/components/posts/PostList";
 import { ShineBorder } from "@/components/ui/shine-border";
+import { fetchPostComments } from "@/lib/api/comment.service";
+import { fetchPostsByTag } from "@/lib/api/post.service";
 import {
   searchProfilesByUsername,
   type PublicProfile,
@@ -35,7 +38,7 @@ function ProfileSkeleton() {
   );
 }
 
-export default function SearchPage() {
+function UserSearch() {
   const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PublicProfile[]>([]);
@@ -52,6 +55,7 @@ export default function SearchPage() {
       setError(null);
       return;
     }
+
     setLoading(true);
     setError(null);
     try {
@@ -87,6 +91,264 @@ export default function SearchPage() {
   };
 
   return (
+    <Stack gap="md">
+      <div className={fieldContainerClassName}>
+        <ShineBorder
+          borderWidth="0.125rem"
+          duration={15}
+          shineColor={[
+            "var(--color-breezy-green)",
+            "var(--color-breezy-yellow)",
+            "var(--color-breezy-green)",
+          ]}
+          className="z-20"
+        />
+        <div className="relative z-10 flex items-center rounded-[inherit] bg-background">
+          <span className="pointer-events-none absolute left-4 text-muted-foreground">
+            <FiSearch className="h-5 w-5" aria-hidden />
+          </span>
+          <input
+            ref={inputRef}
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("search.userPlaceholder")}
+            aria-label={t("search.inputAria")}
+            className="search-input w-full rounded-xl bg-transparent py-3 pl-11 pr-11 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              aria-label={t("search.clear")}
+              className="absolute right-4 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <FiX className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {loading && (
+        <Stack gap="sm">
+          <ProfileSkeleton />
+          <ProfileSkeleton />
+          <ProfileSkeleton />
+        </Stack>
+      )}
+
+      {error && !loading && (
+        <Card radius={8} p="md" withBorder style={{ borderColor: "var(--destructive)" }}>
+          <Text size="sm" style={{ color: "var(--destructive)" }}>
+            {error}
+          </Text>
+        </Card>
+      )}
+
+      {!loading && !error && searched && results.length === 0 && (
+        <Stack align="center" gap="xs" py={64}>
+          <FiUser
+            className="h-10 w-10 opacity-30"
+            style={{ color: "var(--muted-foreground)" }}
+            aria-hidden
+          />
+          <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
+            {t("search.noResults", { query })}
+          </Text>
+        </Stack>
+      )}
+
+      {!loading && !error && results.length > 0 && (
+        <Stack gap="sm" role="list" aria-label={t("search.title")}>
+          {results.map((profile) => {
+            const displayName = profile.nickname || profile.username;
+            return (
+              <div key={profile.id_user} role="listitem">
+                <Link
+                  href={`/profile/${encodeURIComponent(profile.username)}`}
+                  className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-breezy-green"
+                >
+                  <Card
+                    radius={8}
+                    p="md"
+                    withBorder
+                    bg="var(--card)"
+                    className="transition-colors hover:border-[rgb(var(--breezy-green-rgb)_/_0.5)] hover:bg-accent"
+                    style={{ borderColor: "var(--border)" }}
+                  >
+                    <Group gap="sm" wrap="nowrap">
+                      <Avatar
+                        src={profile.url_photo || null}
+                        alt={displayName}
+                        radius="xl"
+                        size={44}
+                        color="green"
+                      >
+                        {displayName.slice(0, 2).toUpperCase()}
+                      </Avatar>
+                      <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
+                        <Text fw={700} size="sm" truncate style={{ color: "var(--foreground)" }}>
+                          {displayName}
+                        </Text>
+                        <Text size="sm" truncate style={{ color: "var(--muted-foreground)" }}>
+                          @{profile.username}
+                        </Text>
+                        {profile.bio && (
+                          <Text
+                            size="xs"
+                            truncate
+                            mt={2}
+                            style={{ color: "var(--muted-foreground)", opacity: 0.7 }}
+                          >
+                            {profile.bio}
+                          </Text>
+                        )}
+                      </Stack>
+                    </Group>
+                  </Card>
+                </Link>
+              </div>
+            );
+          })}
+        </Stack>
+      )}
+
+      {!query && !searched && (
+        <Stack align="center" gap="xs" py={80}>
+          <FiSearch
+            className="h-12 w-12 opacity-20"
+            style={{ color: "var(--muted-foreground)" }}
+            aria-hidden
+          />
+          <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
+            {t("search.initial")}
+          </Text>
+        </Stack>
+      )}
+    </Stack>
+  );
+}
+
+function TagSearch() {
+  const { t } = useI18n();
+  const [tagInput, setTagInput] = useState("");
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleTagSubmit = () => {
+    const tag = tagInput.trim().replace(/^#/, "");
+    setActiveTag(tag || null);
+  };
+
+  const clearTag = () => {
+    setTagInput("");
+    setActiveTag(null);
+    inputRef.current?.focus();
+  };
+
+  const fetchPosts = useMemo(() => {
+    if (!activeTag) {
+      return null;
+    }
+
+    return fetchPostsByTag(activeTag);
+  }, [activeTag]);
+
+  return (
+    <Stack gap="md">
+      <div className={fieldContainerClassName}>
+        <ShineBorder
+          borderWidth="0.125rem"
+          duration={15}
+          shineColor={[
+            "var(--color-breezy-green)",
+            "var(--color-breezy-yellow)",
+            "var(--color-breezy-green)",
+          ]}
+          className="z-20"
+        />
+        <div className="relative z-10 flex items-center rounded-[inherit] bg-background">
+          <span className="pointer-events-none absolute left-4 text-muted-foreground">
+            <FiHash className="h-5 w-5" aria-hidden />
+          </span>
+          <input
+            ref={inputRef}
+            type="search"
+            value={tagInput}
+            onChange={(e) => {
+              setTagInput(e.target.value);
+              if (!e.target.value.trim()) {
+                setActiveTag(null);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleTagSubmit();
+              }
+            }}
+            placeholder={t("search.tagPlaceholder")}
+            aria-label={t("search.tagInputAria")}
+            className="search-input w-full rounded-xl bg-transparent py-3 pl-11 pr-24 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+          <div className="absolute right-2 flex items-center gap-1">
+            {tagInput && (
+              <button
+                type="button"
+                onClick={clearTag}
+                aria-label={t("search.clear")}
+                className="p-1 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <FiX className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleTagSubmit}
+              disabled={!tagInput.trim()}
+              aria-label={t("search.tagSearch")}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40"
+              style={{
+                backgroundColor: "rgb(var(--breezy-green-rgb) / 0.15)",
+                color: "var(--color-breezy-green)",
+              }}
+            >
+              {t("search.tagSearch")}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {fetchPosts ? (
+        <PostList
+          fetchPosts={fetchPosts}
+          fetchCommentsForPost={fetchPostComments}
+          title={`#${activeTag}`}
+          showCreateButton={false}
+        />
+      ) : (
+        <Stack align="center" gap="xs" py={80}>
+          <FiHash
+            className="h-12 w-12 opacity-20"
+            style={{ color: "var(--muted-foreground)" }}
+            aria-hidden
+          />
+          <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
+            {t("search.tagInitial")}
+          </Text>
+        </Stack>
+      )}
+    </Stack>
+  );
+}
+
+export default function SearchPage() {
+  const { t } = useI18n();
+
+  return (
     <section className="min-h-[calc(100svh-64px)] bg-transparent px-4 py-8 text-foreground md:min-h-svh">
       <div className="mx-auto w-full max-w-xl">
         <Text
@@ -99,161 +361,30 @@ export default function SearchPage() {
           {t("search.title")}
         </Text>
 
-        {/* Barre de recherche */}
-        <div className={`${fieldContainerClassName} mb-6`}>
-          <ShineBorder
-            borderWidth="0.125rem"
-            duration={15}
-            shineColor={[
-              "var(--color-breezy-green)",
-              "var(--color-breezy-yellow)",
-              "var(--color-breezy-green)",
-            ]}
-            className="z-20"
-          />
-          <div className="relative z-10 flex items-center rounded-[inherit] bg-background">
-            <span className="pointer-events-none absolute left-4 text-muted-foreground">
-              <FiSearch className="h-5 w-5" aria-hidden />
-            </span>
-            <input
-              ref={inputRef}
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t("search.placeholder")}
-              aria-label={t("search.inputAria")}
-              className="search-input w-full rounded-xl bg-transparent py-3 pl-11 pr-11 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-            />
-            {query && (
-              <button
-                onClick={clearSearch}
-                aria-label={t("search.clear")}
-                className="absolute right-4 text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <FiX className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </div>
+        <Tabs defaultValue="users" color="green">
+          <Tabs.List mb="md">
+            <Tabs.Tab
+              value="users"
+              leftSection={<FiUser className="h-4 w-4" />}
+            >
+              {t("search.tabUsers")}
+            </Tabs.Tab>
+            <Tabs.Tab
+              value="tags"
+              leftSection={<FiHash className="h-4 w-4" />}
+            >
+              {t("search.tabTags")}
+            </Tabs.Tab>
+          </Tabs.List>
 
-        {/* Chargement */}
-        {loading && (
-          <Stack gap="sm">
-            <ProfileSkeleton />
-            <ProfileSkeleton />
-            <ProfileSkeleton />
-          </Stack>
-        )}
+          <Tabs.Panel value="users">
+            <UserSearch />
+          </Tabs.Panel>
 
-        {/* Erreur */}
-        {error && !loading && (
-          <Card
-            radius={8}
-            p="md"
-            withBorder
-            style={{ borderColor: "var(--destructive)" }}
-          >
-            <Text size="sm" style={{ color: "var(--destructive)" }}>
-              {error}
-            </Text>
-          </Card>
-        )}
-
-        {/* Aucun résultat */}
-        {!loading && !error && searched && results.length === 0 && (
-          <Stack align="center" gap="xs" py={64}>
-            <FiUser
-              className="h-10 w-10 opacity-30"
-              style={{ color: "var(--muted-foreground)" }}
-              aria-hidden
-            />
-            <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
-              {t("search.noResults", { query })}
-            </Text>
-          </Stack>
-        )}
-
-        {/* Résultats */}
-        {!loading && !error && results.length > 0 && (
-          <Stack gap="sm" role="list" aria-label={t("search.title")}>
-            {results.map((profile) => {
-              const displayName = profile.nickname || profile.username;
-              return (
-                <div key={profile.id_user} role="listitem">
-                  <Link
-                    href={`/profile/${encodeURIComponent(profile.username)}`}
-                    className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-breezy-green"
-                  >
-                    <Card
-                      radius={8}
-                      p="md"
-                      withBorder
-                      bg="var(--card)"
-                      className="transition-colors hover:border-[rgb(var(--breezy-green-rgb)_/_0.5)] hover:bg-accent"
-                      style={{ borderColor: "var(--border)" }}
-                    >
-                      <Group gap="sm" wrap="nowrap">
-                        <Avatar
-                          src={profile.url_photo || null}
-                          alt={displayName}
-                          radius="xl"
-                          size={44}
-                          color="green"
-                        >
-                          {displayName.slice(0, 2).toUpperCase()}
-                        </Avatar>
-                        <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
-                          <Text
-                            fw={700}
-                            size="sm"
-                            truncate
-                            style={{ color: "var(--foreground)" }}
-                          >
-                            {displayName}
-                          </Text>
-                          <Text
-                            size="sm"
-                            truncate
-                            style={{ color: "var(--muted-foreground)" }}
-                          >
-                            @{profile.username}
-                          </Text>
-                          {profile.bio && (
-                            <Text
-                              size="xs"
-                              truncate
-                              mt={2}
-                              style={{
-                                color: "var(--muted-foreground)",
-                                opacity: 0.7,
-                              }}
-                            >
-                              {profile.bio}
-                            </Text>
-                          )}
-                        </Stack>
-                      </Group>
-                    </Card>
-                  </Link>
-                </div>
-              );
-            })}
-          </Stack>
-        )}
-
-        {/* État initial */}
-        {!query && !searched && (
-          <Stack align="center" gap="xs" py={80}>
-            <FiSearch
-              className="h-12 w-12 opacity-20"
-              style={{ color: "var(--muted-foreground)" }}
-              aria-hidden
-            />
-            <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
-              {t("search.initial")}
-            </Text>
-          </Stack>
-        )}
+          <Tabs.Panel value="tags">
+            <TagSearch />
+          </Tabs.Panel>
+        </Tabs>
       </div>
     </section>
   );

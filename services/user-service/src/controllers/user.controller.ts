@@ -4,11 +4,13 @@ import type {
   CreateUserStateInput,
   UpdateUserStateInput,
   UserStateParams,
+  UserStateRoleParams,
 } from "../models/user.model";
 import {
   createUserState,
   deleteUserState,
   getUserStateById,
+  getUserStatesByRole,
   HttpError,
   updateUserState,
 } from "../services/user.service";
@@ -58,6 +60,22 @@ export const getUserStateByIdController: RequestHandler<UserStateParams> = async
       status: "success",
       message: "User state retrieved successfully",
       data: userState,
+    });
+  } catch (error) {
+    handleControllerError(res, error);
+  }
+};
+
+export const getUserStatesByRoleController: RequestHandler<
+  UserStateRoleParams
+> = async (req, res) => {
+  try {
+    const users = await getUserStatesByRole(req.params.role);
+
+    res.status(200).json({
+      status: "success",
+      message: "User states retrieved successfully",
+      data: { users },
     });
   } catch (error) {
     handleControllerError(res, error);

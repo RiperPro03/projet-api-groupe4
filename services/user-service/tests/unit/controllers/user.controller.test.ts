@@ -5,6 +5,7 @@ import type {
   CreateUserStateInput,
   UpdateUserStateInput,
   UserStateParams,
+  UserStateRoleParams,
 } from "../../../src/models/user.model";
 import { createMockResponse } from "../../utils/mock-response";
 
@@ -23,6 +24,7 @@ const serviceMocks = vi.hoisted(() => {
     HttpError: MockHttpError,
     createUserState: vi.fn(),
     getUserStateById: vi.fn(),
+    getUserStatesByRole: vi.fn(),
     updateUserState: vi.fn(),
     deleteUserState: vi.fn(),
   };
@@ -34,6 +36,7 @@ import {
   createUserStateController,
   deleteUserStateController,
   getUserStateByIdController,
+  getUserStatesByRoleController,
   updateUserStateController,
 } from "../../../src/controllers/user.controller";
 
@@ -43,6 +46,7 @@ type CreateUserStateRequest = Request<
   CreateUserStateInput
 >;
 type GetUserStateRequest = Request<UserStateParams>;
+type GetUserStatesByRoleRequest = Request<UserStateRoleParams>;
 type UpdateUserStateRequest = Request<
   UserStateParams,
   unknown,
@@ -110,6 +114,41 @@ describe("user.controller", () => {
         id_user: "user-42",
         role: "USER",
         statuts: "ACTIVE",
+      },
+    });
+  });
+
+  it("getUserStatesByRoleController returns 200 with active users", async () => {
+    const req = {
+      params: {
+        role: "MODERATOR",
+      },
+    } as GetUserStatesByRoleRequest;
+    const res = createMockResponse();
+
+    serviceMocks.getUserStatesByRole.mockResolvedValue([
+      {
+        id_user: "mod-1",
+        role: "MODERATOR",
+        statuts: "ACTIVE",
+      },
+    ]);
+
+    await getUserStatesByRoleController(req, res, vi.fn());
+
+    expect(serviceMocks.getUserStatesByRole).toHaveBeenCalledWith("MODERATOR");
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      status: "success",
+      message: "User states retrieved successfully",
+      data: {
+        users: [
+          {
+            id_user: "mod-1",
+            role: "MODERATOR",
+            statuts: "ACTIVE",
+          },
+        ],
       },
     });
   });

@@ -5,6 +5,7 @@ import {
   validateCreateUserState,
   validateUpdateUserState,
   validateUserStateParams,
+  validateUserStateRoleParams,
 } from "../../../src/middlewares/user-state.validator";
 import { createMockResponse } from "../../utils/mock-response";
 
@@ -113,6 +114,23 @@ describe("user-state.validator", () => {
 
     expect(req.params).toEqual({
       id_user: "user-42",
+    });
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
+  it("validateUserStateRoleParams accepts ADMIN and MODERATOR", () => {
+    const req = {
+      params: {
+        role: "ADMIN",
+      },
+    } as unknown as Request;
+    const res = createMockResponse();
+    const next = vi.fn() as NextFunction;
+
+    validateUserStateRoleParams(req, res, next);
+
+    expect(req.params).toEqual({
+      role: "ADMIN",
     });
     expect(next).toHaveBeenCalledTimes(1);
   });

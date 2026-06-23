@@ -4,6 +4,10 @@ const profileClientMocks = vi.hoisted(() => ({
   getUserIdByUsername: vi.fn(),
 }));
 
+const userClientMocks = vi.hoisted(() => ({
+  getUserIdsByRole: vi.fn(),
+}));
+
 const notificationClientMocks = vi.hoisted(() => ({
   createMentionNotification: vi.fn(),
 }));
@@ -12,16 +16,39 @@ vi.mock("../src/clients/profile.client.js", () => ({
   getUserIdByUsername: profileClientMocks.getUserIdByUsername,
 }));
 
+vi.mock("../src/clients/user.client.js", () => ({
+  getUserIdsByRole: userClientMocks.getUserIdsByRole,
+}));
+
 vi.mock("../src/clients/notification.client.js", () => ({
   createMentionNotification: notificationClientMocks.createMentionNotification,
 }));
 
-import { notifyCommentMentionsSafely } from "../src/services/mention-notification.service.js";
+import {
+  notifyCommentMentionsSafely,
+  resolveMentionedUserIds,
+} from "../src/services/mention-notification.service.js";
 
 describe("mention-notification.service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     notificationClientMocks.createMentionNotification.mockResolvedValue(undefined);
+    userClientMocks.getUserIdsByRole.mockResolvedValue([]);
+  });
+
+  describe("resolveMentionedUserIds", () => {
+    it("retourne les ids des admins et moderateurs mentionnés", async () => {
+      userClientMocks.getUserIdsByRole
+        .mockResolvedValueOnce(["admin-1"])
+        .mockResolvedValueOnce(["mod-1"]);
+
+      const result = await resolveMentionedUserIds(
+        "Signalement @admin @moderator",
+        "user-a",
+      );
+
+      expect(result).toEqual(["admin-1", "mod-1"]);
+    });
   });
 
   describe("notifyCommentMentionsSafely", () => {
@@ -69,6 +96,21 @@ describe("mention-notification.service", () => {
       );
       await vi.waitFor(() => {
         expect(notificationClientMocks.createMentionNotification).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("envoie des notifications pour @admin et @moderator", async () => {
+      userClientMocks.getUserIdsByRole
+        .mockResolvedValueOnce(["admin-1"])
+        .mockResolvedValueOnce(["mod-1"]);
+
+      notifyCommentMentionsSafely(
+        "user-a",
+        "comment-123",
+        "Aide @admin @moderator",
+      );
+      await vi.waitFor(() => {
+        expect(notificationClientMocks.createMentionNotification).toHaveBeenCalledTimes(2);
       });
     });
 

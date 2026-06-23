@@ -10,6 +10,10 @@ const userStateParamsSchema = z.object({
   id_user: z.string().trim().min(1, "id_user is required"),
 });
 
+const userStateRoleParamsSchema = z.object({
+  role: z.enum(USER_STATE_ROLES),
+});
+
 const createUserStateSchema = z.object({
   id_user: z.string().trim().min(1, "id_user is required"),
   role: z.enum(USER_STATE_ROLES).optional(),
@@ -68,9 +72,13 @@ const validateParams =
 export const validateCreateUserState = validateBody(createUserStateSchema);
 export const validateUpdateUserState = validateBody(updateUserStateSchema);
 export const validateUserStateParams = validateParams(userStateParamsSchema);
+export const validateUserStateRoleParams = validateParams(
+  userStateRoleParamsSchema,
+);
 
 export {
   createUserStateSchema,
   updateUserStateSchema,
   userStateParamsSchema,
+  userStateRoleParamsSchema,
 };

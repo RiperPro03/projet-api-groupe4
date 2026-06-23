@@ -25,3 +25,8 @@ export interface UserStateParams {
   [key: string]: string;
   id_user: string;
 }
+
+export interface UserStateRoleParams {
+  [key: string]: string;
+  role: UserStateRole;
+}

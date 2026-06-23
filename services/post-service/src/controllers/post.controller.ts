@@ -205,6 +205,34 @@ async function getAllPosts(req: Request, res: Response) {
     }
 }
 
+async function getPostsByTag(req: Request, res: Response) {
+    try {
+        const tag = getRouteParam(req, "tag")?.trim();
+
+        if (!tag) {
+            return res.status(400).json({
+                status: "error",
+                message: "tag param is required",
+            });
+        }
+
+        const { limit, cursor } = getPaginationParams(req);
+        const page = await postService.getPostsByTag(tag, limit, cursor);
+
+        return res.status(200).json({
+            status: "success",
+            message: "Posts retrieved",
+            data: page,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status: "error",
+            message: "Internal server error",
+        });
+    }
+}
+
 // DELETE /posts/:id — Soft delete d'un post
 async function softDeletePost(req: Request, res: Response) {
     try {
@@ -252,6 +280,7 @@ const postController = {
     getFeedPosts,
     getPostById,
     getAllPosts,
+    getPostsByTag,
     updatePost,
     softDeletePost,
 };

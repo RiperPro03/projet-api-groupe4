@@ -61,12 +61,8 @@ services:
       - post-service
       - media-service
       - follow-service
-      - interaction-service
-<<<<<<< HEAD
       - chat-service
-=======
       - notification-service
->>>>>>> refs/rewritten/main-2
     networks:
       - breezy-network
     deploy: *replicated-service
@@ -158,19 +154,14 @@ services:
       PORT: 3003
       SERVICE_NAME: post-service
       MONGO_URI: mongodb://post-mongodb:27017/${POST_MONGO_DB:-post_db}
-<<<<<<< HEAD
       INTERNAL_NGINX_URL: http://nginx-internal
-    depends_on:
-      - post-mongodb
-      - nginx-internal
-=======
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-10000}
       NOTIFICATION_SERVICE_URL: http://notification-service:3008
       PROFILE_SERVICE_URL: http://profile-service:3006
     depends_on:
       - post-mongodb
       - notification-service
       - profile-service
->>>>>>> refs/rewritten/main-2
     networks:
       - breezy-network
     deploy: *replicated-service

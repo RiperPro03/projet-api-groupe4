@@ -62,7 +62,11 @@ services:
       - media-service
       - follow-service
       - interaction-service
+<<<<<<< HEAD
       - chat-service
+=======
+      - notification-service
+>>>>>>> refs/rewritten/main-2
     networks:
       - breezy-network
     deploy: *replicated-service
@@ -85,7 +89,7 @@ services:
       NODE_ENV: production
       PORT: 4000
       HOSTNAME: 0.0.0.0
-      INTERNAL_API_URL: http://nginx/api
+      INTERNAL_API_URL: http://api-gateway:3000
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
     networks:
       - breezy-network
@@ -154,10 +158,19 @@ services:
       PORT: 3003
       SERVICE_NAME: post-service
       MONGO_URI: mongodb://post-mongodb:27017/${POST_MONGO_DB:-post_db}
+<<<<<<< HEAD
       INTERNAL_NGINX_URL: http://nginx-internal
     depends_on:
       - post-mongodb
       - nginx-internal
+=======
+      NOTIFICATION_SERVICE_URL: http://notification-service:3008
+      PROFILE_SERVICE_URL: http://profile-service:3006
+    depends_on:
+      - post-mongodb
+      - notification-service
+      - profile-service
+>>>>>>> refs/rewritten/main-2
     networks:
       - breezy-network
     deploy: *replicated-service
@@ -173,6 +186,19 @@ services:
     depends_on:
       - interaction-mongodb
       - nginx-internal
+    networks:
+      - breezy-network
+    deploy: *replicated-service
+
+  notification-service:
+    image: ${IMAGE_REGISTRY:-ghcr.io/asrip/projet-api-groupe4}/notification-service:${IMAGE_TAG:?Set IMAGE_TAG}
+    environment:
+      NODE_ENV: production
+      PORT: 3008
+      SERVICE_NAME: notification-service
+      MONGO_URI: mongodb://notification-mongodb:27017/${NOTIFICATION_MONGO_DB:-notification_db}
+    depends_on:
+      - notification-mongodb
     networks:
       - breezy-network
     deploy: *replicated-service
@@ -305,6 +331,19 @@ services:
       retries: 10
     deploy: *singleton-service
 
+  notification-mongodb:
+    image: mongo:8
+    volumes:
+      - notification_mongodb_data:/data/db
+    networks:
+      - breezy-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy: *singleton-service
+
   media-mongodb:
     image: mongo:8
     volumes:
@@ -343,6 +382,7 @@ volumes:
   profile_mongodb_data:
   post_mongodb_data:
   interaction_mongodb_data:
+  notification_mongodb_data:
   media_mongodb_data:
   minio_data:
   certbot_webroot:

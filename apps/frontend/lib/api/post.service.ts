@@ -1,7 +1,7 @@
 import { httpClient } from "./http-client";
 import { getCurrentUserFromApi } from "./current-user.service";
 import type { FetchPostPage, PostPage, PostPageParams } from "@/hooks/usePostList";
-import type { Author, Media, Post } from "@/types/post";
+import type { Author, Post } from "@/types/post";
 
 type ApiPost = {
   id: string;
@@ -9,7 +9,6 @@ type ApiPost = {
   content: string;
   author?: Author;
   tags?: string[];
-  media?: Media[];
   likesCount?: number;
   commentsCount?: number;
   isLiked?: boolean;
@@ -37,7 +36,6 @@ type PostResponse = {
 type CreatePostInput = {
   content: string;
   tags?: string[];
-  media?: Media[];
 };
 
 function mapApiPost(post: ApiPost, likesCount = 0, commentsCount = 0): Post {
@@ -49,7 +47,7 @@ function mapApiPost(post: ApiPost, likesCount = 0, commentsCount = 0): Post {
       username: post.authorId.slice(0, 12),
     },
     content: post.content,
-    media: post.media ?? [],
+    media: [],
     likesCount: post.likesCount ?? likesCount,
     commentsCount: post.commentsCount ?? commentsCount,
     isLiked: post.isLiked ?? false,
@@ -153,7 +151,7 @@ export async function fetchPostById(postId: string): Promise<Post | null> {
   return mapApiPost(data.data.post);
 }
 
-export async function createPost({ content, tags, media }: CreatePostInput): Promise<Post> {
+export async function createPost({ content, tags }: CreatePostInput): Promise<Post> {
   const currentUser = await getCurrentUserFromApi();
   const authorId =
     currentUser.profile?.id_user ?? currentUser.user?.id_user ?? currentUser.auth.id;
@@ -162,7 +160,6 @@ export async function createPost({ content, tags, media }: CreatePostInput): Pro
     authorId,
     content,
     tags,
-    media,
   });
 
   if (!data.data.post) {
@@ -170,8 +167,4 @@ export async function createPost({ content, tags, media }: CreatePostInput): Pro
   }
 
   return mapApiPost(data.data.post);
-}
-
-export async function deletePost(postId: string): Promise<void> {
-  await httpClient.delete(`/posts/${encodeURIComponent(postId)}`);
 }

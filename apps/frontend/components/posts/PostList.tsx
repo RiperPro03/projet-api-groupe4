@@ -1,32 +1,27 @@
 "use client";
 
 import {
-  ActionIcon,
   Alert,
-  Box,
   Button,
   Group,
-  Image,
   Loader,
   Modal,
   Stack,
   Text,
   Textarea,
 } from "@mantine/core";
-import { Dropzone } from "@mantine/dropzone";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FiPlus, FiSearch, FiSend, FiTrash2, FiUpload, FiX } from "react-icons/fi";
+import { FiPlus, FiSearch, FiSend, FiX, FiX } from "react-icons/fi";
 import CommentComposer from "@/components/comments/CommentComposer";
 import CommentThread from "@/components/comments/CommentThread";
 import { AnimatedList } from "@/components/ui/animated-list";
-import { RippleButton } from "@/components/ui/ripple-button";
-import { ShineBorder } from "@/components/ui/shine-border";
+import { MagicCard } from "@/components/ui/magic-card";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
 import { ReportDialog } from "@/components/reports/ReportDialog";
 import { usePostList, type FetchPostPage } from "@/hooks/usePostList";
 import { createComment } from "@/lib/api/comment.service";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
-import { getApiErrorMessage, isApiStatusCode } from "@/lib/api/http-client";
+import { isApiStatusCode } from "@/lib/api/http-client";
 import { likePost, unlikePost } from "@/lib/api/interaction.service";
 import { createPost, fetchPostsByTag, deletePost } from "@/lib/api/post.service";
 import { createContentReport } from "@/lib/api/report.service";
@@ -53,28 +48,6 @@ type PostListProps = {
   showTagSearch?: boolean;
 };
 
-const postMediaMaxFiles = 4;
-const postImageMaxSize = 100 * 1024 * 1024;
-const postVideoMaxSize = 10 * 1024 * 1024 * 1024;
-const postMediaMimeTypes = [
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/webp",
-  "video/mp4",
-  "video/webm",
-];
-const greenButtonClassName =
-  "relative rounded-full border-breezy-green bg-breezy-green px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-breezy-green/90 disabled:cursor-not-allowed disabled:opacity-60";
-
-function isAcceptedPostMedia(file: File) {
-  if (file.type.startsWith("video/")) {
-    return file.size <= postVideoMaxSize;
-  }
-
-  return file.size <= postImageMaxSize;
-}
-
 function PostFeedItem({
   post,
   fetchCommentsForPost,
@@ -100,7 +73,6 @@ function PostFeedItem({
   );
   const likesCount = likeState?.likesCount ?? post.likesCount;
   const isLiked = likeState?.isLiked ?? post.isLiked ?? false;
-  const canDelete = currentUserId === post.author.id;
 
   useEffect(() => {
     dispatch(
@@ -183,7 +155,6 @@ function PostFeedItem({
         onComment={
           canOpenComments ? () => setShowComments((value) => !value) : undefined
         }
-        onDelete={canDelete ? () => onDeletePost(post) : undefined}
         onReport={() => onReportPost(post)}
         onLike={async () => {
           if (isLikePending) {
@@ -258,14 +229,12 @@ export default function PostList({
   const { notify } = useNotifications();
   const listTitle = title ?? t("post.feedTitle");
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const mediaPreviewsRef = useRef<string[]>([]);
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [postContent, setPostContent] = useState("");
   const [selectedPostMedia, setSelectedPostMedia] = useState<File[]>([]);
   const [postMediaPreviews, setPostMediaPreviews] = useState<string[]>([]);
   const [createPostError, setCreatePostError] = useState<string | null>(null);
   const [postActionError, setPostActionError] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [reportPost, setReportPost] = useState<Post | null>(null);
   const [reportError, setReportError] = useState<string | null>(null);
   const [isReportingPost, setIsReportingPost] = useState(false);
@@ -286,61 +255,11 @@ export default function PostList({
     error,
     prependPost,
     loadMore,
-    removePost,
   } = usePostList({
     fetchPosts: effectiveFetchPosts,
     fetchUpdatedPosts: activeTag ? undefined : fetchUpdatedPosts,
     pageSize,
   });
-
-  function updateSelectedPostMedia(files: File[]) {
-    mediaPreviewsRef.current.forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
-
-    const previews = files.map((file) => URL.createObjectURL(file));
-    mediaPreviewsRef.current = previews;
-    setSelectedPostMedia(files);
-    setPostMediaPreviews(previews);
-  }
-
-  function addSelectedPostMedia(files: File[]) {
-    setCreatePostError(null);
-
-    const remainingSlots = postMediaMaxFiles - selectedPostMedia.length;
-    const acceptedFiles = files
-      .filter(isAcceptedPostMedia)
-      .slice(0, Math.max(remainingSlots, 0));
-
-    if (acceptedFiles.length < files.length) {
-      setCreatePostError(t("post.ignoredFiles"));
-    }
-
-    if (acceptedFiles.length === 0) {
-      return;
-    }
-
-    updateSelectedPostMedia([...selectedPostMedia, ...acceptedFiles]);
-  }
-
-  function removeSelectedPostMedia(index: number) {
-    updateSelectedPostMedia(
-      selectedPostMedia.filter((_, selectedIndex) => selectedIndex !== index)
-    );
-  }
-
-  function resetCreatePostForm() {
-    setPostContent("");
-    setCreatePostError(null);
-    updateSelectedPostMedia([]);
-  }
-
-  function closeCreatePostModal() {
-    if (isCreatingPost) {
-      return;
-    }
-
-    setIsCreatePostOpen(false);
-    resetCreatePostForm();
-  }
 
   async function handleCreatePost() {
     const trimmedContent = postContent.trim();
@@ -350,21 +269,12 @@ export default function PostList({
     }
 
     setIsCreatingPost(true);
-    setCreatePostError(null);
 
     try {
       const post = await createPost({ content: trimmedContent });
       prependPost(post);
+      setPostContent("");
       setIsCreatePostOpen(false);
-      resetCreatePostForm();
-    } catch (createError) {
-      setCreatePostError(
-        getApiErrorMessage(
-          createError,
-          t("post.createErrorFallback"),
-          t("common.serverUnreachable")
-        )
-      );
     } finally {
       setIsCreatingPost(false);
     }
@@ -629,35 +539,6 @@ export default function PostList({
             </Alert>
           )}
 
-          <Group justify="flex-end">
-            <div className="relative rounded-full">
-              <ShineBorder
-                borderWidth="0.125rem"
-                duration={15}
-                shineColor={[
-                  "var(--color-breezy-green)",
-                  "var(--color-breezy-yellow)",
-                  "var(--color-breezy-green)",
-                ]}
-                className="z-20"
-              />
-              <RippleButton
-                type="button"
-                rippleColor="var(--color-breezy-black)"
-                disabled={!postContent.trim() || isCreatingPost}
-                onClick={handleCreatePost}
-                className={greenButtonClassName}
-              >
-                <span className="flex items-center gap-2">
-                  <FiSend size={16} />
-                  {isCreatingPost ? t("common.publishing") : t("common.publish")}
-                </span>
-              </RippleButton>
-            </div>
-          </Group>
-        </Stack>
-      </Modal>
-
       <ReportDialog
         opened={reportPost !== null}
         title={t("report.postTitle")}
@@ -677,6 +558,38 @@ export default function PostList({
       <Group justify="space-between" align="center">
         <Text fw={700} style={{ color: "var(--foreground)" }} size="lg">
           {listTitle}
+        </Text>
+        {showCreateButton && (
+          <div className="relative rounded-full">
+            <ShineBorder
+              borderWidth="0.125rem"
+              duration={15}
+              shineColor={[
+                "var(--color-breezy-green)",
+                "var(--color-breezy-yellow)",
+                "var(--color-breezy-green)",
+              ]}
+              className="z-20"
+            />
+            <RippleButton
+              type="button"
+              rippleColor="var(--color-breezy-black)"
+              disabled={!postContent.trim() || isCreatingPost}
+              onClick={handleCreatePost}
+              className={greenButtonClassName}
+            >
+              <span className="flex items-center gap-2">
+                <FiSend size={16} />
+                {isCreatingPost ? t("common.publishing") : t("common.publish")}
+              </span>
+            </RippleButton>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Group justify="space-between" align="center">
+        <Text fw={700} style={{ color: "var(--foreground)" }} size="lg">
+          {title}
           {activeTag && (
             <Text component="span" size="sm" fw={400} ml="xs" style={{ color: "var(--muted-foreground)" }}>
               — #{activeTag}
@@ -744,12 +657,6 @@ export default function PostList({
         </Alert>
       )}
 
-      {postActionError && (
-        <Alert color="red" variant="light" onClose={() => setPostActionError(null)}>
-          {postActionError}
-        </Alert>
-      )}
-
       {posts.length === 0 ? (
         <Text style={{ color: "var(--muted-foreground)" }} ta="center" py="xl">
           Aucun post pour le moment.
@@ -761,7 +668,6 @@ export default function PostList({
               key={post.id}
               post={post}
               fetchCommentsForPost={fetchCommentsForPost}
-              currentUserId={currentUserId}
               onDeletePost={handleDeletePost}
               onReportPost={(post) => {
                 setReportPost(post);

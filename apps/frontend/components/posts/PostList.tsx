@@ -19,12 +19,15 @@ import CommentComposer from "@/components/comments/CommentComposer";
 import CommentThread from "@/components/comments/CommentThread";
 import { AnimatedList } from "@/components/ui/animated-list";
 import { MagicCard } from "@/components/ui/magic-card";
+import { useNotifications } from "@/components/notifications/NotificationProvider";
+import { ReportDialog } from "@/components/reports/ReportDialog";
 import { usePostList, type FetchPostPage } from "@/hooks/usePostList";
 import { createComment } from "@/lib/api/comment.service";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { getApiErrorMessage, httpClient, isApiStatusCode } from "@/lib/api/http-client";
 import { likePost, unlikePost } from "@/lib/api/interaction.service";
 import { createPost, deletePost } from "@/lib/api/post.service";
+import { createContentReport } from "@/lib/api/report.service";
 import { getAuthenticatedUserId } from "@/lib/current-user-ids";
 import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -146,11 +149,13 @@ function PostFeedItem({
   fetchCommentsForPost,
   currentUserId,
   onDeletePost,
+  onReportPost,
 }: {
   post: Post;
   fetchCommentsForPost?: (postId: string) => Promise<Comment[]>;
   currentUserId: string | null;
   onDeletePost: (post: Post) => Promise<void>;
+  onReportPost: (post: Post) => void;
 }) {
   const { t } = useI18n();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -329,6 +334,7 @@ function PostFeedItem({
               }
             : undefined
         }
+        onReport={() => onReportPost(post)}
         onLike={async () => {
           if (isLikePending) {
             return;
@@ -395,6 +401,7 @@ export default function PostList({
   showCreateButton = true,
 }: PostListProps) {
   const { t } = useI18n();
+  const { notify } = useNotifications();
   const listTitle = title ?? t("post.feedTitle");
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const mediaPreviewsRef = useRef<string[]>([]);
@@ -404,6 +411,9 @@ export default function PostList({
   const [postMediaPreviews, setPostMediaPreviews] = useState<string[]>([]);
   const [createPostError, setCreatePostError] = useState<string | null>(null);
   const [postActionError, setPostActionError] = useState<string | null>(null);
+  const [reportPost, setReportPost] = useState<Post | null>(null);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [isReportingPost, setIsReportingPost] = useState(false);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const {
@@ -539,6 +549,38 @@ export default function PostList({
           ),
         })
       );
+    }
+  }
+
+  async function handleReportPost(message: string) {
+    if (!reportPost || isReportingPost) {
+      return;
+    }
+
+    setIsReportingPost(true);
+    setReportError(null);
+
+    try {
+      await createContentReport({
+        message,
+        postId: reportPost.id,
+      });
+      setReportPost(null);
+      notify({
+        title: t("report.successTitle"),
+        description: t("report.postSuccessDescription"),
+        tone: "success",
+      });
+    } catch (error) {
+      setReportError(
+        getApiErrorMessage(
+          error,
+          t("report.errorDescription"),
+          t("common.serverUnreachable")
+        )
+      );
+    } finally {
+      setIsReportingPost(false);
     }
   }
 
@@ -806,6 +848,22 @@ export default function PostList({
         </MagicCard>
       </Modal>
 
+      <ReportDialog
+        opened={reportPost !== null}
+        title={t("report.postTitle")}
+        description={t("report.postDescription")}
+        placeholder={t("report.postPlaceholder")}
+        error={reportError}
+        isSubmitting={isReportingPost}
+        onClose={() => {
+          if (!isReportingPost) {
+            setReportPost(null);
+            setReportError(null);
+          }
+        }}
+        onSubmit={handleReportPost}
+      />
+
       <Group justify="space-between" align="center">
         <Text fw={700} style={{ color: "var(--foreground)" }} size="lg">
           {listTitle}
@@ -876,6 +934,10 @@ export default function PostList({
               currentUserId={currentUserId}
               fetchCommentsForPost={fetchCommentsForPost}
               onDeletePost={handleDeletePost}
+              onReportPost={(post) => {
+                setReportPost(post);
+                setReportError(null);
+              }}
             />
           ))}
         </AnimatedList>

@@ -1,6 +1,6 @@
-export type NotificationType = "like" | "mention";
+export type NotificationType = "like" | "mention" | "follow";
 
-export type NotificationResourceType = "post" | "comment";
+export type NotificationResourceType = "post" | "comment" | "user";
 
 export type CreateNotificationInput = {
   recipientId: string;

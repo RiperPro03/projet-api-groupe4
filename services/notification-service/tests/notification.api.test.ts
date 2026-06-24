@@ -23,6 +23,7 @@ vi.mock("../src/models/notification.model.js", () => ({
 
 import app from "../src/app.js";
 import {
+  createFollowNotificationInput,
   createLikeNotificationInput,
   createMentionNotificationInput,
   createNotificationDocument,
@@ -84,6 +85,25 @@ describe("notification API", () => {
 
       expect(response.status).toBe(201);
       expect(response.body.data.notification.type).toBe("mention");
+    });
+
+    it("crée une notification de follow", async () => {
+      notificationMocks.create.mockResolvedValue(
+        createNotificationDocument({
+          type: "follow",
+          resourceType: "user",
+          resourceId: "user-a",
+          message: "Un utilisateur a commencé à vous suivre",
+        })
+      );
+
+      const response = await request(app)
+        .post("/notifications")
+        .send(createFollowNotificationInput());
+
+      expect(response.status).toBe(201);
+      expect(response.body.data.notification.type).toBe("follow");
+      expect(response.body.data.notification.resourceType).toBe("user");
     });
   });
 

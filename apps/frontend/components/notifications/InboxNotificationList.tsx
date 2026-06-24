@@ -130,6 +130,7 @@ export default function InboxNotificationList({
           <Tabs.Tab value="all">{t("notifications.tabAll")}</Tabs.Tab>
           <Tabs.Tab value="like">{t("notifications.tabLikes")}</Tabs.Tab>
           <Tabs.Tab value="mention">{t("notifications.tabMentions")}</Tabs.Tab>
+          <Tabs.Tab value="follow">{t("notifications.tabFollows")}</Tabs.Tab>
         </Tabs.List>
       </Tabs>
 

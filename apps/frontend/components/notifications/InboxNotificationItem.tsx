@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ActionIcon, Badge, Card, Group, Text } from "@mantine/core";
-import { FiAtSign, FiHeart, FiTrash2 } from "react-icons/fi";
+import { FiAtSign, FiHeart, FiTrash2, FiUserPlus } from "react-icons/fi";
 import {
   getNotificationAriaLabel,
   getNotificationDisplayMessage,
@@ -38,14 +38,21 @@ export default function InboxNotificationItem({
 }: InboxNotificationItemProps) {
   const { dateLocale, t } = useI18n();
   const isMention = notification.type === "mention";
+  const isFollow = notification.type === "follow";
   const notificationHref = getNotificationHref(notification);
   const isNavigable = isNotificationNavigable(notification);
-  const Icon = isMention ? FiAtSign : FiHeart;
-  const accentColor = isMention ? "amber" : "green";
-  const unreadDotClass = isMention ? "bg-amber-500" : "bg-breezy-green";
+  const Icon = isMention ? FiAtSign : isFollow ? FiUserPlus : FiHeart;
+  const accentColor = isMention ? "amber" : isFollow ? "blue" : "green";
+  const unreadDotClass = isMention
+    ? "bg-amber-500"
+    : isFollow
+      ? "bg-blue-500"
+      : "bg-breezy-green";
   const iconWrapperClass = isMention
     ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-    : "bg-breezy-green/15 text-breezy-green";
+    : isFollow
+      ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
+      : "bg-breezy-green/15 text-breezy-green";
 
   async function handleClick() {
     if (!notification.isRead) {
@@ -61,10 +68,14 @@ export default function InboxNotificationItem({
 
   const unreadBackground = isMention
     ? "color-mix(in srgb, var(--mantine-color-amber-5) 8%, var(--card))"
-    : "color-mix(in srgb, var(--breezy-green) 8%, var(--card))";
+    : isFollow
+      ? "color-mix(in srgb, var(--mantine-color-blue-5) 8%, var(--card))"
+      : "color-mix(in srgb, var(--breezy-green) 8%, var(--card))";
   const unreadBorder = isMention
     ? "color-mix(in srgb, var(--mantine-color-amber-5) 35%, var(--border))"
-    : "color-mix(in srgb, var(--breezy-green) 35%, var(--border))";
+    : isFollow
+      ? "color-mix(in srgb, var(--mantine-color-blue-5) 35%, var(--border))"
+      : "color-mix(in srgb, var(--breezy-green) 35%, var(--border))";
 
   const content = (
     <Card

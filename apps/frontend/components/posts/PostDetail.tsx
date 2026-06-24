@@ -7,11 +7,12 @@ import { FiArrowLeft } from "react-icons/fi";
 import CommentComposer from "@/components/comments/CommentComposer";
 import CommentThread from "@/components/comments/CommentThread";
 import ContentCard from "@/components/feed/ContentCard";
-import { createComment, fetchPostComments } from "@/lib/api/comment.service";
+import { createComment, deleteComment, fetchPostComments } from "@/lib/api/comment.service";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
-import { isApiStatusCode } from "@/lib/api/http-client";
+import { getApiErrorMessage, isApiStatusCode } from "@/lib/api/http-client";
 import { likePost, unlikePost } from "@/lib/api/interaction.service";
 import { fetchPostById } from "@/lib/api/post.service";
+import { removeCommentBranch } from "@/lib/comments/comment-state";
 import { getAuthenticatedUserId } from "@/lib/current-user-ids";
 import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -37,6 +38,7 @@ export default function PostDetail({ postId }: PostDetailProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [commentActionError, setCommentActionError] = useState<string | null>(null);
   const [isLikePending, setIsLikePending] = useState(false);
   const dispatch = useAppDispatch();
   const likeState = useAppSelector((state) =>
@@ -168,6 +170,30 @@ export default function PostDetail({ postId }: PostDetailProps) {
     );
   }
 
+  async function handleDeleteComment(comment: Comment) {
+    const previousComments = comments;
+
+    setCommentActionError(null);
+    setComments((currentComments) =>
+      removeCommentBranch(currentComments, comment.id)
+    );
+
+    try {
+      await deleteComment(comment.id);
+    } catch (deleteError) {
+      setComments(previousComments);
+      setCommentActionError(
+        t("comment.deleteImpossible", {
+          message: getApiErrorMessage(
+            deleteError,
+            t("common.unknownError"),
+            t("common.serverUnreachable")
+          ),
+        })
+      );
+    }
+  }
+
   return (
     <Stack gap="md">
       {backButton}
@@ -218,10 +244,23 @@ export default function PostDetail({ postId }: PostDetailProps) {
         }}
       />
       <CommentComposer onSubmit={handleCommentSubmit} />
+      {commentActionError && (
+        <Alert
+          variant="light"
+          style={{
+            backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+            borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+            color: "var(--destructive)",
+          }}
+        >
+          {commentActionError}
+        </Alert>
+      )}
       <CommentThread
         comments={comments}
         highlightCommentId={highlightCommentId}
         onReplySubmit={handleReplySubmit}
+        onDeleteSubmit={handleDeleteComment}
       />
     </Stack>
   );

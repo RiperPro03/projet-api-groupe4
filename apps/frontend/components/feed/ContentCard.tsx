@@ -107,42 +107,58 @@ function MediaGrid({ media = [] }: { media?: Media[] }) {
         width: "100%",
       }}
     >
-      {media.map((item) => (
-        <Box
-          key={item.id}
-          style={{
-            aspectRatio: media.length === 1 ? "16 / 10" : "1 / 1",
-            background: "var(--muted)",
-            border: "1px solid var(--border)",
-            borderRadius: 8,
-            overflow: "hidden",
-          }}
-        >
-          {item.type === "image" ? (
-            <Image
-              src={item.url}
-              alt={item.alt ?? ""}
-              h="100%"
-              w="100%"
-              fit="cover"
-            />
-          ) : (
-            <video
-              controls
-              preload="metadata"
-              aria-label={item.alt ?? t("content.videoContent")}
-              style={{
-                display: "block",
-                height: "100%",
-                objectFit: "cover",
-                width: "100%",
-              }}
-            >
-              <source src={item.url} />
-            </video>
-          )}
-        </Box>
-      ))}
+      {media.map((item) => {
+        const isSingleMedia = media.length === 1;
+
+        return (
+          <Box
+            key={item.id}
+            style={{
+              alignItems: "center",
+              aspectRatio: isSingleMedia ? undefined : "1 / 1",
+              background: "var(--muted)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              display: "flex",
+              justifyContent: "center",
+              maxHeight: isSingleMedia ? "min(70vh, 640px)" : undefined,
+              overflow: "hidden",
+            }}
+          >
+            {item.type === "image" ? (
+              <Image
+                src={item.url}
+                alt={item.alt ?? ""}
+                fit="contain"
+                style={{
+                  display: "block",
+                  height: isSingleMedia ? "auto" : "100%",
+                  maxHeight: isSingleMedia ? "min(70vh, 640px)" : "100%",
+                  maxWidth: "100%",
+                  objectFit: "contain",
+                  width: isSingleMedia ? "auto" : "100%",
+                }}
+              />
+            ) : (
+              <video
+                controls
+                preload="metadata"
+                aria-label={item.alt ?? t("content.videoContent")}
+                style={{
+                  display: "block",
+                  height: isSingleMedia ? "auto" : "100%",
+                  maxHeight: isSingleMedia ? "min(70vh, 640px)" : "100%",
+                  maxWidth: "100%",
+                  objectFit: "contain",
+                  width: isSingleMedia ? "auto" : "100%",
+                }}
+              >
+                <source src={item.url} />
+              </video>
+            )}
+          </Box>
+        );
+      })}
     </Box>
   );
 }

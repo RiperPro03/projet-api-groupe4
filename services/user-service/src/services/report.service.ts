@@ -10,6 +10,7 @@ const contentReportSelect = {
   id: true,
   message: true,
   postId: true,
+  commentId: true,
   reportedUserId: true,
   createdAt: true,
   updatedAt: true,
@@ -65,8 +66,15 @@ export const updateContentReport = async (
 ): Promise<ContentReport> => {
   const updateData = {
     ...data,
-    ...(data.postId !== undefined ? { reportedUserId: null } : {}),
-    ...(data.reportedUserId !== undefined ? { postId: null } : {}),
+    ...(data.postId !== undefined
+      ? { commentId: null, reportedUserId: null }
+      : {}),
+    ...(data.commentId !== undefined
+      ? { postId: null, reportedUserId: null }
+      : {}),
+    ...(data.reportedUserId !== undefined
+      ? { postId: null, commentId: null }
+      : {}),
   };
 
   try {

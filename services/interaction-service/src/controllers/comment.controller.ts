@@ -123,7 +123,11 @@ export const deleteCommentHandler: RequestHandler = async (req, res, next) => {
       throw new CommentError("commentId est requis", 400);
     }
 
-    const comment = await softDeleteComment(commentId, req.header("x-user-id"));
+    const comment = await softDeleteComment(
+      commentId,
+      req.header("x-user-id"),
+      req.header("x-user-role")
+    );
 
     res.status(200).json({
       status: "success",

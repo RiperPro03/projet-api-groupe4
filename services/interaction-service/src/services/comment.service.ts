@@ -4,6 +4,8 @@ import type {
   CreateCommentInput,
 } from "../types/comment.types.js";
 
+const moderationRoles = new Set(["MODERATOR", "ADMIN"]);
+
 export class CommentError extends Error {
   constructor(
     message: string,
@@ -127,7 +129,8 @@ export async function getCommentById(
 
 export async function softDeleteComment(
   commentId: string,
-  requesterId?: string | null
+  requesterId?: string | null,
+  requesterRole?: string | null
 ): Promise<CommentResponse> {
   const resolvedCommentId = requireNonEmpty(commentId, "commentId");
   const comment = await Comment.findOne({
@@ -139,7 +142,9 @@ export async function softDeleteComment(
     throw new CommentError("Commentaire introuvable", 404);
   }
 
-  if (requesterId && comment.authorId !== requesterId) {
+  const canModerate = requesterRole ? moderationRoles.has(requesterRole) : false;
+
+  if (!canModerate && (!requesterId || comment.authorId !== requesterId)) {
     throw new CommentError("Forbidden", 403);
   }
 

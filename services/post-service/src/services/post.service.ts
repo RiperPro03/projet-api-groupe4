@@ -11,6 +11,8 @@ import type {
     PostResponse,
 } from "../types/post.types";
 
+const moderationRoles = new Set(["MODERATOR", "ADMIN"]);
+
 function sanitizePost(post: InstanceType<typeof Post>): PostResponse {
     return {
         id: String(post._id),
@@ -185,7 +187,8 @@ async function getPostsByTag(
 
 async function softDeletePost(
     postId: string,
-    requesterId?: string | null
+    requesterId?: string | null,
+    requesterRole?: string | null
 ): Promise<PostResponse> {
     const post = await Post.findById(postId);
 
@@ -193,7 +196,9 @@ async function softDeletePost(
         throw new Error("POST_NOT_FOUND");
     }
 
-    if (requesterId && post.authorId !== requesterId) {
+    const canModerate = requesterRole ? moderationRoles.has(requesterRole) : false;
+
+    if (!canModerate && (!requesterId || post.authorId !== requesterId)) {
         throw new Error("POST_FORBIDDEN");
     }
 

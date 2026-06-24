@@ -28,6 +28,7 @@ describe("report.service", () => {
     id: true,
     message: true,
     postId: true,
+    commentId: true,
     reportedUserId: true,
     createdAt: true,
     updatedAt: true,
@@ -43,6 +44,7 @@ describe("report.service", () => {
         id: "report-1",
         message: "Contenu inapproprie",
         postId: "post-1",
+        commentId: null,
         reportedUserId: null,
         createdAt: now,
         updatedAt: now,
@@ -65,6 +67,7 @@ describe("report.service", () => {
       id: "report-1",
       message: "Contenu inapproprie",
       postId: null,
+      commentId: null,
       reportedUserId: "user-1",
       createdAt: now,
       updatedAt: now,
@@ -99,6 +102,7 @@ describe("report.service", () => {
     const report = {
       id: "report-1",
       ...payload,
+      commentId: null,
       reportedUserId: null,
       createdAt: now,
       updatedAt: now,
@@ -120,6 +124,7 @@ describe("report.service", () => {
       id: "report-1",
       message: "Message modifie",
       postId: "post-1",
+      commentId: null,
       reportedUserId: null,
       createdAt: now,
       updatedAt: now,
@@ -144,6 +149,7 @@ describe("report.service", () => {
       id: "report-1",
       message: "Contenu inapproprie",
       postId: null,
+      commentId: null,
       reportedUserId: "user-1",
       createdAt: now,
       updatedAt: now,
@@ -157,7 +163,32 @@ describe("report.service", () => {
 
     expect(prismaMocks.update).toHaveBeenCalledWith({
       where: { id: "report-1" },
-      data: { reportedUserId: "user-1", postId: null },
+      data: { reportedUserId: "user-1", postId: null, commentId: null },
+      select: contentReportSelect,
+    });
+    expect(result).toEqual(report);
+  });
+
+  it("updateContentReport clears other targets when a commentId is provided", async () => {
+    const report = {
+      id: "report-1",
+      message: "Contenu inapproprie",
+      postId: null,
+      commentId: "comment-1",
+      reportedUserId: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    prismaMocks.update.mockResolvedValue(report);
+
+    const result = await updateContentReport("report-1", {
+      commentId: "comment-1",
+    });
+
+    expect(prismaMocks.update).toHaveBeenCalledWith({
+      where: { id: "report-1" },
+      data: { commentId: "comment-1", postId: null, reportedUserId: null },
       select: contentReportSelect,
     });
     expect(result).toEqual(report);

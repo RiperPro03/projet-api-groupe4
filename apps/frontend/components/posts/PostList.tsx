@@ -425,6 +425,7 @@ function PostFeedItem({
             <CommentThread
               comments={comments}
               maxVisualDepth={2}
+              allowReport
               onReplySubmit={handleReplySubmit}
               onDeleteSubmit={handleDeleteComment}
             />

@@ -157,6 +157,22 @@ describe("post.service", () => {
     );
   });
 
+  it.each(["MODERATOR", "ADMIN"])(
+    "soft delete un post par un %s meme si ce n'est pas l'auteur",
+    async (role) => {
+      const document = createPostDocument();
+      postMocks.findById.mockResolvedValue(document);
+
+      const post = await postService.softDeletePost("post-123", "user-b", role);
+
+      expect(post.deletedAt).toBeInstanceOf(Date);
+      expect(document.save).toHaveBeenCalled();
+      expect(interactionMocks.deletePostInteractions).toHaveBeenCalledWith(
+        "post-123",
+      );
+    },
+  );
+
   it("nettoie les interactions meme si le post est deja supprime", async () => {
     const deletedAt = new Date("2026-06-23T10:00:00.000Z");
     const document = createPostDocument({ deletedAt });
@@ -177,6 +193,15 @@ describe("post.service", () => {
     await expect(
       postService.softDeletePost("post-123", "user-b"),
     ).rejects.toThrow("POST_FORBIDDEN");
+    expect(interactionMocks.deletePostInteractions).not.toHaveBeenCalled();
+  });
+
+  it("refuse le soft delete sans demandeur authentifie", async () => {
+    postMocks.findById.mockResolvedValue(createPostDocument());
+
+    await expect(postService.softDeletePost("post-123")).rejects.toThrow(
+      "POST_FORBIDDEN",
+    );
     expect(interactionMocks.deletePostInteractions).not.toHaveBeenCalled();
   });
 });

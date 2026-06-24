@@ -5,10 +5,13 @@ import { Box, Group, Modal, Paper, Stack, Text } from "@mantine/core";
 import { FiTrash2 } from "react-icons/fi";
 import CommentComposer from "@/components/comments/CommentComposer";
 import ContentCard from "@/components/feed/ContentCard";
+import { ReportDialog } from "@/components/reports/ReportDialog";
+import { useNotifications } from "@/components/notifications/NotificationProvider";
 import { RippleButton } from "@/components/ui/ripple-button";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
-import { isApiStatusCode } from "@/lib/api/http-client";
+import { getApiErrorMessage, isApiStatusCode } from "@/lib/api/http-client";
 import { likeComment, unlikeComment } from "@/lib/api/interaction.service";
+import { createContentReport } from "@/lib/api/report.service";
 import { getAuthenticatedUserId } from "@/lib/current-user-ids";
 import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -24,6 +27,7 @@ type CommentThreadProps = {
   comments: Comment[];
   maxVisualDepth?: number;
   highlightCommentId?: string | null;
+  allowReport?: boolean;
   onReplySubmit?: (parentComment: Comment, content: string) => void | Promise<void>;
   onDeleteSubmit?: (comment: Comment) => void | Promise<void>;
 };
@@ -73,6 +77,7 @@ function ThreadNode({
   onCancelReply,
   onReplySubmit,
   onDeleteSubmit,
+  onStartReport,
   currentUserId,
 }: {
   node: CommentNode;
@@ -84,6 +89,7 @@ function ThreadNode({
   onCancelReply: () => void;
   onReplySubmit?: (parentComment: Comment, content: string) => void | Promise<void>;
   onDeleteSubmit?: (comment: Comment) => void | Promise<void>;
+  onStartReport?: (comment: Comment) => void;
   currentUserId: string | null;
 }) {
   const { t } = useI18n();
@@ -259,6 +265,7 @@ function ThreadNode({
                   }
                 : undefined
             }
+            onReport={onStartReport ? () => onStartReport(node) : undefined}
             onComment={() => onStartReply(node)}
             onLike={handleLike}
           />
@@ -308,6 +315,7 @@ function ThreadNode({
               onCancelReply={onCancelReply}
               onReplySubmit={onReplySubmit}
               onDeleteSubmit={onDeleteSubmit}
+              onStartReport={onStartReport}
               currentUserId={currentUserId}
             />
           ))}
@@ -321,13 +329,50 @@ export default function CommentThread({
   comments,
   maxVisualDepth = 3,
   highlightCommentId = null,
+  allowReport = false,
   onReplySubmit,
   onDeleteSubmit,
 }: CommentThreadProps) {
   const { t } = useI18n();
+  const { notify } = useNotifications();
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [reportComment, setReportComment] = useState<Comment | null>(null);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [isReportingComment, setIsReportingComment] = useState(false);
   const tree = buildCommentTree(comments);
+
+  async function handleReportComment(message: string) {
+    if (!reportComment || isReportingComment) {
+      return;
+    }
+
+    setIsReportingComment(true);
+    setReportError(null);
+
+    try {
+      await createContentReport({
+        message,
+        commentId: reportComment.id,
+      });
+      setReportComment(null);
+      notify({
+        title: t("report.successTitle"),
+        description: t("report.commentSuccessDescription"),
+        tone: "success",
+      });
+    } catch (error) {
+      setReportError(
+        getApiErrorMessage(
+          error,
+          t("report.errorDescription"),
+          t("common.serverUnreachable")
+        )
+      );
+    } finally {
+      setIsReportingComment(false);
+    }
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -355,22 +400,48 @@ export default function CommentThread({
   }
 
   return (
-    <Stack gap="md">
-      {tree.map((node) => (
-        <ThreadNode
-          key={node.id}
-          node={node}
-          depth={0}
-          maxVisualDepth={maxVisualDepth}
-          activeReplyId={activeReplyId}
-          highlightCommentId={highlightCommentId}
-          onStartReply={(comment) => setActiveReplyId(comment.id)}
-          onCancelReply={() => setActiveReplyId(null)}
-          onReplySubmit={onReplySubmit}
-          onDeleteSubmit={onDeleteSubmit}
-          currentUserId={currentUserId}
-        />
-      ))}
-    </Stack>
+    <>
+      <ReportDialog
+        opened={reportComment !== null}
+        title={t("report.commentTitle")}
+        description={t("report.commentDescription")}
+        placeholder={t("report.commentPlaceholder")}
+        error={reportError}
+        isSubmitting={isReportingComment}
+        onClose={() => {
+          if (!isReportingComment) {
+            setReportComment(null);
+            setReportError(null);
+          }
+        }}
+        onSubmit={handleReportComment}
+      />
+
+      <Stack gap="md">
+        {tree.map((node) => (
+          <ThreadNode
+            key={node.id}
+            node={node}
+            depth={0}
+            maxVisualDepth={maxVisualDepth}
+            activeReplyId={activeReplyId}
+            highlightCommentId={highlightCommentId}
+            onStartReply={(comment) => setActiveReplyId(comment.id)}
+            onCancelReply={() => setActiveReplyId(null)}
+            onReplySubmit={onReplySubmit}
+            onDeleteSubmit={onDeleteSubmit}
+            onStartReport={
+              allowReport
+                ? (comment) => {
+                    setReportError(null);
+                    setReportComment(comment);
+                  }
+                : undefined
+            }
+            currentUserId={currentUserId}
+          />
+        ))}
+      </Stack>
+    </>
   );
 }

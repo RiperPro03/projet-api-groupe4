@@ -85,7 +85,8 @@ describe("report routes", () => {
       errors: [
         {
           path: "body",
-          message: "Exactly one of postId or reportedUserId must be provided",
+          message:
+            "Exactly one of postId, commentId or reportedUserId must be provided",
         },
       ],
     });
@@ -96,6 +97,7 @@ describe("report routes", () => {
     const response = await request(app).post("/users-state/reports").send({
       message: "Contenu inapproprie",
       postId: "post-1",
+      commentId: "comment-1",
       reportedUserId: "user-1",
     });
 
@@ -106,7 +108,8 @@ describe("report routes", () => {
       errors: [
         {
           path: "body",
-          message: "Exactly one of postId or reportedUserId must be provided",
+          message:
+            "Exactly one of postId, commentId or reportedUserId must be provided",
         },
       ],
     });

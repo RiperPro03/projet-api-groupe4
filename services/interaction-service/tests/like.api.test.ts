@@ -379,5 +379,30 @@ describe("like API", () => {
       expect(response.body.error).toBe("Forbidden");
       expect(comment.save).not.toHaveBeenCalled();
     });
+
+    it("autorise la suppression par un moderateur meme si ce n'est pas l'auteur", async () => {
+      const comment = {
+        _id: "comment-456",
+        postId: "post-123",
+        authorId: "alice",
+        parentCommentId: null,
+        content: "Bonjour",
+        createdAt: new Date("2026-01-01T10:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T10:00:00.000Z"),
+        deletedAt: null,
+        save: vi.fn().mockResolvedValue(undefined),
+      };
+      commentMocks.findOne.mockResolvedValue(comment);
+
+      const response = await request(app)
+        .delete("/comments/comment-456")
+        .set("x-user-id", "moderator-1")
+        .set("x-user-role", "MODERATOR");
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe("Comment deleted");
+      expect(comment.deletedAt).toBeInstanceOf(Date);
+      expect(comment.save).toHaveBeenCalledOnce();
+    });
   });
 });

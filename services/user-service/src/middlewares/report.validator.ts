@@ -7,6 +7,7 @@ const contentReportParamsSchema = z.object({
 
 const reportTargetSchema = {
   postId: z.string().trim().min(1, "postId is required").optional(),
+  commentId: z.string().trim().min(1, "commentId is required").optional(),
   reportedUserId: z
     .string()
     .trim()
@@ -16,10 +17,12 @@ const reportTargetSchema = {
 
 const hasExactlyOneReportTarget = (data: {
   postId?: string;
+  commentId?: string;
   reportedUserId?: string;
 }) =>
-  [data.postId, data.reportedUserId].filter((value) => value !== undefined)
-    .length === 1;
+  [data.postId, data.commentId, data.reportedUserId].filter(
+    (value) => value !== undefined,
+  ).length === 1;
 
 const createContentReportSchema = z
   .object({
@@ -27,7 +30,7 @@ const createContentReportSchema = z
     ...reportTargetSchema,
   })
   .refine(hasExactlyOneReportTarget, {
-    message: "Exactly one of postId or reportedUserId must be provided",
+    message: "Exactly one of postId, commentId or reportedUserId must be provided",
   });
 
 const updateContentReportSchema = z
@@ -39,6 +42,7 @@ const updateContentReportSchema = z
     (data) =>
       data.message !== undefined ||
       data.postId !== undefined ||
+      data.commentId !== undefined ||
       data.reportedUserId !== undefined,
     {
       message: "At least one field must be provided",
@@ -46,9 +50,11 @@ const updateContentReportSchema = z
   )
   .refine(
     (data) =>
-      data.postId === undefined || data.reportedUserId === undefined,
+      [data.postId, data.commentId, data.reportedUserId].filter(
+        (value) => value !== undefined,
+      ).length <= 1,
     {
-      message: "Only one of postId or reportedUserId can be provided",
+      message: "Only one of postId, commentId or reportedUserId can be provided",
     },
   );
 

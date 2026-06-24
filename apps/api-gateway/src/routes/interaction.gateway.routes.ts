@@ -7,6 +7,7 @@ import {
 import { authMiddleware } from "../middlewares/auth.middleware";
 import {
   authenticatedRoles,
+  moderationRoles,
   requireBodyOwnerOrRoles,
   requireCommentOwnerOrRoles,
   requireOwnerOrRoles,
@@ -44,7 +45,7 @@ router.all("/comments/likes/status", authMiddleware, requireOwnerOrRoles({ roles
 router.delete(
   "/comments/:commentId",
   authMiddleware,
-  requireCommentOwnerOrRoles([]),
+  requireCommentOwnerOrRoles(moderationRoles),
   forwardInteractionRequest,
 );
 

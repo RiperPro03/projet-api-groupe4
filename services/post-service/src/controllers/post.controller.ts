@@ -246,7 +246,12 @@ async function softDeletePost(req: Request, res: Response) {
         }
 
         const requesterId = req.header("x-user-id");
-        const post = await postService.softDeletePost(postId, requesterId);
+        const requesterRole = req.header("x-user-role");
+        const post = await postService.softDeletePost(
+            postId,
+            requesterId,
+            requesterRole
+        );
 
         return res.status(200).json({
             status: "success",

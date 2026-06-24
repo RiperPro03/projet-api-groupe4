@@ -162,3 +162,7 @@ export async function createComment({
     getCurrentUserAuthor(currentUser, authorId)
   );
 }
+
+export async function deleteComment(commentId: string) {
+  await httpClient.delete(`/comments/${encodeURIComponent(commentId)}`);
+}

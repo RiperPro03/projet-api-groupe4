@@ -62,7 +62,6 @@ export default function Navbar({
 
     useEffect(() => {
         if (!currentUser) {
-            setChatUnreadCount(0);
             return;
         }
 
@@ -110,7 +109,7 @@ export default function Navbar({
     const links = [
         { href: "/", label: t("nav.home"), icon: FiHome },
         { href: "/search", label: t("nav.search"), icon: FiSearch },
-        { href: "/chat", label: "Messages", icon: FiMessageCircle },
+        { href: "/chat", label: t("nav.messages"), icon: FiMessageCircle },
         { href: "/notif", label: t("nav.notifications"), icon: FiBell },
         ...(canAccessAdmin
             ? [{ href: "/admin", label: t("nav.admin"), icon: FiShield }]

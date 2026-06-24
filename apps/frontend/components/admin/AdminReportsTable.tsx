@@ -8,6 +8,7 @@ import {
   Card,
   Group,
   Loader,
+  Modal,
   ScrollArea,
   SegmentedControl,
   Stack,
@@ -18,15 +19,19 @@ import {
 import {
   FiArrowLeft,
   FiExternalLink,
+  FiFileMinus,
   FiFileText,
   FiFlag,
+  FiMessageCircle,
   FiRefreshCw,
   FiTrash2,
   FiUser,
   FiUsers,
 } from "react-icons/fi";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
+import { deleteComment, fetchCommentById } from "@/lib/api/comment.service";
 import { getApiErrorMessage } from "@/lib/api/http-client";
+import { deletePost } from "@/lib/api/post.service";
 import { getProfileById, type PublicProfile } from "@/lib/api/profile.service";
 import {
   deleteContentReport,
@@ -34,11 +39,25 @@ import {
   type ContentReport,
 } from "@/lib/api/report.service";
 import { useI18n } from "@/lib/i18n/client";
+import { RippleButton } from "@/components/ui/ripple-button";
 
-type ReportFilter = "all" | "posts" | "users";
+type ReportFilter = "all" | "posts" | "comments" | "users";
+
+const secondaryButtonClassName =
+  "rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60";
+const destructiveButtonClassName =
+  "rounded-full border-0 bg-destructive px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-destructive/20 transition-colors hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-60";
 
 function getReportTargetType(report: ContentReport) {
-  return report.reportedUserId ? "user" : "post";
+  if (report.reportedUserId) {
+    return "user";
+  }
+
+  if (report.commentId) {
+    return "comment";
+  }
+
+  return "post";
 }
 
 export function AdminReportsTable() {
@@ -48,12 +67,25 @@ export function AdminReportsTable() {
   const [reportedProfiles, setReportedProfiles] = useState<
     Map<string, PublicProfile>
   >(() => new Map());
+  const [commentPostIds, setCommentPostIds] = useState<Map<string, string>>(
+    () => new Map()
+  );
   const [filter, setFilter] = useState<ReportFilter>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingReportIds, setDeletingReportIds] = useState<Set<string>>(
     () => new Set()
   );
+  const [deletingPostIds, setDeletingPostIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [deletingCommentIds, setDeletingCommentIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [postDeleteReport, setPostDeleteReport] =
+    useState<ContentReport | null>(null);
+  const [commentDeleteReport, setCommentDeleteReport] =
+    useState<ContentReport | null>(null);
   const requestIdRef = useRef(0);
 
   const dateFormatter = useMemo(
@@ -68,6 +100,10 @@ export function AdminReportsTable() {
   const visibleReports = reports.filter((report) => {
     if (filter === "posts") {
       return Boolean(report.postId);
+    }
+
+    if (filter === "comments") {
+      return Boolean(report.commentId);
     }
 
     if (filter === "users") {
@@ -92,24 +128,42 @@ export function AdminReportsTable() {
             .filter((userId): userId is string => Boolean(userId))
         )
       );
+      const reportedCommentIds = Array.from(
+        new Set(
+          nextReports
+            .map((report) => report.commentId)
+            .filter((commentId): commentId is string => Boolean(commentId))
+        )
+      );
       const profileEntries = await Promise.all(
         reportedUserIds.map(async (userId) => {
           const profile = await getProfileById(userId).catch(() => null);
           return profile ? ([userId, profile] as const) : null;
         })
       );
+      const commentPostEntries = await Promise.all(
+        reportedCommentIds.map(async (commentId) => {
+          const comment = await fetchCommentById(commentId).catch(() => null);
+          return comment ? ([commentId, comment.id_post] as const) : null;
+        })
+      );
       const resolvedProfileEntries = profileEntries.filter(
         (entry): entry is readonly [string, PublicProfile] => entry !== null
+      );
+      const resolvedCommentPostEntries = commentPostEntries.filter(
+        (entry): entry is readonly [string, string] => entry !== null
       );
 
       if (requestIdRef.current === requestId) {
         setReports(nextReports);
         setReportedProfiles(new Map(resolvedProfileEntries));
+        setCommentPostIds(new Map(resolvedCommentPostEntries));
       }
     } catch (loadError) {
       if (requestIdRef.current === requestId) {
         setReports([]);
         setReportedProfiles(new Map());
+        setCommentPostIds(new Map());
         setError(getApiErrorMessage(loadError, t("admin.reportLoadError")));
       }
     } finally {
@@ -164,8 +218,255 @@ export function AdminReportsTable() {
     }
   };
 
+  const handleDeleteReportedPost = async (report: ContentReport) => {
+    if (!report.postId) {
+      return;
+    }
+
+    const postId = report.postId;
+    setDeletingPostIds((current) => new Set(current).add(postId));
+
+    try {
+      await deletePost(postId);
+      const relatedReportIds = Array.from(
+        new Set([
+          report.id,
+          ...reports
+            .filter((currentReport) => currentReport.postId === postId)
+            .map((currentReport) => currentReport.id),
+        ])
+      );
+
+      await Promise.all(
+        relatedReportIds.map((reportId) =>
+          deleteContentReport(reportId).catch(() => null)
+        )
+      );
+      setReports((currentReports) =>
+        currentReports.filter((currentReport) => currentReport.postId !== postId)
+      );
+      notify(
+        {
+          title: t("admin.reportPostDeleteSuccessTitle"),
+          description: t("admin.reportPostDeleteSuccessDescription"),
+          tone: "success",
+        },
+        { duration: 2500 }
+      );
+    } catch (deleteError) {
+      notify(
+        {
+          title: t("admin.reportPostDeleteErrorTitle"),
+          description: getApiErrorMessage(
+            deleteError,
+            t("admin.reportPostDeleteError")
+          ),
+          tone: "error",
+        },
+        { duration: 3500 }
+      );
+    } finally {
+      setDeletingPostIds((current) => {
+        const next = new Set(current);
+        next.delete(postId);
+        return next;
+      });
+    }
+  };
+
+  const handleDeleteReportedComment = async (report: ContentReport) => {
+    if (!report.commentId) {
+      return;
+    }
+
+    const commentId = report.commentId;
+    setDeletingCommentIds((current) => new Set(current).add(commentId));
+
+    try {
+      await deleteComment(commentId);
+      const relatedReportIds = Array.from(
+        new Set([
+          report.id,
+          ...reports
+            .filter((currentReport) => currentReport.commentId === commentId)
+            .map((currentReport) => currentReport.id),
+        ])
+      );
+
+      await Promise.all(
+        relatedReportIds.map((reportId) =>
+          deleteContentReport(reportId).catch(() => null)
+        )
+      );
+      setReports((currentReports) =>
+        currentReports.filter(
+          (currentReport) => currentReport.commentId !== commentId
+        )
+      );
+      notify(
+        {
+          title: t("admin.reportCommentDeleteSuccessTitle"),
+          description: t("admin.reportCommentDeleteSuccessDescription"),
+          tone: "success",
+        },
+        { duration: 2500 }
+      );
+    } catch (deleteError) {
+      notify(
+        {
+          title: t("admin.reportCommentDeleteErrorTitle"),
+          description: getApiErrorMessage(
+            deleteError,
+            t("admin.reportCommentDeleteError")
+          ),
+          tone: "error",
+        },
+        { duration: 3500 }
+      );
+    } finally {
+      setDeletingCommentIds((current) => {
+        const next = new Set(current);
+        next.delete(commentId);
+        return next;
+      });
+    }
+  };
+
+  const handleConfirmDeleteReportedPost = async () => {
+    if (!postDeleteReport) {
+      return;
+    }
+
+    await handleDeleteReportedPost(postDeleteReport);
+    setPostDeleteReport(null);
+  };
+
+  const handleConfirmDeleteReportedComment = async () => {
+    if (!commentDeleteReport) {
+      return;
+    }
+
+    await handleDeleteReportedComment(commentDeleteReport);
+    setCommentDeleteReport(null);
+  };
+
+  const pendingPostId = postDeleteReport?.postId ?? null;
+  const isDeletingPendingPost = pendingPostId
+    ? deletingPostIds.has(pendingPostId)
+    : false;
+  const pendingCommentId = commentDeleteReport?.commentId ?? null;
+  const isDeletingPendingComment = pendingCommentId
+    ? deletingCommentIds.has(pendingCommentId)
+    : false;
+
   return (
     <section id="admin-reports" className="scroll-mt-24">
+      <Modal
+        opened={postDeleteReport !== null}
+        onClose={() => {
+          if (!isDeletingPendingPost) {
+            setPostDeleteReport(null);
+          }
+        }}
+        title={t("admin.reportDeletePostAria")}
+        centered
+        radius={8}
+        closeOnClickOutside={!isDeletingPendingPost}
+        closeOnEscape={!isDeletingPendingPost}
+        overlayProps={{ backgroundOpacity: 0.72, blur: 2 }}
+      >
+        <Stack gap="md">
+          <Stack gap={4}>
+            <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
+              {t("post.deleteDescription")}
+            </Text>
+            {pendingPostId && (
+              <Text size="xs" style={{ color: "var(--muted-foreground)" }}>
+                {t("admin.reportPostTarget", { postId: pendingPostId })}
+              </Text>
+            )}
+          </Stack>
+
+          <Group justify="flex-end">
+            <RippleButton
+              type="button"
+              rippleColor="var(--foreground)"
+              disabled={isDeletingPendingPost}
+              onClick={() => setPostDeleteReport(null)}
+              className={secondaryButtonClassName}
+            >
+              {t("common.cancel")}
+            </RippleButton>
+            <RippleButton
+              type="button"
+              rippleColor="var(--foreground)"
+              disabled={isDeletingPendingPost}
+              onClick={() => void handleConfirmDeleteReportedPost()}
+              className={destructiveButtonClassName}
+            >
+              <span className="flex items-center gap-2">
+                <FiTrash2 size={16} />
+                {isDeletingPendingPost ? t("post.deleting") : t("common.delete")}
+              </span>
+            </RippleButton>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={commentDeleteReport !== null}
+        onClose={() => {
+          if (!isDeletingPendingComment) {
+            setCommentDeleteReport(null);
+          }
+        }}
+        title={t("admin.reportDeleteCommentAria")}
+        centered
+        radius={8}
+        closeOnClickOutside={!isDeletingPendingComment}
+        closeOnEscape={!isDeletingPendingComment}
+        overlayProps={{ backgroundOpacity: 0.72, blur: 2 }}
+      >
+        <Stack gap="md">
+          <Stack gap={4}>
+            <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
+              {t("comment.deleteDescription")}
+            </Text>
+            {pendingCommentId && (
+              <Text size="xs" style={{ color: "var(--muted-foreground)" }}>
+                {t("admin.reportCommentTarget", { commentId: pendingCommentId })}
+              </Text>
+            )}
+          </Stack>
+
+          <Group justify="flex-end">
+            <RippleButton
+              type="button"
+              rippleColor="var(--foreground)"
+              disabled={isDeletingPendingComment}
+              onClick={() => setCommentDeleteReport(null)}
+              className={secondaryButtonClassName}
+            >
+              {t("common.cancel")}
+            </RippleButton>
+            <RippleButton
+              type="button"
+              rippleColor="var(--foreground)"
+              disabled={isDeletingPendingComment}
+              onClick={() => void handleConfirmDeleteReportedComment()}
+              className={destructiveButtonClassName}
+            >
+              <span className="flex items-center gap-2">
+                <FiTrash2 size={16} />
+                {isDeletingPendingComment
+                  ? t("comment.deleting")
+                  : t("common.delete")}
+              </span>
+            </RippleButton>
+          </Group>
+        </Stack>
+      </Modal>
+
       <Group justify="space-between" align="flex-start" gap="md" mb="lg">
         <Stack gap={4}>
           <Text component="h1" fw={700} size="xl" style={{ color: "var(--foreground)" }}>
@@ -222,6 +523,7 @@ export function AdminReportsTable() {
         data={[
           { value: "all", label: t("admin.reportFilterAll") },
           { value: "posts", label: t("admin.reportFilterPosts") },
+          { value: "comments", label: t("admin.reportFilterComments") },
           { value: "users", label: t("admin.reportFilterUsers") },
         ]}
       />
@@ -274,20 +576,37 @@ export function AdminReportsTable() {
               </Table.Thead>
               <Table.Tbody>
                 {visibleReports.map((report) => {
-                  const isUserReport = getReportTargetType(report) === "user";
+                  const targetType = getReportTargetType(report);
+                  const isUserReport = targetType === "user";
+                  const isCommentReport = targetType === "comment";
                   const profile = report.reportedUserId
                     ? reportedProfiles.get(report.reportedUserId)
                     : null;
                   const isDeleting = deletingReportIds.has(report.id);
+                  const isDeletingPost = report.postId
+                    ? deletingPostIds.has(report.postId)
+                    : false;
+                  const isDeletingComment = report.commentId
+                    ? deletingCommentIds.has(report.commentId)
+                    : false;
+                  const commentPostId = report.commentId
+                    ? commentPostIds.get(report.commentId)
+                    : null;
                   const targetHref = profile
                     ? `/profile/${encodeURIComponent(profile.username)}`
                     : report.postId
                       ? `/posts/${encodeURIComponent(report.postId)}`
+                      : report.commentId && commentPostId
+                        ? `/posts/${encodeURIComponent(commentPostId)}?comment=${encodeURIComponent(report.commentId)}`
                       : null;
                   const targetLabel = profile
                     ? `@${profile.username}`
                     : report.postId
                       ? t("admin.reportPostTarget", { postId: report.postId })
+                      : report.commentId
+                        ? t("admin.reportCommentTarget", {
+                            commentId: report.commentId,
+                          })
                       : report.reportedUserId ?? t("admin.reportUnknownTarget");
 
                   return (
@@ -298,12 +617,20 @@ export function AdminReportsTable() {
                           color={isUserReport ? "red" : "yellow"}
                           radius={8}
                           leftSection={
-                            isUserReport ? <FiUser size={12} /> : <FiFileText size={12} />
+                            isUserReport ? (
+                              <FiUser size={12} />
+                            ) : isCommentReport ? (
+                              <FiMessageCircle size={12} />
+                            ) : (
+                              <FiFileText size={12} />
+                            )
                           }
                         >
                           {isUserReport
                             ? t("admin.reportTypeUser")
-                            : t("admin.reportTypePost")}
+                            : isCommentReport
+                              ? t("admin.reportTypeComment")
+                              : t("admin.reportTypePost")}
                         </Badge>
                       </Table.Td>
                       <Table.Td>
@@ -347,6 +674,44 @@ export function AdminReportsTable() {
                               </ActionIcon>
                             </Tooltip>
                           )}
+                          {report.postId && (
+                            <Tooltip label={t("admin.reportDeletePostAria")}>
+                              <ActionIcon
+                                type="button"
+                                variant="subtle"
+                                color="red"
+                                radius="xl"
+                                aria-label={t("admin.reportDeletePostAria")}
+                                disabled={isDeletingPost}
+                                onClick={() => setPostDeleteReport(report)}
+                              >
+                                {isDeletingPost ? (
+                                  <Loader size="xs" />
+                                ) : (
+                                  <FiFileMinus size={18} />
+                                )}
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
+                          {report.commentId && (
+                            <Tooltip label={t("admin.reportDeleteCommentAria")}>
+                              <ActionIcon
+                                type="button"
+                                variant="subtle"
+                                color="red"
+                                radius="xl"
+                                aria-label={t("admin.reportDeleteCommentAria")}
+                                disabled={isDeletingComment}
+                                onClick={() => setCommentDeleteReport(report)}
+                              >
+                                {isDeletingComment ? (
+                                  <Loader size="xs" />
+                                ) : (
+                                  <FiMessageCircle size={18} />
+                                )}
+                              </ActionIcon>
+                            </Tooltip>
+                          )}
                           <Tooltip label={t("admin.reportDeleteAria")}>
                             <ActionIcon
                               type="button"
@@ -354,7 +719,9 @@ export function AdminReportsTable() {
                               color="red"
                               radius="xl"
                               aria-label={t("admin.reportDeleteAria")}
-                              disabled={isDeleting}
+                              disabled={
+                                isDeleting || isDeletingPost || isDeletingComment
+                              }
                               onClick={() => void handleDeleteReport(report)}
                             >
                               {isDeleting ? <Loader size="xs" /> : <FiTrash2 size={18} />}

@@ -1,17 +1,35 @@
 import type { UserNotification } from "@/types/notification";
 
-export type NotificationFilter = "all" | "like" | "mention";
+export type NotificationFilter = "all" | "like" | "mention" | "follow";
+
+type Translate = (key: string, params?: Record<string, string | number>) => string;
 
 export function getNotificationTypeLabel(
-  type: UserNotification["type"]
+  type: UserNotification["type"],
+  t: Translate
 ): string {
-  return type === "mention" ? "Mention" : "J'aime";
+  if (type === "mention") {
+    return t("notifications.typeMention");
+  }
+
+  if (type === "follow") {
+    return t("notifications.typeFollow");
+  }
+
+  return t("notifications.typeLike");
 }
 
 export function getResourceTypeLabel(
-  resourceType: UserNotification["resourceType"]
+  resourceType: UserNotification["resourceType"],
+  t: Translate
 ): string {
-  return resourceType === "comment" ? "Commentaire" : "Post";
+  if (resourceType === "user") {
+    return t("notifications.resourceUser");
+  }
+
+  return resourceType === "comment"
+    ? t("notifications.resourceComment")
+    : t("notifications.resourcePost");
 }
 
 export function matchesNotificationFilter(
@@ -26,47 +44,62 @@ export function matchesNotificationFilter(
 }
 
 export function getNotificationDisplayMessage(
-  notification: UserNotification
+  notification: UserNotification,
+  t: Translate
 ): string {
-  const actorName = notification.actor?.name?.trim();
-
-  if (!actorName) {
-    return notification.message;
-  }
+  const actor = notification.actor?.name?.trim() || t("notifications.someone");
 
   if (notification.type === "like") {
     return notification.resourceType === "post"
-      ? `${actorName} a aimé votre post`
-      : `${actorName} a aimé votre commentaire`;
+      ? t("notifications.likePost", { actor })
+      : t("notifications.likeComment", { actor });
+  }
+
+  if (notification.type === "follow") {
+    return t("notifications.followUser", { actor });
   }
 
   return notification.resourceType === "post"
-    ? `${actorName} vous a mentionné dans un post`
-    : `${actorName} vous a mentionné dans un commentaire`;
+    ? t("notifications.mentionPost", { actor })
+    : t("notifications.mentionComment", { actor });
 }
 
 export function getNotificationAriaLabel(
-  notification: UserNotification
+  notification: UserNotification,
+  t: Translate
 ): string {
-  const typeLabel = getNotificationTypeLabel(notification.type);
-  const resourceLabel = getResourceTypeLabel(notification.resourceType);
-  const readState = notification.isRead ? "lue" : "non lue";
+  const typeLabel = getNotificationTypeLabel(notification.type, t).toLowerCase();
+  const resourceLabel = getResourceTypeLabel(notification.resourceType, t).toLowerCase();
+  const readState = notification.isRead
+    ? t("notifications.read")
+    : t("notifications.unread");
   const actorName = notification.actor?.name?.trim();
 
   if (actorName) {
-    return `${actorName}, ${typeLabel.toLowerCase()} dans un ${resourceLabel.toLowerCase()}, ${readState}`;
+    return t("notifications.ariaWithActor", {
+      actor: actorName,
+      type: typeLabel,
+      resource: resourceLabel,
+      readState,
+    });
   }
 
-  return `${typeLabel} dans un ${resourceLabel.toLowerCase()}, ${readState}`;
+  return t("notifications.ariaGeneric", {
+    type: typeLabel,
+    resource: resourceLabel,
+    readState,
+  });
 }
 
-export function getEmptyFilterMessage(filter: NotificationFilter): string {
+export function getEmptyFilterMessage(filter: NotificationFilter, t: Translate): string {
   switch (filter) {
     case "mention":
-      return "Aucune mention pour le moment.";
+      return t("notifications.emptyMentions");
     case "like":
-      return "Aucun j'aime pour le moment.";
+      return t("notifications.emptyLikes");
+    case "follow":
+      return t("notifications.emptyFollows");
     default:
-      return "Aucune notification pour le moment.";
+      return t("notifications.emptyAll");
   }
 }

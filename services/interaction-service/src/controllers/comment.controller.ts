@@ -7,6 +7,7 @@ import {
   getCommentReplies,
   getCommentsByAuthor,
   getCommentsByPost,
+  softDeleteComment,
 } from "../services/comment.service.js";
 import { notifyCommentMentionsSafely } from "../services/mention-notification.service.js";
 
@@ -108,6 +109,30 @@ export const getCommentRepliesHandler: RequestHandler = async (
       status: "success",
       message: "Replies retrieved",
       data: { comments },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteCommentHandler: RequestHandler = async (req, res, next) => {
+  try {
+    const commentId = getRouteParam(req.params.commentId);
+
+    if (!commentId) {
+      throw new CommentError("commentId est requis", 400);
+    }
+
+    const comment = await softDeleteComment(
+      commentId,
+      req.header("x-user-id"),
+      req.header("x-user-role")
+    );
+
+    res.status(200).json({
+      status: "success",
+      message: "Comment deleted",
+      data: { comment },
     });
   } catch (error) {
     next(error);

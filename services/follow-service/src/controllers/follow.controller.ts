@@ -6,6 +6,7 @@ import {
   getFollowers,
   FollowError,
 } from "../services/follow.service.js";
+import { notifyFollowSafely } from "../services/follow-notification.service.js";
 
 function getBodyIds(req: Request): { followerId: string; followingId: string } | null {
   const { followerId, followingId } = req.body;
@@ -56,6 +57,7 @@ export async function addFollowHandler(req: Request, res: Response) {
     }
 
     const follow = await addFollow(ids.followerId, ids.followingId);
+    notifyFollowSafely(ids.followerId, ids.followingId);
     res.status(201).json(follow);
   } catch (error) {
     handleError(error, res);

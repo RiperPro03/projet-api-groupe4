@@ -30,6 +30,7 @@ import {
   NotificationError,
 } from "../src/services/notification.service.js";
 import {
+  createFollowNotificationInput,
   createLikeNotificationInput,
   createMentionNotificationInput,
   createNotificationDocument,
@@ -107,12 +108,12 @@ describe("notification.service", () => {
       await expect(
         createNotification(
           createLikeNotificationInput({
-            type: "follow" as "like",
+            type: "message" as "like",
           })
         )
       ).rejects.toMatchObject({
         statusCode: 400,
-        message: "type doit être like ou mention",
+        message: "type doit être like, mention ou follow",
       });
     });
 
@@ -183,6 +184,57 @@ describe("notification.service", () => {
       ).rejects.toMatchObject({
         statusCode: 400,
         message: "recipientId et actorId ne peuvent pas être identiques",
+      });
+    });
+
+    it("crée une notification de follow", async () => {
+      const document = createNotificationDocument({
+        type: "follow",
+        resourceType: "user",
+        resourceId: "user-a",
+        message: "Un utilisateur a commencé à vous suivre",
+      });
+      notificationMocks.create.mockResolvedValue(document);
+
+      const result = await createNotification(createFollowNotificationInput());
+
+      expect(result.message).toBe("Un utilisateur a commencé à vous suivre");
+      expect(notificationMocks.create).toHaveBeenCalledWith({
+        recipientId: "user-b",
+        actorId: "user-a",
+        type: "follow",
+        resourceType: "user",
+        resourceId: "user-a",
+        message: "Un utilisateur a commencé à vous suivre",
+        isRead: false,
+        readAt: null,
+      });
+    });
+
+    it("refuse un resourceType invalide pour follow", async () => {
+      await expect(
+        createNotification(
+          createFollowNotificationInput({
+            resourceType: "post",
+          })
+        )
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "resourceType doit être user pour une notification follow",
+      });
+    });
+
+    it("refuse un resourceId différent de actorId pour follow", async () => {
+      await expect(
+        createNotification(
+          createFollowNotificationInput({
+            resourceId: "user-c",
+          })
+        )
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message:
+          "resourceId doit correspondre à actorId pour une notification follow",
       });
     });
   });

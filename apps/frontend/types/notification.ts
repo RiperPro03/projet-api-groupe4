@@ -8,8 +8,8 @@ export type UserNotification = {
     username: string;
     avatarUrl?: string;
   };
-  type: "like" | "mention";
-  resourceType: "post" | "comment";
+  type: "like" | "mention" | "follow";
+  resourceType: "post" | "comment" | "user";
   resourceId: string;
   postId?: string;
   message: string;

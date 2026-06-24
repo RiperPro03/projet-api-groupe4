@@ -15,6 +15,7 @@ import {
   allowVisitorOrRoles,
   forbidModeratorAdminUserAccess,
   requireBodyOwnerOrRoles,
+  requireCommentOwnerOrRoles,
   requireOwnerOrRoles,
   requireParamOwnerOrRoles,
   requirePostOwnerOrRoles,
@@ -486,5 +487,75 @@ describe("RBAC middleware", () => {
 
     expect(next).toHaveBeenCalledWith(serviceError);
     expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it("allows the author of a comment returned by interaction-service", async () => {
+    httpClientMocks.requestService.mockResolvedValue({
+      data: {
+        data: {
+          comment: {
+            authorId: "user-1",
+          },
+        },
+      },
+    });
+    const req = createRequest({
+      authUser: {
+        id: "user-1",
+        role: "USER",
+      },
+      headers: {
+        "x-request-id": "request-1",
+      },
+      params: {
+        commentId: "comment-1",
+      },
+    });
+    const res = createResponse();
+    const next = vi.fn() as NextFunction;
+
+    await requireCommentOwnerOrRoles([])(req, res, next);
+
+    expect(httpClientMocks.requestService).toHaveBeenCalledWith(
+      "interactions",
+      expect.objectContaining({
+        method: "GET",
+        url: expect.stringContaining("/comments/comment-1"),
+        headers: {
+          "x-request-id": "request-1",
+        },
+      }),
+    );
+    expect(next).toHaveBeenCalledOnce();
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it("forbids comment owner access when interaction-service returns another author", async () => {
+    httpClientMocks.requestService.mockResolvedValue({
+      data: {
+        data: {
+          comment: {
+            authorId: "user-2",
+          },
+        },
+      },
+    });
+    const req = createRequest({
+      authUser: {
+        id: "user-1",
+        role: "USER",
+      },
+      params: {
+        commentId: "comment-1",
+      },
+    });
+    const res = createResponse();
+    const next = vi.fn() as NextFunction;
+
+    await requireCommentOwnerOrRoles([])(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(forbiddenPayload);
+    expect(next).not.toHaveBeenCalled();
   });
 });

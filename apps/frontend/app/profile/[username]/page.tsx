@@ -3,7 +3,17 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ActionIcon, Avatar, Card, Group, Loader, Menu, Stack, Text } from "@mantine/core";
+import {
+  ActionIcon,
+  Avatar,
+  Card,
+  Group,
+  Loader,
+  Menu,
+  Modal,
+  Stack,
+  Text,
+} from "@mantine/core";
 import {
   FiArrowLeft,
   FiFlag,
@@ -53,6 +63,10 @@ const followButtonClassName =
 
 const followingButtonClassName =
   "border-border bg-card/90 text-foreground hover:border-destructive/70 hover:bg-destructive/10 hover:text-destructive";
+const secondaryButtonClassName =
+  "rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60";
+const destructiveButtonClassName =
+  "rounded-full border-0 bg-destructive px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-destructive/20 transition-colors hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-60";
 
 export default function PublicProfilePage() {
   const params = useParams();
@@ -65,6 +79,7 @@ export default function PublicProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isBanConfirmOpen, setIsBanConfirmOpen] = useState(false);
   const [isReportingUser, setIsReportingUser] = useState(false);
   const [isBanningUser, setIsBanningUser] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
@@ -208,14 +223,11 @@ export default function PublicProfilePage() {
       return;
     }
 
-    if (!window.confirm(t("profile.banConfirm", { username: state.profile.username }))) {
-      return;
-    }
-
     setIsBanningUser(true);
 
     try {
       await updateUserStatus(state.profile.id_user, "INACTIVE");
+      setIsBanConfirmOpen(false);
       notify({
         title: t("profile.banSuccessTitle"),
         description: t("profile.banSuccessDescription", {
@@ -303,6 +315,51 @@ export default function PublicProfilePage() {
 
   return (
     <section className="relative min-h-[calc(100svh-64px)] overflow-hidden bg-transparent px-5 py-8 text-foreground md:min-h-svh">
+      <Modal
+        opened={isBanConfirmOpen}
+        onClose={() => {
+          if (!isBanningUser) {
+            setIsBanConfirmOpen(false);
+          }
+        }}
+        title={t("profile.banUser")}
+        centered
+        radius={8}
+        closeOnClickOutside={!isBanningUser}
+        closeOnEscape={!isBanningUser}
+        overlayProps={{ backgroundOpacity: 0.72, blur: 2 }}
+      >
+        <Stack gap="md">
+          <Text size="sm" style={{ color: "var(--muted-foreground)" }}>
+            {t("profile.banConfirm", { username: profile.username })}
+          </Text>
+
+          <Group justify="flex-end">
+            <RippleButton
+              type="button"
+              rippleColor="var(--foreground)"
+              disabled={isBanningUser}
+              onClick={() => setIsBanConfirmOpen(false)}
+              className={secondaryButtonClassName}
+            >
+              {t("common.cancel")}
+            </RippleButton>
+            <RippleButton
+              type="button"
+              rippleColor="var(--foreground)"
+              disabled={isBanningUser}
+              onClick={() => void handleBanUser()}
+              className={destructiveButtonClassName}
+            >
+              <span className="flex items-center gap-2">
+                <FiSlash size={16} />
+                {isBanningUser ? t("profile.banLoading") : t("profile.banUser")}
+              </span>
+            </RippleButton>
+          </Group>
+        </Stack>
+      </Modal>
+
       <ReportDialog
         opened={isReportOpen}
         title={t("report.userTitle")}
@@ -351,8 +408,10 @@ export default function PublicProfilePage() {
                   rippleColor="rgb(var(--breezy-green-rgb) / 0.25)"
                   className="mt-1 inline-flex h-10 items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-4 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-accent"
                 >
-                  <FiMessageCircle className="h-4 w-4" aria-hidden />
-                  Message
+                  <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap leading-none">
+                    <FiMessageCircle className="h-4 w-4 shrink-0" aria-hidden />
+                    <span>{t("profile.message")}</span>
+                  </span>
                 </RippleButton>
               </Link>
 
@@ -439,7 +498,7 @@ export default function PublicProfilePage() {
                         color="red"
                         leftSection={<FiSlash className="h-4 w-4" aria-hidden />}
                         disabled={isBanningUser}
-                        onClick={() => void handleBanUser()}
+                        onClick={() => setIsBanConfirmOpen(true)}
                       >
                         {isBanningUser ? t("profile.banLoading") : t("profile.banUser")}
                       </Menu.Item>

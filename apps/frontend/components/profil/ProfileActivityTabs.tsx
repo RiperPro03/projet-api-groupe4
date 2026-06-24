@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Tabs } from "@mantine/core";
 import CommentList from "@/components/comments/CommentList";
 import PostList from "@/components/posts/PostList";
-import { fetchUserComments } from "@/lib/api/comment.service";
+import { fetchPostComments, fetchUserComments } from "@/lib/api/comment.service";
 import { fetchUserPosts } from "@/lib/api/post.service";
 import { useI18n } from "@/lib/i18n/client";
 
@@ -34,7 +34,12 @@ export default function ProfileActivityTabs({
       </Tabs.List>
 
       <Tabs.Panel value="posts" pt="md">
-        <PostList fetchPosts={fetchPosts} title={t("post.profileTitle")} showCreateButton={isOwnProfile} />
+        <PostList
+          fetchPosts={fetchPosts}
+          fetchCommentsForPost={fetchPostComments}
+          title={t("post.profileTitle")}
+          showCreateButton={isOwnProfile}
+        />
       </Tabs.Panel>
 
       <Tabs.Panel value="comments" pt="md">

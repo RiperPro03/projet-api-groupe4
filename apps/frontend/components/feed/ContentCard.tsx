@@ -17,6 +17,7 @@ import type { ReactNode } from "react";
 import { FiFlag, FiHeart, FiMessageCircle, FiTrash2 } from "react-icons/fi";
 import { useI18n } from "@/lib/i18n/client";
 import PostLikersAvatars from "@/components/posts/PostLikersAvatars";
+import { CoolMode, type CoolParticleOptions } from "@/components/ui/cool-mode";
 import type { Author, Media } from "@/types/post";
 
 type ContentCardProps = {
@@ -36,6 +37,7 @@ type ContentCardProps = {
   onDelete?: () => void;
   onReport?: () => void;
   isDeleting?: boolean;
+  showDiscussionAction?: boolean;
 };
 
 const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -106,42 +108,58 @@ function MediaGrid({ media = [] }: { media?: Media[] }) {
         width: "100%",
       }}
     >
-      {media.map((item) => (
-        <Box
-          key={item.id}
-          style={{
-            aspectRatio: media.length === 1 ? "16 / 10" : "1 / 1",
-            background: "var(--muted)",
-            border: "1px solid var(--border)",
-            borderRadius: 8,
-            overflow: "hidden",
-          }}
-        >
-          {item.type === "image" ? (
-            <Image
-              src={item.url}
-              alt={item.alt ?? ""}
-              h="100%"
-              w="100%"
-              fit="cover"
-            />
-          ) : (
-            <video
-              controls
-              preload="metadata"
-              aria-label={item.alt ?? t("content.videoContent")}
-              style={{
-                display: "block",
-                height: "100%",
-                objectFit: "cover",
-                width: "100%",
-              }}
-            >
-              <source src={item.url} />
-            </video>
-          )}
-        </Box>
-      ))}
+      {media.map((item) => {
+        const isSingleMedia = media.length === 1;
+
+        return (
+          <Box
+            key={item.id}
+            style={{
+              alignItems: "center",
+              aspectRatio: isSingleMedia ? undefined : "1 / 1",
+              background: "var(--muted)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              display: "flex",
+              justifyContent: "center",
+              maxHeight: isSingleMedia ? "min(70vh, 640px)" : undefined,
+              overflow: "hidden",
+            }}
+          >
+            {item.type === "image" ? (
+              <Image
+                src={item.url}
+                alt={item.alt ?? ""}
+                fit="contain"
+                style={{
+                  display: "block",
+                  height: isSingleMedia ? "auto" : "100%",
+                  maxHeight: isSingleMedia ? "min(70vh, 640px)" : "100%",
+                  maxWidth: "100%",
+                  objectFit: "contain",
+                  width: isSingleMedia ? "auto" : "100%",
+                }}
+              />
+            ) : (
+              <video
+                controls
+                preload="metadata"
+                aria-label={item.alt ?? t("content.videoContent")}
+                style={{
+                  display: "block",
+                  height: isSingleMedia ? "auto" : "100%",
+                  maxHeight: isSingleMedia ? "min(70vh, 640px)" : "100%",
+                  maxWidth: "100%",
+                  objectFit: "contain",
+                  width: isSingleMedia ? "auto" : "100%",
+                }}
+              >
+                <source src={item.url} />
+              </video>
+            )}
+          </Box>
+        );
+      })}
     </Box>
   );
 }
@@ -152,26 +170,38 @@ function ActionButton({
   onClick,
   children,
   locale,
+  coolModeOptions,
 }: {
   label: string;
   count?: number;
   onClick?: () => void;
   children: ReactNode;
   locale: string;
+  coolModeOptions?: CoolParticleOptions;
 }) {
+  const button = (
+    <ActionIcon
+      aria-label={label}
+      variant="subtle"
+      color="gray"
+      radius="xl"
+      size="lg"
+      onClick={onClick}
+    >
+      {children}
+    </ActionIcon>
+  );
+
   return (
     <Group gap={6} wrap="nowrap">
       <Tooltip label={label}>
-        <ActionIcon
-          aria-label={label}
-          variant="subtle"
-          color="gray"
-          radius="xl"
-          size="lg"
-          onClick={onClick}
-        >
-          {children}
-        </ActionIcon>
+        <span style={{ display: "inline-flex" }}>
+          {coolModeOptions ? (
+            <CoolMode options={coolModeOptions}>{button}</CoolMode>
+          ) : (
+            button
+          )}
+        </span>
       </Tooltip>
       {typeof count === "number" && (
         <Text size="sm" style={{ color: "var(--muted-foreground)" }} miw={20}>
@@ -199,6 +229,7 @@ export default function ContentCard({
   onDelete,
   onReport,
   isDeleting = false,
+  showDiscussionAction = true,
 }: ContentCardProps) {
   const { dateLocale, t } = useI18n();
   const discussionCount = type === "post" ? commentsCount : repliesCount;
@@ -210,6 +241,8 @@ export default function ContentCard({
     .toUpperCase();
   const shouldUseFullWidthBody = type === "post" && !isReply;
   const profileHref = `/profile/${encodeURIComponent(author.username)}`;
+  const deleteLabel =
+    type === "post" ? t("content.deletePost") : t("content.deleteComment");
 
   const metaContent = (
     <Group gap={6} wrap="wrap">
@@ -247,22 +280,39 @@ export default function ContentCard({
       <MediaGrid media={media} />
 
       <Group gap="xl" mt={4} align="center">
-        <ActionButton
-          label={type === "post" ? t("content.comment") : t("content.reply")}
-          count={discussionCount}
-          onClick={onComment}
-          locale={dateLocale}
-        >
-          <FiMessageCircle size={18} />
-        </ActionButton>
+        {showDiscussionAction && (
+          <ActionButton
+            label={type === "post" ? t("content.comment") : t("content.reply")}
+            count={discussionCount}
+            onClick={onComment}
+            locale={dateLocale}
+          >
+            <FiMessageCircle size={18} />
+          </ActionButton>
+        )}
         <ActionButton
           label={isLiked ? t("content.unlike") : t("content.like")}
           count={likesCount}
           onClick={onLike}
           locale={dateLocale}
+          coolModeOptions={
+            isLiked
+              ? undefined
+              : {
+                  particle: "💚",
+                  particleColor: "var(--color-breezy-green)",
+                  animationSpeed: 0.35,
+                  gravity: 0.25,
+                  particleCount: 1,
+                  spinSpeed: 8,
+                  size: 7,
+                  speedHorz: 2,
+                  speedUp: 5,
+                }
+          }
         >
           <Box c={isLiked ? "green.4" : undefined} component="span" lh={0}>
-            <FiHeart size={18} />
+            <FiHeart fill={isLiked ? "currentColor" : "none"} size={18} />
           </Box>
         </ActionButton>
         {onReport && (
@@ -291,9 +341,9 @@ export default function ContentCard({
       }}
     >
       {onDelete && (
-        <Tooltip label={t("content.deletePost")}>
+        <Tooltip label={deleteLabel}>
           <ActionIcon
-            aria-label={t("content.deletePost")}
+            aria-label={deleteLabel}
             disabled={isDeleting}
             loading={isDeleting}
             onClick={onDelete}
@@ -355,7 +405,14 @@ export default function ContentCard({
             </Avatar>
           </Link>
 
-          <Stack gap={8} style={{ flex: 1, minWidth: 0 }}>
+          <Stack
+            gap={8}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              paddingRight: onDelete ? 36 : undefined,
+            }}
+          >
             {metaContent}
             {bodyContent}
           </Stack>

@@ -68,7 +68,8 @@ export default async function ProfilePage() {
         
         <div className="mt-8">
           <ProfileActivityTabs
-            profileUserId={currentUser.auth.id}
+            profileUserId={profileUserId}
+            isOwnProfile
           />
         </div>
       </div>

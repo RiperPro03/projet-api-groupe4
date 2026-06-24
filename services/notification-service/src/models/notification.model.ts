@@ -16,12 +16,12 @@ const notificationSchema = new Schema(
     type: {
       type: String,
       required: true,
-      enum: ["like", "mention"],
+      enum: ["like", "mention", "follow"],
     },
     resourceType: {
       type: String,
       required: true,
-      enum: ["post", "comment"],
+      enum: ["post", "comment", "user"],
     },
     resourceId: {
       type: String,

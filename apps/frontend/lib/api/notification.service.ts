@@ -10,8 +10,8 @@ type ApiNotification = {
   id: string;
   recipientId: string;
   actorId: string;
-  type: "like" | "mention";
-  resourceType: "post" | "comment";
+  type: "like" | "mention" | "follow";
+  resourceType: "post" | "comment" | "user";
   resourceId: string;
   message: string;
   isRead: boolean;

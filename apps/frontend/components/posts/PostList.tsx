@@ -23,12 +23,13 @@ import { MagicCard } from "@/components/ui/magic-card";
 import { useNotifications } from "@/components/notifications/NotificationProvider";
 import { ReportDialog } from "@/components/reports/ReportDialog";
 import { usePostList, type FetchPostPage } from "@/hooks/usePostList";
-import { createComment } from "@/lib/api/comment.service";
+import { createComment, deleteComment } from "@/lib/api/comment.service";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { getApiErrorMessage, httpClient, isApiStatusCode } from "@/lib/api/http-client";
 import { likePost, unlikePost } from "@/lib/api/interaction.service";
 import { createPost, deletePost } from "@/lib/api/post.service";
 import { createContentReport } from "@/lib/api/report.service";
+import { countRootComments, removeCommentBranch } from "@/lib/comments/comment-state";
 import { getAuthenticatedUserId } from "@/lib/current-user-ids";
 import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -64,6 +65,7 @@ const postMediaMimeTypes = [
 const postImageMaxSize = 100 * 1024 * 1024;
 const postVideoMaxSize = 10000 * 1024 * 1024;
 const postMediaMaxFiles = 4;
+const postContentMaxLength = 280;
 const secondaryButtonClassName =
   "rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60";
 const greenButtonClassName =
@@ -163,6 +165,7 @@ function PostFeedItem({
   const [isLikePending, setIsLikePending] = useState(false);
   const [isDeletingPost, setIsDeletingPost] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [commentActionError, setCommentActionError] = useState<string | null>(null);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount);
   const canOpenComments = Boolean(fetchCommentsForPost);
   const canDeletePost = currentUserId !== null && post.author.id === currentUserId;
@@ -194,7 +197,7 @@ function PostFeedItem({
       .then((items) => {
         if (isMounted) {
           setComments(items);
-          setCommentsCount(items.filter((item) => !item.parentCommentId).length);
+          setCommentsCount(countRootComments(items));
         }
       })
       .finally(() => {
@@ -235,6 +238,32 @@ function PostFeedItem({
         )
         .concat(newReply)
     );
+  }
+
+  async function handleDeleteComment(comment: Comment) {
+    const previousComments = comments;
+    const previousCommentsCount = commentsCount;
+    const nextComments = removeCommentBranch(previousComments, comment.id);
+
+    setCommentActionError(null);
+    setComments(nextComments);
+    setCommentsCount(countRootComments(nextComments));
+
+    try {
+      await deleteComment(comment.id);
+    } catch (deleteError) {
+      setComments(previousComments);
+      setCommentsCount(previousCommentsCount);
+      setCommentActionError(
+        t("comment.deleteImpossible", {
+          message: getApiErrorMessage(
+            deleteError,
+            t("common.unknownError"),
+            t("common.serverUnreachable")
+          ),
+        })
+      );
+    }
   }
 
   function handleToggleComments() {
@@ -318,6 +347,7 @@ function PostFeedItem({
         likers={post.likers}
         commentsCount={commentsCount}
         isLiked={isLiked}
+        showDiscussionAction={canOpenComments}
         onComment={
           canOpenComments ? handleToggleComments : undefined
         }
@@ -371,6 +401,19 @@ function PostFeedItem({
         }}
       />
 
+      {commentActionError && (
+        <Alert
+          variant="light"
+          style={{
+            backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+            borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+            color: "var(--destructive)",
+          }}
+        >
+          {commentActionError}
+        </Alert>
+      )}
+
       {canOpenComments && showComments && (
         <Stack gap="sm" pl={{ base: 0, sm: 56 }}>
           <CommentComposer onSubmit={handleCommentSubmit} />
@@ -382,7 +425,9 @@ function PostFeedItem({
             <CommentThread
               comments={comments}
               maxVisualDepth={2}
+              allowReport
               onReplySubmit={handleReplySubmit}
+              onDeleteSubmit={handleDeleteComment}
             />
           )}
         </Stack>
@@ -497,7 +542,7 @@ export default function PostList({
   async function handleCreatePost() {
     const trimmedContent = postContent.trim();
 
-    if (!trimmedContent || isCreatingPost) {
+    if (!trimmedContent || trimmedContent.length > postContentMaxLength || isCreatingPost) {
       return;
     }
 
@@ -670,6 +715,7 @@ export default function PostList({
                 value={postContent}
                 onChange={(event) => setPostContent(event.currentTarget.value)}
                 placeholder={t("post.composerPlaceholder")}
+                maxLength={postContentMaxLength}
                 autosize
                 minRows={4}
                 maxRows={10}
@@ -686,6 +732,18 @@ export default function PostList({
                   },
                 }}
               />
+              <Text
+                size="xs"
+                ta="right"
+                style={{
+                  color:
+                    postContent.length >= postContentMaxLength
+                      ? "var(--destructive)"
+                      : "var(--muted-foreground)",
+                }}
+              >
+                {postContent.length}/{postContentMaxLength}
+              </Text>
               <Dropzone
                 accept={postMediaMimeTypes}
                 maxFiles={postMediaMaxFiles}
@@ -832,7 +890,11 @@ export default function PostList({
                 <RippleButton
                   type="button"
                   rippleColor="var(--color-breezy-black)"
-                  disabled={!postContent.trim() || isCreatingPost}
+                  disabled={
+                    !postContent.trim() ||
+                    postContent.trim().length > postContentMaxLength ||
+                    isCreatingPost
+                  }
                   onClick={handleCreatePost}
                   className={greenButtonClassName}
                 >

@@ -26,6 +26,7 @@ import {
   type StoredConversation,
 } from "@/lib/chat/chat-storage";
 import { getAuthenticatedUserId } from "@/lib/current-user-ids";
+import { useI18n } from "@/lib/i18n/client";
 
 type PageState =
   | { status: "loading" }
@@ -53,8 +54,8 @@ function fallbackProfile(userId: string): PublicProfile {
   };
 }
 
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat("fr-FR", {
+function formatTime(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
@@ -64,6 +65,7 @@ function formatTime(value: string) {
 
 export default function ChatInboxClient() {
   const router = useRouter();
+  const { dateLocale, t } = useI18n();
   const [state, setState] = useState<PageState>({ status: "loading" });
   const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
@@ -226,9 +228,9 @@ export default function ChatInboxClient() {
           return a.online ? -1 : 1;
         }
 
-        return displayName(a.profile).localeCompare(displayName(b.profile), "fr");
+        return displayName(a.profile).localeCompare(displayName(b.profile), dateLocale);
       });
-  }, [onlineUserIds, query, state]);
+  }, [dateLocale, onlineUserIds, query, state]);
 
   if (state.status === "loading") {
     return (
@@ -257,9 +259,9 @@ export default function ChatInboxClient() {
       <div className="mx-auto w-full max-w-3xl">
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Messages</h1>
+            <h1 className="text-2xl font-bold">{t("chat.title")}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Conversations privees ephemeres
+              {t("chat.description")}
             </p>
           </div>
           <FiMessageCircle className="size-6 text-breezy-green" aria-hidden />
@@ -269,7 +271,7 @@ export default function ChatInboxClient() {
           value={query}
           onChange={(event) => setQuery(event.currentTarget.value)}
           leftSection={<FiSearch size={16} />}
-          placeholder="Rechercher une conversation"
+          placeholder={t("chat.searchPlaceholder")}
           radius={8}
           mb="md"
         />
@@ -277,7 +279,7 @@ export default function ChatInboxClient() {
         <div className="overflow-hidden rounded-lg border border-border bg-card/80">
           {items.length === 0 ? (
             <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-              Aucune conversation pour le moment.
+              {t("chat.noConversations")}
             </p>
           ) : (
             items.map(({ profile, conversation, online }) => {
@@ -313,7 +315,9 @@ export default function ChatInboxClient() {
 
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       <span className="text-xs text-muted-foreground">
-                        {conversation?.updatedAt ? formatTime(conversation.updatedAt) : ""}
+                        {conversation?.updatedAt
+                          ? formatTime(conversation.updatedAt, dateLocale)
+                          : ""}
                       </span>
                       {conversation && conversation.unreadCount > 0 && (
                         <span className="min-w-5 rounded-full bg-breezy-green px-1.5 text-center text-xs font-bold text-black">
@@ -324,15 +328,17 @@ export default function ChatInboxClient() {
                       )}
                       {!conversation && (
                         <span className="text-xs text-muted-foreground">
-                          {online ? "Connecte" : "Deconnecte"}
+                          {online ? t("chat.online") : t("chat.offline")}
                         </span>
                       )}
                     </div>
                   </Link>
 
-                  <Tooltip label="Effacer la conversation">
+                  <Tooltip label={t("chat.clearConversation")}>
                     <ActionIcon
-                      aria-label={`Effacer la conversation avec ${profileName}`}
+                      aria-label={t("chat.clearConversationWith", {
+                        username: profileName,
+                      })}
                       className="mr-3 shrink-0"
                       color="red"
                       radius="xl"

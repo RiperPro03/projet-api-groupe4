@@ -17,6 +17,7 @@ import type { ReactNode } from "react";
 import { FiFlag, FiHeart, FiMessageCircle, FiTrash2 } from "react-icons/fi";
 import { useI18n } from "@/lib/i18n/client";
 import PostLikersAvatars from "@/components/posts/PostLikersAvatars";
+import { CoolMode, type CoolParticleOptions } from "@/components/ui/cool-mode";
 import type { Author, Media } from "@/types/post";
 
 type ContentCardProps = {
@@ -169,26 +170,38 @@ function ActionButton({
   onClick,
   children,
   locale,
+  coolModeOptions,
 }: {
   label: string;
   count?: number;
   onClick?: () => void;
   children: ReactNode;
   locale: string;
+  coolModeOptions?: CoolParticleOptions;
 }) {
+  const button = (
+    <ActionIcon
+      aria-label={label}
+      variant="subtle"
+      color="gray"
+      radius="xl"
+      size="lg"
+      onClick={onClick}
+    >
+      {children}
+    </ActionIcon>
+  );
+
   return (
     <Group gap={6} wrap="nowrap">
       <Tooltip label={label}>
-        <ActionIcon
-          aria-label={label}
-          variant="subtle"
-          color="gray"
-          radius="xl"
-          size="lg"
-          onClick={onClick}
-        >
-          {children}
-        </ActionIcon>
+        <span style={{ display: "inline-flex" }}>
+          {coolModeOptions ? (
+            <CoolMode options={coolModeOptions}>{button}</CoolMode>
+          ) : (
+            button
+          )}
+        </span>
       </Tooltip>
       {typeof count === "number" && (
         <Text size="sm" style={{ color: "var(--muted-foreground)" }} miw={20}>
@@ -282,6 +295,21 @@ export default function ContentCard({
           count={likesCount}
           onClick={onLike}
           locale={dateLocale}
+          coolModeOptions={
+            isLiked
+              ? undefined
+              : {
+                  particle: "💚",
+                  particleColor: "var(--color-breezy-green)",
+                  animationSpeed: 0.35,
+                  gravity: 0.25,
+                  particleCount: 1,
+                  spinSpeed: 8,
+                  size: 7,
+                  speedHorz: 2,
+                  speedUp: 5,
+                }
+          }
         >
           <Box c={isLiked ? "green.4" : undefined} component="span" lh={0}>
             <FiHeart fill={isLiked ? "currentColor" : "none"} size={18} />

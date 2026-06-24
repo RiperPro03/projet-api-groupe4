@@ -284,7 +284,7 @@ export default function ContentCard({
           locale={dateLocale}
         >
           <Box c={isLiked ? "green.4" : undefined} component="span" lh={0}>
-            <FiHeart size={18} />
+            <FiHeart fill={isLiked ? "currentColor" : "none"} size={18} />
           </Box>
         </ActionButton>
         {onReport && (

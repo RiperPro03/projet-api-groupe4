@@ -5,8 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import InboxNotificationList from "@/components/notifications/InboxNotificationList";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
 import { fetchUserNotifications } from "@/lib/api/notification.service";
+import { useI18n } from "@/lib/i18n/client";
 
 export default function NotificationInbox() {
+  const { t } = useI18n();
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +26,7 @@ export default function NotificationInbox() {
       })
       .catch(() => {
         if (isMounted) {
-          setError("Impossible de verifier l'utilisateur connecte.");
+          setError(t("api.currentUserVerifyError"));
         }
       })
       .finally(() => {
@@ -36,7 +38,7 @@ export default function NotificationInbox() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [t]);
 
   const fetchNotifications = useMemo(() => {
     return userId ? fetchUserNotifications(userId) : null;
@@ -53,7 +55,7 @@ export default function NotificationInbox() {
   if (error || !fetchNotifications || !userId) {
     return (
       <Alert color="red" variant="light">
-        {error ?? "Utilisateur introuvable."}
+        {error ?? t("api.userNotFound")}
       </Alert>
     );
   }

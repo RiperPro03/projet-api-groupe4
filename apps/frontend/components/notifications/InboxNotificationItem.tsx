@@ -13,6 +13,7 @@ import {
   getNotificationHref,
   isNotificationNavigable,
 } from "@/lib/notifications/notification-links";
+import { useI18n } from "@/lib/i18n/client";
 import type { UserNotification } from "@/types/notification";
 
 type InboxNotificationItemProps = {
@@ -21,8 +22,8 @@ type InboxNotificationItemProps = {
   onDelete: (notificationId: string) => void | Promise<void>;
 };
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("fr-FR", {
+function formatDate(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
@@ -35,6 +36,7 @@ export default function InboxNotificationItem({
   onMarkAsRead,
   onDelete,
 }: InboxNotificationItemProps) {
+  const { dateLocale, t } = useI18n();
   const isMention = notification.type === "mention";
   const notificationHref = getNotificationHref(notification);
   const isNavigable = isNotificationNavigable(notification);
@@ -89,24 +91,24 @@ export default function InboxNotificationItem({
         </div>
         <div className="min-w-0 flex-1">
           <Text size="sm" fw={notification.isRead ? 500 : 600} lh={1.45}>
-            {getNotificationDisplayMessage(notification)}
+            {getNotificationDisplayMessage(notification, t)}
           </Text>
           <Group gap="xs" mt={6} wrap="wrap">
             <Badge size="xs" variant="light" color={accentColor} radius="sm">
-              {getNotificationTypeLabel(notification.type)}
+              {getNotificationTypeLabel(notification.type, t)}
             </Badge>
             <Text size="xs" c="dimmed">
-              {getResourceTypeLabel(notification.resourceType)}
+              {getResourceTypeLabel(notification.resourceType, t)}
             </Text>
             <Text size="xs" c="dimmed">
-              {formatDate(notification.createdAt)}
+              {formatDate(notification.createdAt, dateLocale)}
             </Text>
           </Group>
         </div>
         <ActionIcon
           variant="subtle"
           color="gray"
-          aria-label="Supprimer la notification"
+          aria-label={t("notifications.deleteAria")}
           onClick={handleDelete}
         >
           <FiTrash2 size={16} />
@@ -115,7 +117,7 @@ export default function InboxNotificationItem({
     </Card>
   );
 
-  const ariaLabel = getNotificationAriaLabel(notification);
+  const ariaLabel = getNotificationAriaLabel(notification, t);
 
   if (isNavigable && notificationHref) {
     return (

@@ -25,6 +25,7 @@ import {
   type ChatMessage,
 } from "@/lib/chat/chat-storage";
 import { getAuthenticatedUserId } from "@/lib/current-user-ids";
+import { useI18n } from "@/lib/i18n/client";
 
 type PageState =
   | { status: "loading" }
@@ -41,8 +42,8 @@ function displayName(profile: PublicProfile) {
   return profile.nickname || profile.username;
 }
 
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat("fr-FR", {
+function formatTime(value: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
@@ -51,6 +52,7 @@ function formatTime(value: string) {
 export default function ChatRoomClient() {
   const params = useParams();
   const router = useRouter();
+  const { dateLocale, t } = useI18n();
   const peerUserId = decodeURIComponent(params.userId as string);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const socketRef = useRef<ReturnType<typeof createChatSocket> | null>(null);
@@ -130,10 +132,10 @@ export default function ChatRoomClient() {
 
     socket.on("connect", () => setConnectionError(null));
     socket.on("connect_error", () => {
-      setConnectionError("Connexion au chat indisponible.");
+      setConnectionError(t("chat.connectionUnavailable"));
     });
     socket.on("chat:error", (error: { message?: string }) => {
-      setConnectionError(error.message ?? "Impossible d'envoyer le message.");
+      setConnectionError(error.message ?? t("chat.sendError"));
     });
     socket.on("chat:connected", (payload: ChatConnectedPayload) => {
       setIsPeerOnline(payload.onlineUserIds.includes(peerId));
@@ -176,7 +178,7 @@ export default function ChatRoomClient() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [currentUserId, peerId]);
+  }, [currentUserId, peerId, t]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -192,7 +194,7 @@ export default function ChatRoomClient() {
     const socket = socketRef.current;
 
     if (!socket?.connected) {
-      setConnectionError("Connexion au chat indisponible.");
+      setConnectionError(t("chat.connectionUnavailable"));
       return;
     }
 
@@ -219,10 +221,10 @@ export default function ChatRoomClient() {
       <section className="min-h-[calc(100svh-64px)] px-5 py-8 text-foreground">
         <div className="mx-auto max-w-3xl">
           <Alert color="red" variant="light">
-            Conversation introuvable.
+            {t("chat.conversationNotFound")}
           </Alert>
           <Link className="mt-4 inline-block text-sm text-breezy-green" href="/chat">
-            Retour aux messages
+            {t("chat.backToMessages")}
           </Link>
         </div>
       </section>
@@ -249,7 +251,7 @@ export default function ChatRoomClient() {
         <header className="flex items-center gap-3 border-b border-border px-4 py-3">
           <Link
             href="/chat"
-            aria-label="Retour aux messages"
+            aria-label={t("chat.backToMessages")}
             className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <FiArrowLeft className="size-5" aria-hidden />
@@ -263,7 +265,7 @@ export default function ChatRoomClient() {
               <ChatStatusDot online={isPeerOnline} />
             </div>
             <p className="truncate text-xs text-muted-foreground">
-              @{state.peer.username} - {isPeerOnline ? "Connecte" : "Deconnecte"}
+              @{state.peer.username} - {isPeerOnline ? t("chat.online") : t("chat.offline")}
             </p>
           </div>
         </header>
@@ -277,7 +279,7 @@ export default function ChatRoomClient() {
         <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5">
           {state.messages.length === 0 ? (
             <p className="py-16 text-center text-sm text-muted-foreground">
-              Aucun message local. Demarrez la conversation.
+              {t("chat.noMessages")}
             </p>
           ) : (
             state.messages.map((message) => {
@@ -301,8 +303,10 @@ export default function ChatRoomClient() {
                         isOwn ? "text-black/65" : "text-muted-foreground"
                       }`}
                     >
-                      {formatTime(message.sentAt)}
-                      {isOwn && message.delivered === false ? " - non remis" : ""}
+                      {formatTime(message.sentAt, dateLocale)}
+                      {isOwn && message.delivered === false
+                        ? ` - ${t("chat.notDelivered")}`
+                        : ""}
                     </p>
                   </div>
                 </div>
@@ -323,7 +327,7 @@ export default function ChatRoomClient() {
             <Textarea
               value={input}
               onChange={(event) => setInput(event.currentTarget.value)}
-              placeholder="Votre message"
+              placeholder={t("chat.messagePlaceholder")}
               autosize
               minRows={1}
               maxRows={5}
@@ -341,7 +345,7 @@ export default function ChatRoomClient() {
               disabled={!canSend}
               rippleColor="var(--color-breezy-black)"
               className="h-10 rounded-full border-breezy-green bg-breezy-green px-4 text-black disabled:cursor-not-allowed disabled:opacity-60"
-              aria-label="Envoyer"
+              aria-label={t("chat.send")}
             >
               <FiSend className="size-4" aria-hidden />
             </RippleButton>

@@ -10,6 +10,7 @@ import {
   matchesNotificationFilter,
   type NotificationFilter,
 } from "@/lib/notification-labels";
+import { useI18n } from "@/lib/i18n/client";
 import type { FetchNotificationPage } from "@/types/notification";
 
 type InboxNotificationListProps = {
@@ -23,6 +24,7 @@ export default function InboxNotificationList({
   recipientId,
   pageSize = 20,
 }: InboxNotificationListProps) {
+  const { t } = useI18n();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
   const [filter, setFilter] = useState<NotificationFilter>("all");
@@ -95,14 +97,14 @@ export default function InboxNotificationList({
   const hasUnread = notifications.some((notification) => !notification.isRead);
   const emptyMessage =
     notifications.length === 0
-      ? getEmptyFilterMessage("all")
-      : getEmptyFilterMessage(filter);
+      ? getEmptyFilterMessage("all", t)
+      : getEmptyFilterMessage(filter, t);
 
   return (
     <Stack gap="md">
       <Group justify="space-between" align="center">
         <Text fw={700} style={{ color: "var(--foreground)" }} size="lg">
-          Notifications
+          {t("notifications.title")}
         </Text>
         {hasUnread && (
           <Button
@@ -113,7 +115,7 @@ export default function InboxNotificationList({
             loading={isMarkingAll}
             onClick={handleMarkAllAsRead}
           >
-            Tout marquer comme lu
+            {t("notifications.markAllRead")}
           </Button>
         )}
       </Group>
@@ -125,9 +127,9 @@ export default function InboxNotificationList({
         keepMounted={false}
       >
         <Tabs.List grow>
-          <Tabs.Tab value="all">Toutes</Tabs.Tab>
-          <Tabs.Tab value="like">J&apos;aime</Tabs.Tab>
-          <Tabs.Tab value="mention">Mentions</Tabs.Tab>
+          <Tabs.Tab value="all">{t("notifications.tabAll")}</Tabs.Tab>
+          <Tabs.Tab value="like">{t("notifications.tabLikes")}</Tabs.Tab>
+          <Tabs.Tab value="mention">{t("notifications.tabMentions")}</Tabs.Tab>
         </Tabs.List>
       </Tabs>
 
@@ -169,7 +171,7 @@ export default function InboxNotificationList({
           size="sm"
           py="sm"
         >
-          Vous avez atteint la fin des notifications.
+          {t("notifications.end")}
         </Text>
       )}
     </Stack>

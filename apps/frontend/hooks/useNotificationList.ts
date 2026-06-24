@@ -7,6 +7,7 @@ import {
   markNotificationAsRead as markNotificationAsReadApi,
 } from "@/lib/api/notification.service";
 import { getApiErrorMessage } from "@/lib/api/http-client";
+import { useI18n } from "@/lib/i18n/client";
 import { enrichNotificationsWithActors } from "@/lib/notifications/enrich-notifications";
 import type {
   FetchNotificationPage,
@@ -24,6 +25,7 @@ export function useNotificationList({
   recipientId,
   pageSize = 20,
 }: UseNotificationListOptions) {
+  const { t } = useI18n();
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -49,7 +51,9 @@ export function useNotificationList({
       } catch (loadError) {
         if (isMounted) {
           setError(
-            `Impossible de charger les notifications. ${getApiErrorMessage(loadError)}`
+            t("notifications.loadError", {
+              message: getApiErrorMessage(loadError),
+            })
           );
         }
       } finally {
@@ -64,7 +68,7 @@ export function useNotificationList({
     return () => {
       isMounted = false;
     };
-  }, [fetchNotifications, pageSize]);
+  }, [fetchNotifications, pageSize, t]);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || isLoadingMore || !nextCursor) {
@@ -95,12 +99,14 @@ export function useNotificationList({
       setHasMore(page.hasMore);
     } catch (loadMoreError) {
       setError(
-        `Impossible de charger plus de notifications. ${getApiErrorMessage(loadMoreError)}`
+        t("notifications.loadMoreError", {
+          message: getApiErrorMessage(loadMoreError),
+        })
       );
     } finally {
       setIsLoadingMore(false);
     }
-  }, [fetchNotifications, hasMore, isLoadingMore, nextCursor, pageSize]);
+  }, [fetchNotifications, hasMore, isLoadingMore, nextCursor, pageSize, t]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
     const updated = await markNotificationAsReadApi(notificationId);

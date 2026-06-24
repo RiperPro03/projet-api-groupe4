@@ -34,6 +34,10 @@ services:
         published: ${PUBLIC_HTTPS_PORT:-8443}
         protocol: tcp
         mode: ingress
+      - target: 9001
+        published: ${MINIO_CONSOLE_PUBLIC_PORT:-9001}
+        protocol: tcp
+        mode: ingress
     configs:
       - source: nginx_public_conf
         target: /etc/nginx/nginx.conf

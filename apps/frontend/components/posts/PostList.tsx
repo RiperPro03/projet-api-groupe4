@@ -65,6 +65,7 @@ const postMediaMimeTypes = [
 const postImageMaxSize = 100 * 1024 * 1024;
 const postVideoMaxSize = 10000 * 1024 * 1024;
 const postMediaMaxFiles = 4;
+const postContentMaxLength = 280;
 const secondaryButtonClassName =
   "rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60";
 const greenButtonClassName =
@@ -540,7 +541,7 @@ export default function PostList({
   async function handleCreatePost() {
     const trimmedContent = postContent.trim();
 
-    if (!trimmedContent || isCreatingPost) {
+    if (!trimmedContent || trimmedContent.length > postContentMaxLength || isCreatingPost) {
       return;
     }
 
@@ -713,6 +714,7 @@ export default function PostList({
                 value={postContent}
                 onChange={(event) => setPostContent(event.currentTarget.value)}
                 placeholder={t("post.composerPlaceholder")}
+                maxLength={postContentMaxLength}
                 autosize
                 minRows={4}
                 maxRows={10}
@@ -729,6 +731,18 @@ export default function PostList({
                   },
                 }}
               />
+              <Text
+                size="xs"
+                ta="right"
+                style={{
+                  color:
+                    postContent.length >= postContentMaxLength
+                      ? "var(--destructive)"
+                      : "var(--muted-foreground)",
+                }}
+              >
+                {postContent.length}/{postContentMaxLength}
+              </Text>
               <Dropzone
                 accept={postMediaMimeTypes}
                 maxFiles={postMediaMaxFiles}
@@ -875,7 +889,11 @@ export default function PostList({
                 <RippleButton
                   type="button"
                   rippleColor="var(--color-breezy-black)"
-                  disabled={!postContent.trim() || isCreatingPost}
+                  disabled={
+                    !postContent.trim() ||
+                    postContent.trim().length > postContentMaxLength ||
+                    isCreatingPost
+                  }
                   onClick={handleCreatePost}
                   className={greenButtonClassName}
                 >

@@ -8,6 +8,7 @@ import { authMiddleware } from "../middlewares/auth.middleware";
 import {
   authenticatedRoles,
   requireBodyOwnerOrRoles,
+  requireCommentOwnerOrRoles,
   requireOwnerOrRoles,
   requireRoles,
 } from "../middlewares/rbac.middleware";
@@ -40,6 +41,12 @@ router.post("/comments/likes", authMiddleware, requireBodyOwnerOrRoles({ roles: 
 router.delete("/comments/likes", authMiddleware, requireBodyOwnerOrRoles({ roles: [], ownerBodyField: "userId" }), forwardInteractionRequest);
 router.all("/comments/likes/count", authMiddleware, requireRoles(authenticatedRoles), forwardInteractionRequest);
 router.all("/comments/likes/status", authMiddleware, requireOwnerOrRoles({ roles: [], ownerQueryParam: "userId" }), forwardInteractionRequest);
+router.delete(
+  "/comments/:commentId",
+  authMiddleware,
+  requireCommentOwnerOrRoles([]),
+  forwardInteractionRequest,
+);
 
 router.all("/replies/likes", authMiddleware, requireRoles(authenticatedRoles), forwardInteractionRequest);
 router.all("/replies/likes/count", authMiddleware, requireRoles(authenticatedRoles), forwardInteractionRequest);

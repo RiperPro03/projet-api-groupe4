@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, Group, Loader, Stack, Text } from "@mantine/core";
+import { FiArrowLeft } from "react-icons/fi";
 import CommentComposer from "@/components/comments/CommentComposer";
 import CommentThread from "@/components/comments/CommentThread";
 import ContentCard from "@/components/feed/ContentCard";
-import { createComment, fetchPostComments } from "@/lib/api/comment.service";
+import { createComment, deleteComment, fetchPostComments } from "@/lib/api/comment.service";
 import { getCurrentUserFromApi } from "@/lib/api/current-user.service";
-import { isApiStatusCode } from "@/lib/api/http-client";
+import { getApiErrorMessage, isApiStatusCode } from "@/lib/api/http-client";
 import { likePost, unlikePost } from "@/lib/api/interaction.service";
 import { fetchPostById } from "@/lib/api/post.service";
+import { removeCommentBranch } from "@/lib/comments/comment-state";
 import { getAuthenticatedUserId } from "@/lib/current-user-ids";
 import { useI18n } from "@/lib/i18n/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -29,12 +31,14 @@ type PostDetailProps = {
 
 export default function PostDetail({ postId }: PostDetailProps) {
   const { t } = useI18n();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const highlightCommentId = searchParams.get("comment");
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [commentActionError, setCommentActionError] = useState<string | null>(null);
   const [isLikePending, setIsLikePending] = useState(false);
   const dispatch = useAppDispatch();
   const likeState = useAppSelector((state) =>
@@ -42,6 +46,16 @@ export default function PostDetail({ postId }: PostDetailProps) {
   );
   const likesCount = likeState?.likesCount ?? post?.likesCount ?? 0;
   const isLiked = likeState?.isLiked ?? post?.isLiked ?? false;
+  const backButton = (
+    <button
+      type="button"
+      onClick={() => router.back()}
+      className="inline-flex w-fit items-center gap-1.5 rounded-full px-1 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-breezy-green"
+    >
+      <FiArrowLeft className="h-4 w-4" aria-hidden />
+      {t("profile.back")}
+    </button>
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -91,32 +105,41 @@ export default function PostDetail({ postId }: PostDetailProps) {
 
   if (isLoading) {
     return (
-      <Group justify="center" py="xl">
-        <Loader color="green" />
-      </Group>
+      <Stack gap="md">
+        {backButton}
+        <Group justify="center" py="xl">
+          <Loader color="green" />
+        </Group>
+      </Stack>
     );
   }
 
   if (error) {
     return (
-      <Alert
-        variant="light"
-        style={{
-          backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
-          borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
-          color: "var(--destructive)",
-        }}
-      >
-        {error}
-      </Alert>
+      <Stack gap="md">
+        {backButton}
+        <Alert
+          variant="light"
+          style={{
+            backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+            borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+            color: "var(--destructive)",
+          }}
+        >
+          {error}
+        </Alert>
+      </Stack>
     );
   }
 
   if (!post) {
     return (
-      <Text c="gray.5" ta="center" py="xl">
-        {t("post.notFound")}
-      </Text>
+      <Stack gap="md">
+        {backButton}
+        <Text c="gray.5" ta="center" py="xl">
+          {t("post.notFound")}
+        </Text>
+      </Stack>
     );
   }
 
@@ -147,8 +170,33 @@ export default function PostDetail({ postId }: PostDetailProps) {
     );
   }
 
+  async function handleDeleteComment(comment: Comment) {
+    const previousComments = comments;
+
+    setCommentActionError(null);
+    setComments((currentComments) =>
+      removeCommentBranch(currentComments, comment.id)
+    );
+
+    try {
+      await deleteComment(comment.id);
+    } catch (deleteError) {
+      setComments(previousComments);
+      setCommentActionError(
+        t("comment.deleteImpossible", {
+          message: getApiErrorMessage(
+            deleteError,
+            t("common.unknownError"),
+            t("common.serverUnreachable")
+          ),
+        })
+      );
+    }
+  }
+
   return (
     <Stack gap="md">
+      {backButton}
       <ContentCard
         type="post"
         author={post.author}
@@ -196,10 +244,23 @@ export default function PostDetail({ postId }: PostDetailProps) {
         }}
       />
       <CommentComposer onSubmit={handleCommentSubmit} />
+      {commentActionError && (
+        <Alert
+          variant="light"
+          style={{
+            backgroundColor: "color-mix(in oklch, var(--destructive) 12%, transparent)",
+            borderColor: "color-mix(in oklch, var(--destructive) 35%, transparent)",
+            color: "var(--destructive)",
+          }}
+        >
+          {commentActionError}
+        </Alert>
+      )}
       <CommentThread
         comments={comments}
         highlightCommentId={highlightCommentId}
         onReplySubmit={handleReplySubmit}
+        onDeleteSubmit={handleDeleteComment}
       />
     </Stack>
   );

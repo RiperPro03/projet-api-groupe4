@@ -16,6 +16,19 @@ export function createMentionNotificationInput(
   };
 }
 
+export function createFollowNotificationInput(
+  overrides: Partial<CreateNotificationInput> = {}
+): CreateNotificationInput {
+  return {
+    recipientId: "user-b",
+    actorId: "user-a",
+    type: "follow",
+    resourceType: "user",
+    resourceId: "user-a",
+    ...overrides,
+  };
+}
+
 export function createLikeNotificationInput(
   overrides: Partial<CreateNotificationInput> = {}
 ): CreateNotificationInput {

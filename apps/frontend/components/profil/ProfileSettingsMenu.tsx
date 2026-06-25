@@ -487,7 +487,7 @@ export default function ProfileSettingsMenu({
       {isMenuOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-14 z-30 w-72 overflow-visible rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-2xl"
+          className="absolute right-0 top-14 z-30 w-[min(calc(100vw-2rem),22rem)] overflow-visible rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-2xl"
         >
           <button
             type="button"
@@ -511,19 +511,19 @@ export default function ProfileSettingsMenu({
 
           <div className="my-1 border-t border-border" />
 
-          <div className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
-            <span className="flex min-w-0 items-center gap-3">
+          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
+            <span className="flex shrink-0 items-center gap-3">
               <FiGlobe className="shrink-0 text-breezy-green" aria-hidden="true" />
               {t("language.label")}
             </span>
-            <div className="relative">
+            <div className="relative ml-auto min-w-0">
               <button
                 type="button"
                 aria-haspopup="listbox"
                 aria-expanded={isLanguageMenuOpen}
                 aria-label={t("language.selectLabel")}
                 onClick={() => setIsLanguageMenuOpen((open) => !open)}
-                className="flex h-9 w-40 items-center justify-between gap-2 rounded-full border border-border bg-background px-3 text-sm font-semibold text-foreground outline-none transition-colors hover:border-breezy-green focus-visible:outline-2 focus-visible:outline-breezy-yellow"
+                className="flex h-9 w-44 max-w-full items-center justify-between gap-2 rounded-full border border-border bg-background px-3 text-sm font-semibold text-foreground outline-none transition-colors hover:border-breezy-green focus-visible:outline-2 focus-visible:outline-breezy-yellow"
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <LanguageFlag code={selectedLanguage.code} />

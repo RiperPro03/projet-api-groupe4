@@ -307,8 +307,8 @@ export default function ContentCard({
               : {
                   particle: "💚",
                   particleColor: "var(--color-breezy-green)",
-                  animationSpeed: 1.4,
-                  gravity: 0.7,
+                  animationSpeed: 0.3,
+                  gravity: 0.3,
                   particleCount: 1  ,
                   spinSpeed: 12,
                   size: 6,

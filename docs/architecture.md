@@ -1,641 +1,599 @@
 # Architecture du projet Breezy
 
-## 1. Présentation générale
+Ce document decrit l'architecture actuelle du projet Breezy telle qu'elle est implementee dans le monorepo. Il remplace l'ancienne version previsionnelle qui mentionnait encore des services non presents ou des dossiers qui ne sont plus utilises.
 
-Breezy est une application de réseau social léger inspirée de Twitter/X.
-L’objectif est de permettre aux utilisateurs de créer un compte, publier des messages courts, interagir avec d’autres utilisateurs, suivre des profils et consulter un fil d’actualité chronologique.
+## 1. Vue d'ensemble
 
-Le projet est organisé selon une architecture en microservices afin de séparer les responsabilités métier et faciliter le travail en équipe. Chaque service possède un rôle précis et communique avec les autres services via des API REST.
+Breezy est une application de reseau social construite en microservices. Le produit permet notamment:
 
-L’application repose sur un monorepo contenant le front-end, l’API Gateway, les microservices, les packages partagés, la documentation et l’infrastructure Docker.
+- l'inscription, la connexion et la gestion de session;
+- la consultation et la modification de profils;
+- la creation de posts courts avec tags et medias;
+- le feed chronologique;
+- les follows, likes, commentaires et reponses;
+- les notifications;
+- le chat temps reel;
+- la moderation via signalements et statuts utilisateur.
 
----
+L'architecture repose sur:
 
-## 2. Objectifs de l’architecture
+- un frontend Next.js;
+- une API gateway Express;
+- des microservices Express separes par domaine;
+- un reverse proxy Nginx public;
+- un reverse proxy Nginx interne pour router entre la gateway et les services;
+- des bases de donnees dediees par service;
+- MinIO pour le stockage objet des medias;
+- Socket.IO pour le chat.
 
-L’architecture choisie doit permettre de :
-
-* séparer clairement les responsabilités entre les services ;
-* faciliter le développement en équipe sur un seul dépôt Git ;
-* rendre le projet plus maintenable ;
-* permettre une évolution progressive vers de nouvelles fonctionnalités ;
-* simplifier le déploiement avec Docker ;
-* centraliser les appels du front-end via une API Gateway ;
-* sécuriser les échanges avec une authentification JWT.
-
----
-
-## 3. Vue globale de l’architecture
-
-Le front-end communique uniquement avec l’API Gateway.
-L’API Gateway reçoit les requêtes HTTP, vérifie si nécessaire le JWT, puis redirige la requête vers le microservice concerné.
-
-Schéma logique :
+## 2. Schema logique
 
 ```txt
 Utilisateur
-    |
-    v
-Frontend React / Next.js
-    |
-    v
+  |
+  v
+Nginx public
+  |-- /                 -> frontend Next.js
+  |-- /api/*            -> api-gateway
+  |-- /chat/socket.io/* -> chat-service
+  |-- /chat/health      -> chat-service
+  |-- /minio/*          -> MinIO
+  |
+  v
 API Gateway
-    |
-    +--> Auth Service
-    +--> User Service
-    +--> Post Service
-    +--> Follow Service
-    +--> Feed Service
+  |
+  v
+Nginx interne
+  |-- /auth/*          -> auth-service
+  |-- /users/*         -> user-service
+  |-- /profiles/*      -> profile-service
+  |-- /posts/*         -> post-service
+  |-- /media/*         -> media-service
+  |-- /follows/*       -> follow-service
+  |-- /interactions/*  -> interaction-service
+  |-- /notifications/* -> notification-service
 ```
 
-Chaque microservice possède sa propre logique métier.
-Selon les besoins du projet, chaque service peut également posséder sa propre base de données.
+Le frontend ne contacte pas directement les microservices. Les appels HTTP applicatifs passent par `/api`, puis par l'API gateway. Le chat Socket.IO et les fichiers MinIO sont exposes par Nginx public avec des chemins dedies.
 
----
-
-## 4. Organisation du monorepo
-
-Le projet est organisé de la manière suivante :
+## 3. Organisation du monorepo
 
 ```txt
-breezy/
-│
-├── apps/
-│   ├── frontend/
-│   └── api-gateway/
-│
-├── services/
-│   ├── auth-service/
-│   ├── user-service/
-│   ├── post-service/
-│   ├── follow-service/
-│   └── feed-service/
-│
-├── packages/
-│   ├── shared-types/
-│   ├── shared-utils/
-│   └── shared-config/
-│
-├── infra/
-│   ├── docker/
-│   ├── nginx/
-│   └── databases/
-│
-├── docs/
-│   ├── architecture.md
-│   ├── api-routes.md
-│   ├── database.md
-│   ├── git-workflow.md
-│   └── conventions.md
-│
-├── docker-compose.yml
-├── package.json
-├── pnpm-workspace.yaml
-├── .env.example
-└── README.md
+projet-api-groupe4/
+|-- apps/
+|   |-- api-gateway/
+|   `-- frontend/
+|-- services/
+|   |-- auth-service/
+|   |-- chat-service/
+|   |-- follow-service/
+|   |-- interaction-service/
+|   |-- media-service/
+|   |-- notification-service/
+|   |-- post-service/
+|   |-- profile-service/
+|   `-- user-service/
+|-- infra/
+|   |-- nginx/
+|   `-- nginx-internal/
+|-- docs/
+|   |-- api-index.md
+|   |-- api-auth.md
+|   |-- api-users.md
+|   |-- api-profiles.md
+|   |-- api-posts.md
+|   |-- api-interactions.md
+|   |-- api-follows.md
+|   |-- api-media.md
+|   |-- api-notifications.md
+|   |-- api-chat.md
+|   `-- architecture.md
+|-- scripts/
+|-- docker-compose.yml
+|-- docker-compose.prod.yml
+|-- package.json
+|-- pnpm-lock.yaml
+`-- pnpm-workspace.yaml
 ```
 
----
+Le workspace pnpm inclut `apps/*`, `services/*` et `packages/*`. Le dossier `packages/` est prevu par la configuration, mais il n'est pas une brique centrale de l'architecture actuelle.
 
-## 5. Rôle des dossiers principaux
+## 4. Entrees reseau
 
-### 5.1 apps/
+### Local
 
-Le dossier `apps/` contient les applications principales du projet.
+Le `docker-compose.yml` expose Nginx public sur:
 
 ```txt
-apps/
-├── frontend/
-└── api-gateway/
+http://localhost:8080
 ```
 
-### frontend/
+Routes principales:
 
-Le dossier `frontend/` contient l’interface utilisateur de l’application.
+| Route publique | Cible |
+| --- | --- |
+| `/` | Frontend Next.js |
+| `/api/*` | API gateway |
+| `/chat/health` | Healthcheck chat |
+| `/chat/socket.io/*` | Socket.IO chat |
+| `/minio/*` | API objet MinIO |
 
-Technologies prévues :
+### Production
 
-* React.js ;
-* Next.js ;
-* Tailwind CSS ;
-* Axios ;
-* stockage du JWT côté client ;
-* interface responsive et mobile-first.
+Le `docker-compose.prod.yml` expose Nginx avec:
 
-Le front-end ne communique pas directement avec les microservices.
-Toutes les requêtes passent par l’API Gateway.
+| Port | Usage |
+| --- | --- |
+| `${PUBLIC_HTTP_PORT:-80}` | HTTP, redirection vers HTTPS |
+| `${PUBLIC_HTTPS_PORT:-8443}` | HTTPS |
 
-### api-gateway/
+La config de production utilise `infra/nginx/nginx.prod.conf`, avec TLS via Let's Encrypt et un nom de domaine configure sur `riperpro-playhub.duckdns.org`.
 
-Le dossier `api-gateway/` contient le point d’entrée unique de l’API.
+## 5. API gateway
 
-Son rôle est de :
+Application: `apps/api-gateway`
 
-* recevoir les requêtes du front-end ;
-* rediriger les requêtes vers le bon microservice ;
-* gérer les middlewares communs ;
-* vérifier le JWT sur les routes protégées ;
-* centraliser la gestion CORS ;
-* gérer certaines erreurs globales ;
-* limiter l’exposition directe des microservices.
+Port interne: `3000`
 
-Exemple de routage :
+Responsabilites:
+
+- point d'entree unique des APIs HTTP;
+- verification JWT et lecture des cookies `accessToken` / `refreshToken`;
+- controle RBAC sur les routes sensibles;
+- forwarding vers les microservices via Nginx interne;
+- agregations de donnees pour certaines routes;
+- enrichissement des posts et commentaires avec profils, likes et compteurs;
+- creation coordonnee a l'inscription: compte auth, profil et etat utilisateur.
+
+Routes publiques principales:
+
+| Prefixe gateway | Domaine |
+| --- | --- |
+| `/auth` | Authentification |
+| `/me` | Utilisateur courant agrege |
+| `/users` | Etat utilisateur et signalements |
+| `/profiles` | Profils publics |
+| `/posts` | Posts et feed |
+| `/media` | Medias |
+| `/follows` | Abonnements |
+| `/comments` | Commentaires |
+| `/posts/likes` | Likes de posts |
+| `/comments/likes` | Likes de commentaires |
+| `/notifications` | Notifications |
+
+La documentation detaillee des routes est dans [api-index.md](api-index.md).
+
+## 6. Reverse proxy interne
+
+Fichier: `infra/nginx-internal/nginx.conf`
+
+Le proxy interne evite que l'API gateway connaisse directement tous les ports des services. Elle appelle `INTERNAL_NGINX_URL`, puis Nginx interne route vers le service correct.
+
+| Chemin interne | Service |
+| --- | --- |
+| `/auth/` | `auth-service:3001` |
+| `/users/` | `user-service:3002`, remappe vers `/users-state/` |
+| `/profiles/` | `profile-service:3006` |
+| `/posts/` | `post-service:3003` |
+| `/media/` | `media-service:3005` |
+| `/follows/` | `follow-service:3004` |
+| `/interactions/` | `interaction-service:3007` |
+| `/notifications/` | `notification-service:3008` |
+
+## 7. Services applicatifs
+
+| Service | Port | Technologie | Stockage | Role |
+| --- | --- | --- | --- | --- |
+| `frontend` | `4000` | Next.js | Aucun stockage direct | Interface utilisateur |
+| `api-gateway` | `3000` | Express | Aucun stockage direct | Routage, auth gateway, agregations |
+| `auth-service` | `3001` | Express, Prisma | PostgreSQL | Comptes, mots de passe, JWT, refresh tokens |
+| `user-service` | `3002` | Express, Prisma | PostgreSQL | Roles, statuts, signalements |
+| `post-service` | `3003` | Express, Mongoose | MongoDB | Posts, tags, soft delete |
+| `follow-service` | `3004` | Express, Prisma | PostgreSQL | Relations follower/following |
+| `media-service` | `3005` | Express, Mongoose, MinIO SDK | MongoDB + MinIO | URL presignees et metadonnees medias |
+| `profile-service` | `3006` | Express, Mongoose | MongoDB | Profils publics |
+| `interaction-service` | `3007` | Express, Mongoose | MongoDB | Likes, commentaires, reponses |
+| `notification-service` | `3008` | Express, Mongoose | MongoDB | Notifications |
+| `chat-service` | `3009` | Express, Socket.IO | Memoire | Presence et messages prives temps reel |
+
+### 7.1 Frontend
+
+Dossier: `apps/frontend`
+
+Le frontend consomme l'API via `NEXT_PUBLIC_API_URL`, avec `/api` par defaut. Il utilise des cookies HTTP-only pour la session et un proxy Next.js pour verifier ou rafraichir les tokens avant l'acces aux pages protegees.
+
+Il consomme aussi Socket.IO pour le chat:
 
 ```txt
-/api/auth      -> auth-service
-/api/users     -> user-service
-/api/posts     -> post-service
-/api/follows   -> follow-service
-/api/feed      -> feed-service
+path: /chat/socket.io
 ```
 
----
+### 7.2 Auth service
 
-## 6. Rôle des microservices
+Dossier: `services/auth-service`
 
-### 6.1 Auth Service
+Responsabilites:
 
-Le `auth-service` gère l’authentification et la sécurité des comptes.
+- inscription auth;
+- login;
+- verification de token;
+- refresh token;
+- logout;
+- changement de mot de passe;
+- stockage des refresh tokens hashes.
 
-Responsabilités principales :
+Base: `auth-postgres`
 
-* création de compte ;
-* connexion ;
-* génération des JWT ;
-* validation des identifiants ;
-* vérification du mot de passe ;
-* gestion éventuelle du refresh token ;
-* validation du compte utilisateur.
+Tables principales:
 
-Fonctionnalités liées :
+- utilisateurs auth;
+- refresh tokens.
 
-* Fx1 : création de comptes utilisateurs ;
-* Fx2 : authentification sécurisée.
+### 7.3 User service
 
-Routes possibles :
+Dossier: `services/user-service`
+
+Responsabilites:
+
+- etat utilisateur: `role` et `statuts`;
+- roles: `ADMIN`, `MODERATOR`, `USER`;
+- statuts: `ACTIVE`, `INACTIVE`;
+- signalements de contenu;
+- moderation par role via la gateway.
+
+Base: `user-postgres`
+
+Le user-service expose ses routes internes sous `/users-state`, mais la gateway les expose publiquement sous `/users`.
+
+### 7.4 Profile service
+
+Dossier: `services/profile-service`
+
+Responsabilites:
+
+- creation de profil;
+- lecture par `id_user`;
+- lecture par `username`;
+- recherche partielle par username;
+- mise a jour et suppression.
+
+Base: `profile-mongodb`
+
+Collection principale: `user_info`
+
+### 7.5 Post service
+
+Dossier: `services/post-service`
+
+Responsabilites:
+
+- creation de posts courts;
+- limite de 280 caracteres;
+- tags explicites et hashtags extraits du contenu;
+- medias attaches;
+- pagination par cursor;
+- feed par liste d'auteurs;
+- soft delete;
+- suppression des interactions d'un post supprime.
+
+Base: `post-mongodb`
+
+Le feed n'est plus un microservice dedie. Il est construit par la gateway avec:
 
 ```txt
-POST /auth/register
-POST /auth/login
-POST /auth/logout
-GET  /auth/me
+follow-service -> liste des utilisateurs suivis
+post-service   -> posts des utilisateurs suivis et de l'utilisateur courant
 ```
 
----
+### 7.6 Follow service
 
-### 6.2 User Service
+Dossier: `services/follow-service`
 
-Le `user-service` gère les informations de base des utilisateurs et leur profil public.
+Responsabilites:
 
-Responsabilités principales :
+- suivre un utilisateur;
+- ne plus suivre un utilisateur;
+- lister les abonnements;
+- lister les abonnes;
+- notifier un nouveau follower.
 
-* récupération des informations utilisateur ;
-* modification du profil ;
-* gestion du nom, de la biographie et de la photo de profil ;
-* affichage du profil utilisateur ;
-* liste des messages publiés par un utilisateur, en coordination avec le post-service.
+Base: `follow-postgres`
 
-Fonctionnalités liées :
+La table `follows` impose une unicite sur la paire `follower_id` / `following_id`.
 
-* Fx10 : profil utilisateur avec informations de base ;
-* Fx11 : liste des messages publiés par l’utilisateur sur le profil.
+### 7.7 Interaction service
 
-Routes possibles :
+Dossier: `services/interaction-service`
 
-```txt
-GET    /users/:id
-PATCH  /users/:id
-GET    /users/:id/profile
-```
+Responsabilites:
 
----
+- likes de posts;
+- likes de commentaires;
+- liste des likers recents;
+- statuts de likes en lot;
+- commentaires de posts;
+- reponses a des commentaires;
+- soft delete des commentaires;
+- nettoyage des interactions d'un post.
 
-### 6.3 Post Service
+Base: `interaction-mongodb`
 
-Le `post-service` gère les publications, les commentaires et les likes.
+Collections principales:
 
-Responsabilités principales :
+- `post_likes`
+- `comment_likes`
+- `comments`
 
-* création de posts courts ;
-* modification et suppression de posts ;
-* affichage des posts d’un utilisateur ;
-* ajout de commentaires ;
-* réponse à un commentaire ;
-* ajout et retrait de likes.
+### 7.8 Media service
 
-Fonctionnalités liées :
+Dossier: `services/media-service`
 
-* Fx3 : publication de messages courts ;
-* Fx4 : affichage des messages sur le profil ;
-* Fx6 : liker un post ;
-* Fx7 : répondre à un post sous forme de commentaire ;
-* Fx8 : répondre à un commentaire sur un post.
+Responsabilites:
 
-Routes possibles :
+- generation d'URL MinIO presignees;
+- validation MIME type et taille;
+- stockage des metadonnees media;
+- suppression objet MinIO + metadata.
 
-```txt
-POST   /posts
-GET    /posts/:id
-PATCH  /posts/:id
-DELETE /posts/:id
+Stockage:
 
-POST   /posts/:id/likes
-DELETE /posts/:id/likes
+- metadonnees: `media-mongodb`;
+- fichiers: `minio`, bucket `breezy-media`.
 
-POST   /posts/:id/comments
-POST   /comments/:id/replies
-```
-
----
-
-### 6.4 Follow Service
-
-Le `follow-service` gère les relations d’abonnement entre utilisateurs.
-
-Responsabilités principales :
-
-* suivre un utilisateur ;
-* ne plus suivre un utilisateur ;
-* afficher les abonnements ;
-* afficher les abonnés ;
-* fournir les utilisateurs suivis au feed-service.
-
-Fonctionnalités liées :
-
-* Fx9 : suivre ou être suivi par d’autres utilisateurs.
-
-Routes possibles :
-
-```txt
-POST   /follows/:userId
-DELETE /follows/:userId
-GET    /follows/:userId/followers
-GET    /follows/:userId/following
-```
-
----
-
-### 6.5 Feed Service
-
-Le `feed-service` gère le fil d’actualité de l’utilisateur.
-
-Responsabilités principales :
-
-* récupérer la liste des utilisateurs suivis ;
-* récupérer les posts récents de ces utilisateurs ;
-* trier les posts par ordre chronologique ;
-* retourner un flux d’actualité personnalisé.
-
-Fonctionnalités liées :
-
-* Fx5 : flux chronologique des messages des utilisateurs suivis.
-
-Routes possibles :
-
-```txt
-GET /feed
-```
-
-Le feed-service peut communiquer avec :
-
-* le follow-service pour connaître les utilisateurs suivis ;
-* le post-service pour récupérer les messages publiés.
-
----
-
-## 7. Services optionnels futurs
-
-Certaines fonctionnalités secondaires pourront être ajoutées plus tard avec de nouveaux services.
-
-Services possibles :
-
-```txt
-notification-service
-message-service
-media-service
-moderation-service
-search-service
-```
-
-### notification-service
-
-Pour gérer :
-
-* les notifications de mentions ;
-* les notifications de likes ;
-* les notifications de nouveaux followers.
-
-Fonctionnalités liées :
-
-* Fx14 ;
-* Fx15 ;
-* Fx16.
-
-### message-service
-
-Pour gérer les messages privés entre utilisateurs.
-
-Fonctionnalité liée :
-
-* Fx17.
-
-### media-service
-
-Pour gérer l’ajout d’images et de vidéos aux messages.
-
-Fonctionnalités liées :
-
-* Fx18 ;
-* Fx19.
-
-### moderation-service
-
-Pour gérer le signalement, la suspension et le bannissement.
-
-Fonctionnalités liées :
-
-* Fx20 ;
-* Fx21.
-
-### search-service
-
-Pour gérer la recherche par tags ou par mots-clés.
-
-Fonctionnalités liées :
-
-* Fx12 ;
-* Fx13.
-
----
-
-## 8. Communication entre les services
-
-La communication principale se fait en HTTP via des API REST.
-
-Exemple :
+Le flux d'upload est:
 
 ```txt
 Frontend
-  -> API Gateway
-    -> Post Service
+  -> POST /api/media/presigned-url
+  <- uploadUrl, objectKey, publicUrl
+Frontend
+  -> PUT uploadUrl vers MinIO
+Frontend
+  -> reference objectKey/publicUrl dans un post ou profil
 ```
 
-Pour certaines actions, un service peut appeler un autre service.
+### 7.9 Notification service
 
-Exemple pour le fil d’actualité :
+Dossier: `services/notification-service`
+
+Responsabilites:
+
+- creation de notifications `like`, `mention`, `follow`;
+- listing pagine par destinataire;
+- compteur de non lues;
+- marquage lu unitaire ou global;
+- suppression.
+
+Base: `notification-mongodb`
+
+Les notifications sont declenchees par des appels internes depuis les services de follow, post et interaction.
+
+### 7.10 Chat service
+
+Dossier: `services/chat-service`
+
+Responsabilites:
+
+- authentification Socket.IO via auth-service;
+- presence en ligne;
+- messages prives temps reel;
+- ack d'envoi et statut `delivered`.
+
+Le service ne persiste pas les messages en base dans l'etat actuel. Les conversations sont donc gerees cote client/local storage, avec presence temps reel cote serveur.
+
+## 8. Bases de donnees et volumes
+
+| Stockage | Service consommateur | Type | Port local dev |
+| --- | --- | --- | --- |
+| `auth-postgres` | `auth-service` | PostgreSQL 17 | `5433` |
+| `user-postgres` | `user-service` | PostgreSQL 17 | `5434` |
+| `follow-postgres` | `follow-service` | PostgreSQL 17 | `5435` |
+| `profile-mongodb` | `profile-service` | MongoDB 8 | `27019` |
+| `interaction-mongodb` | `interaction-service` | MongoDB 8 | `27020` |
+| `post-mongodb` | `post-service` | MongoDB 8 | `27021` |
+| `media-mongodb` | `media-service` | MongoDB 8 | `27022` |
+| `notification-mongodb` | `notification-service` | MongoDB 8 | `27023` |
+| `minio` | `media-service`, frontend upload direct | Objet S3-compatible | `9000`, console `9001` |
+
+Chaque service garde la responsabilite de ses donnees. Les autres services passent par HTTP au lieu d'acceder directement a sa base.
+
+## 9. Authentification et autorisation
+
+L'authentification repose sur:
+
+- access token JWT;
+- refresh token;
+- cookies HTTP-only `accessToken` et `refreshToken`;
+- header `Authorization: Bearer <token>` accepte par les APIs et le chat.
+
+Flux de connexion:
 
 ```txt
-Feed Service
-  -> Follow Service : récupérer les utilisateurs suivis
-  -> Post Service   : récupérer les posts des utilisateurs suivis
+Frontend -> API Gateway -> auth-service
+auth-service -> verifie email/password
+auth-service -> renvoie accessToken + refreshToken
+frontend/gateway -> stocke les tokens en cookies HTTP-only
 ```
 
-Dans une première version du projet, la communication REST est suffisante.
+La gateway applique ensuite:
 
-Dans une version plus avancée, il serait possible d’ajouter une communication asynchrone avec une file de messages comme RabbitMQ ou Kafka, notamment pour les notifications.
+- verification du token via `auth-service`;
+- recuperation du role courant via `user-service`;
+- controles RBAC;
+- controles owner-or-role sur les ressources sensibles.
 
----
+Regles principales:
 
-## 9. Gestion de l’authentification
+| Regle | Exemple |
+| --- | --- |
+| `USER`, `MODERATOR`, `ADMIN` | lecture posts, profils, commentaires |
+| proprietaire de ressource | modifier son profil, liker avec son `userId`, creer un post avec son `authorId` |
+| `MODERATOR`, `ADMIN` | moderation des posts/commentaires/users |
+| `ADMIN` | creation/suppression d'etats utilisateur, acces global auth |
 
-L’authentification repose sur des JWT.
+## 10. Communication inter-services
 
-Processus simplifié :
+La communication est synchrone en HTTP REST.
+
+Exemples importants:
 
 ```txt
-1. L’utilisateur se connecte depuis le frontend.
-2. Le frontend envoie les identifiants à l’API Gateway.
-3. L’API Gateway transmet la requête à auth-service.
-4. Auth-service vérifie les identifiants.
-5. Auth-service génère un JWT.
-6. Le frontend stocke le JWT.
-7. Les requêtes suivantes contiennent le JWT dans le header Authorization.
+API Gateway -> auth-service
+API Gateway -> user-service
+API Gateway -> profile-service
+API Gateway -> post-service
+API Gateway -> follow-service
+API Gateway -> interaction-service
 ```
 
-Exemple de header :
+Agregation du feed:
 
 ```txt
-Authorization: Bearer <token>
+GET /api/posts/feed
+  -> gateway recupere l'utilisateur courant
+  -> follow-service retourne les following ids
+  -> post-service retourne les posts des auteurs
+  -> profile-service enrichit les auteurs
+  -> interaction-service ajoute likes et commentaires
 ```
 
-L’API Gateway peut vérifier la validité du token avant de transmettre la requête au service concerné.
-
----
-
-## 10. Gestion des bases de données
-
-Le projet peut utiliser plusieurs bases de données selon les besoins des services.
-
-Exemple possible :
+Creation d'un compte:
 
 ```txt
-auth-service    -> PostgreSQL
-user-service    -> PostgreSQL
-post-service    -> MongoDB
-follow-service  -> PostgreSQL
-feed-service    -> pas forcément de base dédiée au début
+POST /api/auth/register
+  -> auth-service cree le compte
+  -> profile-service cree le profil
+  -> user-service cree role USER / statuts ACTIVE
 ```
 
-Choix possibles :
-
-* PostgreSQL pour les données relationnelles ;
-* MongoDB pour les contenus plus flexibles comme les posts et les commentaires.
-
-Chaque microservice doit idéalement être responsable de ses propres données.
-Un service ne doit pas accéder directement à la base de données d’un autre service.
-
----
-
-## 11. Sécurité
-
-Les règles de sécurité principales sont :
-
-* utiliser JWT pour les routes protégées ;
-* vérifier les droits de l’utilisateur côté back-end ;
-* ne jamais faire confiance uniquement au front-end ;
-* protéger les routes sensibles ;
-* gérer correctement les erreurs ;
-* éviter d’exposer les détails techniques dans les réponses d’erreur ;
-* configurer CORS proprement ;
-* stocker les secrets dans des variables d’environnement ;
-* ne jamais versionner les fichiers `.env`.
-
----
-
-## 12. Docker et environnement de développement
-
-Chaque application ou service peut être lancé dans un conteneur Docker.
-
-Le fichier `docker-compose.yml` permet de démarrer l’ensemble du projet en local :
+Notifications:
 
 ```txt
-frontend
-api-gateway
-auth-service
-user-service
-post-service
-follow-service
-feed-service
-postgres
-mongodb
+post-service / interaction-service / follow-service
+  -> notification-service
 ```
 
-Objectifs de Docker :
+## 11. Documentation API
 
-* simplifier l’installation du projet ;
-* éviter les différences d’environnement entre les membres de l’équipe ;
-* lancer facilement tous les services ;
-* préparer le projet à un futur déploiement.
+La documentation HTTP detaillee est separee par domaine:
 
----
+| Fichier | Domaine |
+| --- | --- |
+| [api-index.md](api-index.md) | Index, bases d'appel, healthchecks |
+| [api-auth.md](api-auth.md) | Authentification et session |
+| [api-users.md](api-users.md) | Roles, statuts et signalements |
+| [api-profiles.md](api-profiles.md) | Profils |
+| [api-posts.md](api-posts.md) | Posts et feed |
+| [api-interactions.md](api-interactions.md) | Likes, commentaires, reponses |
+| [api-follows.md](api-follows.md) | Follows |
+| [api-media.md](api-media.md) | Medias et upload MinIO |
+| [api-notifications.md](api-notifications.md) | Notifications |
+| [api-chat.md](api-chat.md) | Chat Socket.IO |
 
-## 13. Packages partagés
+Une collection Postman est aussi disponible dans `docs/postman/`.
 
-Le dossier `packages/` contient du code commun utilisé par plusieurs applications ou services.
+## 12. Docker local
+
+Commande de demarrage habituelle:
+
+```bash
+docker compose up --build
+```
+
+Le compose local construit les images depuis les dossiers du repo et expose seulement les entrees utiles a l'hote:
+
+- Nginx public sur `8080`;
+- bases de donnees sur ports dev;
+- MinIO sur `9000` et `9001`.
+
+Les microservices sont sur le reseau Docker `breezy-network` et sont exposes principalement aux autres conteneurs.
+
+## 13. Docker production
+
+Le fichier `docker-compose.prod.yml` est prevu pour un deploiement type Docker Swarm:
+
+- images prebuild depuis un registry;
+- replicas configurables via `${APP_REPLICAS:-3}`;
+- services stateful en singleton;
+- Nginx public avec TLS;
+- configs Docker pour les fichiers Nginx;
+- volumes persistants pour Postgres, MongoDB, MinIO et Certbot.
+
+`chat-service` est deploye en singleton car la presence est stockee en memoire. Pour le repliquer, il faudrait externaliser la presence et utiliser un adapter Socket.IO partage, par exemple Redis.
+
+## 14. Securite
+
+Mesures presentes:
+
+- helmet sur les apps Express;
+- CORS configure;
+- cookies HTTP-only pour les tokens;
+- refresh tokens stockes hashes;
+- RBAC dans la gateway;
+- verification owner-or-role pour posts, profils, likes, follows et commentaires;
+- services non exposes directement au navigateur;
+- secrets via variables d'environnement;
+- healthchecks DB pour plusieurs services;
+- soft delete pour posts et commentaires.
+
+Points d'attention:
+
+- le chat ne persiste pas les messages cote serveur;
+- certaines routes internes de notification acceptent `recipientId` sans controle owner strict dans la gateway;
+- la route gateway `/replies/likes` est declaree mais le service actuel ne fournit pas encore de handler specifique;
+- le script racine `dev:feed` est un reste historique alors que `feed-service` n'existe plus dans l'architecture actuelle.
+
+## 15. Conventions techniques
+
+Services:
 
 ```txt
-packages/
-├── shared-types/
-├── shared-utils/
-└── shared-config/
+<domain>-service
 ```
 
-### shared-types
-
-Contient les types TypeScript partagés :
+Fichiers courants:
 
 ```txt
-User
-Post
-Comment
-Follow
-AuthPayload
+*.routes.ts
+*.controller.ts
+*.service.ts
+*.model.ts
+*.middleware.ts
 ```
 
-### shared-utils
+Format API recommande:
 
-Contient les fonctions utilitaires communes :
-
-```txt
-formatResponse()
-handleError()
-logger()
+```json
+{
+  "status": "success",
+  "message": "Optional message",
+  "data": {}
+}
 ```
 
-### shared-config
+Certains services existants retournent encore des formats plus directs, par exemple `{ "count": 1 }`, `{ "userIds": [] }`, un tableau de follows ou `{ "error": "..." }`. Ces differences sont documentees dans les fichiers `api-*.md`.
 
-Contient certaines configurations communes :
+## 16. Evolution possible
 
-```txt
-cors
-jwt
-env
-```
+Ameliorations naturelles:
 
-Attention : les packages partagés doivent rester simples.
-Ils ne doivent pas contenir trop de logique métier afin d’éviter de créer un couplage trop fort entre les services.
-
----
-
-## 14. Convention de nommage
-
-Les dossiers des services utilisent le format kebab-case :
-
-```txt
-auth-service
-user-service
-post-service
-follow-service
-feed-service
-```
-
-Les fichiers TypeScript peuvent suivre cette convention :
-
-```txt
-auth.controller.ts
-auth.service.ts
-auth.routes.ts
-auth.model.ts
-error.middleware.ts
-```
-
-Les routes API doivent rester simples et cohérentes :
-
-```txt
-/api/auth
-/api/users
-/api/posts
-/api/follows
-/api/feed
-```
-
----
-
-## 15. Répartition possible du travail en équipe
-
-Exemple de répartition :
-
-```txt
-Membre 1 -> frontend
-Membre 2 -> auth-service + user-service
-Membre 3 -> post-service
-Membre 4 -> follow-service + feed-service
-Membre 5 -> api-gateway + Docker
-```
-
-Chaque membre peut travailler sur un service précis tout en respectant les contrats d’API définis dans la documentation.
-
----
-
-## 16. Évolution progressive du projet
-
-L’architecture doit rester progressive.
-
-Version minimale recommandée :
-
-```txt
-frontend
-api-gateway
-auth-service
-user-service
-post-service
-follow-service
-feed-service
-```
-
-Fonctionnalités à développer en premier :
-
-```txt
-1. Création de compte
-2. Connexion JWT
-3. Profil utilisateur
-4. Création de post
-5. Liste des posts sur le profil
-6. Follow / unfollow
-7. Fil d’actualité
-8. Likes
-9. Commentaires
-```
-
-Fonctionnalités à ajouter plus tard :
-
-```txt
-1. Notifications
-2. Messages privés
-3. Images et vidéos
-4. Modération
-5. Recherche par tags
-6. Thème personnalisé
-7. Multilingue
-```
-
----
+- persister les messages prives cote serveur;
+- ajouter Redis pour presence Socket.IO et cache;
+- harmoniser les formats de reponse entre services;
+- supprimer les scripts historiques non alignes avec les services actuels;
+- renforcer l'ownership des notifications;
+- ajouter OpenAPI ou generation automatique de contrat;
+- ajouter une communication asynchrone pour les notifications;
+- separer eventuellement un vrai service de recherche si la recherche depasse les tags.
 
 ## 17. Conclusion
 
-Cette architecture permet de structurer Breezy de manière claire et évolutive.
-Le choix d’un monorepo facilite le travail en équipe tout en conservant une séparation logique entre les applications, les microservices, les packages partagés et l’infrastructure.
+Breezy utilise aujourd'hui une architecture microservices pragmatique: la gateway centralise l'entree HTTP et la securite, les services gardent leurs donnees, et Nginx separe clairement l'exposition publique du routage interne.
 
-L’API Gateway sert de point d’entrée unique pour le front-end et permet de centraliser une partie de la sécurité et du routage.
+La conception reste evolutive, mais certaines fonctions initialement prevues comme services autonomes sont maintenant integrees autrement:
 
-Les microservices permettent de séparer les responsabilités métier et de faire évoluer progressivement le projet sans rendre le code trop complexe dès le départ.
+- le feed est construit par la gateway a partir des follows, posts et interactions;
+- la recherche par tag est portee par le post-service;
+- la moderation est portee par les signalements du user-service et les controles RBAC;
+- la messagerie privee est portee par le chat-service Socket.IO.
+

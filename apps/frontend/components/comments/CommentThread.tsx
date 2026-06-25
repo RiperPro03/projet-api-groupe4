@@ -136,30 +136,26 @@ function ThreadNode({
       return;
     }
 
-    const currentUser = await getCurrentUserFromApi();
-    const userId = getAuthenticatedUserId(currentUser);
-
     setIsLikePending(true);
 
-    if (isLiked) {
-      dispatch(markUnliked({ targetType: "comment", targetId: node.id }));
-      try {
+    try {
+      const currentUser = await getCurrentUserFromApi();
+      const userId = getAuthenticatedUserId(currentUser);
+
+      if (isLiked) {
+        dispatch(markUnliked({ targetType: "comment", targetId: node.id }));
         await unlikeComment(userId, node.id);
-      } catch (error) {
+        return;
+      }
+
+      dispatch(markLiked({ targetType: "comment", targetId: node.id }));
+      await likeComment(userId, node.id, node.id_post);
+    } catch (error) {
+      if (isLiked) {
         if (!isApiStatusCode(error, 404)) {
           dispatch(markLiked({ targetType: "comment", targetId: node.id }));
         }
-      } finally {
-        setIsLikePending(false);
-      }
-      return;
-    }
-
-    dispatch(markLiked({ targetType: "comment", targetId: node.id }));
-    try {
-      await likeComment(userId, node.id, node.id_post);
-    } catch (error) {
-      if (!isApiStatusCode(error, 409)) {
+      } else if (!isApiStatusCode(error, 409)) {
         dispatch(markUnliked({ targetType: "comment", targetId: node.id }));
       }
     } finally {
@@ -253,6 +249,7 @@ function ThreadNode({
             repliesCount={node.repliesCount}
             isReply={depth > 0}
             isLiked={isLiked}
+            isLikePending={isLikePending}
             isDeleting={isDeletingComment}
             onDelete={
               canDeleteComment

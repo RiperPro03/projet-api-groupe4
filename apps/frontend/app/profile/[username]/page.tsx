@@ -56,7 +56,7 @@ type PageState =
     };
 
 const followButtonBaseClassName =
-  "group mt-1 inline-flex h-10 min-w-36 items-center justify-center rounded-full border px-4 text-sm font-semibold shadow-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-breezy-yellow disabled:cursor-wait disabled:opacity-70";
+  "group inline-flex h-10 w-full min-w-0 items-center justify-center rounded-full border px-3 text-sm font-semibold shadow-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-breezy-yellow disabled:cursor-wait disabled:opacity-70 md:mt-1 md:w-auto md:min-w-36 md:px-4";
 
 const followButtonClassName =
   "border-transparent bg-breezy-green text-black shadow-lg shadow-breezy-green/20 hover:bg-breezy-green/90";
@@ -388,7 +388,7 @@ export default function PublicProfilePage() {
         </button>
 
         {/* En-tête : avatar + bouton action */}
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <Avatar
             src={profile.url_photo || null}
             alt={t("profile.photoAlt", { name: displayName })}
@@ -402,11 +402,14 @@ export default function PublicProfilePage() {
 
           {/* Bouton Suivre / Suivi — masqué si c'est son propre profil */}
           {!isOwnProfile && (
-            <Group gap="xs" align="flex-start" wrap="wrap">
-              <Link href={`/chat/${encodeURIComponent(profile.id_user)}`}>
+            <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.5rem] items-center gap-2 md:flex md:w-auto md:flex-nowrap md:items-start">
+              <Link
+                href={`/chat/${encodeURIComponent(profile.id_user)}`}
+                className="min-w-0 md:shrink-0"
+              >
                 <RippleButton
                   rippleColor="rgb(var(--breezy-green-rgb) / 0.25)"
-                  className="mt-1 inline-flex h-10 items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-4 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-accent"
+                  className="inline-flex h-10 w-full min-w-0 items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-3 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-accent md:mt-1 md:w-auto md:px-4"
                 >
                   <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap leading-none">
                     <FiMessageCircle className="h-4 w-4 shrink-0" aria-hidden />
@@ -474,7 +477,7 @@ export default function PublicProfilePage() {
                     variant="subtle"
                     radius="xl"
                     size={40}
-                    className="mt-1 border border-border bg-card/90 text-foreground hover:bg-accent"
+                    className="border border-border bg-card/90 text-foreground hover:bg-accent md:mt-1"
                   >
                     <FiMoreVertical className="h-5 w-5" aria-hidden />
                   </ActionIcon>
@@ -506,14 +509,14 @@ export default function PublicProfilePage() {
                   )}
                 </Menu.Dropdown>
               </Menu>
-            </Group>
+            </div>
           )}
 
           {isOwnProfile && (
-            <Link href="/profile">
+            <Link href="/profile" className="w-full md:w-auto">
               <RippleButton
                 rippleColor="rgb(var(--breezy-green-rgb) / 0.15)"
-                className="mt-1 inline-flex items-center rounded-full border border-border bg-transparent px-5 py-2 text-sm font-semibold text-foreground hover:bg-accent"
+                className="inline-flex w-full items-center justify-center rounded-full border border-border bg-transparent px-5 py-2 text-sm font-semibold text-foreground hover:bg-accent md:mt-1 md:w-auto"
               >
                 {t("profile.editProfile")}
               </RippleButton>

@@ -69,30 +69,26 @@ function CommentListItem({
       return;
     }
 
-    const currentUser = await getCurrentUserFromApi();
-    const userId = getAuthenticatedUserId(currentUser);
-
     setIsLikePending(true);
 
-    if (isLiked) {
-      dispatch(markUnliked({ targetType: "comment", targetId: comment.id }));
-      try {
+    try {
+      const currentUser = await getCurrentUserFromApi();
+      const userId = getAuthenticatedUserId(currentUser);
+
+      if (isLiked) {
+        dispatch(markUnliked({ targetType: "comment", targetId: comment.id }));
         await unlikeComment(userId, comment.id);
-      } catch (error) {
+        return;
+      }
+
+      dispatch(markLiked({ targetType: "comment", targetId: comment.id }));
+      await likeComment(userId, comment.id, comment.id_post);
+    } catch (error) {
+      if (isLiked) {
         if (!isApiStatusCode(error, 404)) {
           dispatch(markLiked({ targetType: "comment", targetId: comment.id }));
         }
-      } finally {
-        setIsLikePending(false);
-      }
-      return;
-    }
-
-    dispatch(markLiked({ targetType: "comment", targetId: comment.id }));
-    try {
-      await likeComment(userId, comment.id, comment.id_post);
-    } catch (error) {
-      if (!isApiStatusCode(error, 409)) {
+      } else if (!isApiStatusCode(error, 409)) {
         dispatch(markUnliked({ targetType: "comment", targetId: comment.id }));
       }
     } finally {
@@ -171,6 +167,7 @@ function CommentListItem({
         repliesCount={comment.repliesCount}
         isReply={Boolean(comment.parentCommentId)}
         isLiked={isLiked}
+        isLikePending={isLikePending}
         isDeleting={isDeletingComment}
         onDelete={
           canDeleteComment

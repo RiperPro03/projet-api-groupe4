@@ -1,7 +1,5 @@
 # Architecture du projet Breezy
 
-Mise a jour: 2026-06-25
-
 Ce document decrit l'architecture actuelle du projet Breezy telle qu'elle est implementee dans le monorepo. Il remplace l'ancienne version previsionnelle qui mentionnait encore des services non presents ou des dossiers qui ne sont plus utilises.
 
 ## 1. Vue d'ensemble

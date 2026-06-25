@@ -1,378 +1,431 @@
-# Découpage corrigé des fonctionnalités par services - Projet Breezy
-
-## Objectif du document
-
-Ce document regroupe les fonctionnalités du projet **Breezy** par services à développer.  
-L’objectif est de permettre aux membres de l’équipe de savoir clairement quelles tâches sont associées à chaque service.
-
----
-
-## 1. Découpage général corrigé des services
-
-| Service | Rôle principal | Fonctionnalités associées |
-|---|---|---|
-| `auth-service` | Gestion de l’inscription, de la connexion, de la sécurité et des tokens | Fx1, Fx2 |
-| `user-service` | Gestion des profils utilisateurs, informations publiques et préférences | Fx10, Fx22, Fx23 |
-| `post-service` | Gestion des publications, affichage des posts utilisateur, tags et médias | Fx3, Fx4, Fx11, Fx12, Fx18, Fx19 |
-| `feed-service` | Construction du fil d’actualité chronologique | Fx5 |
-| `interaction-service` | Gestion des likes, commentaires et réponses | Fx6, Fx7, Fx8 |
-| `follow-service` | Gestion des abonnements entre utilisateurs | Fx9 |
-| `search-service` | Recherche de contenu via les tags | Fx13 |
-| `notification-service` | Gestion des notifications utilisateur | Fx14, Fx15, Fx16 |
-| `message-service` | Gestion des messages privés | Fx17 |
-| `moderation-service` | Gestion des signalements et sanctions | Fx20, Fx21 |
-| `frontend` | Interface utilisateur React, affichage, navigation, thème et langue | Fx22, Fx23 + toutes les fonctionnalités visibles côté utilisateur |
-| `api-gateway` | Point d’entrée unique vers les services | Routage, sécurité, vérification JWT |
-
-> Remarque importante : il est préférable de séparer `auth-service` et `user-service`.  
-> Le `auth-service` gère l’identité et la sécurité.  
-> Le `user-service` gère les données du profil et les préférences utilisateur.
-
-> Fx22 et Fx23 sont principalement des fonctionnalités du `frontend`.  
-> Si la langue ou le thème doivent être sauvegardés par utilisateur, le `frontend` communique avec le `user-service` pour enregistrer ces préférences.
-
----
-
-## 2. Tableau corrigé des fonctionnalités regroupées par service
-
-| Service | Fonctionnalité | Description |
-|---|---|---|
-| `auth-service` | Fx1 | Création de comptes utilisateurs avec validation |
-| `auth-service` | Fx2 | Authentification sécurisée |
-| `user-service` | Fx10 | Profil utilisateur avec nom, biographie courte et photo de profil |
-| `user-service` | Fx22 | Sauvegarde éventuelle de la langue préférée de l’utilisateur |
-| `user-service` | Fx23 | Sauvegarde éventuelle du thème préféré de l’utilisateur |
-| `post-service` | Fx3 | Publication de messages courts, par exemple limités à 280 caractères |
-| `post-service` | Fx4 | Affichage des messages sur le profil utilisateur |
-| `post-service` | Fx11 | Liste des messages publiés par l’utilisateur sur son profil |
-| `post-service` | Fx12 | Ajout de tags aux messages |
-| `post-service` | Fx18 | Ajout d’images aux messages |
-| `post-service` | Fx19 | Ajout de vidéos aux messages |
-| `feed-service` | Fx5 | Flux chronologique des messages des utilisateurs suivis |
-| `interaction-service` | Fx6 | Liker un post, un commentaire ou une réponse |
-| `interaction-service` | Fx7 | Répondre à un post sous forme de commentaire |
-| `interaction-service` | Fx8 | Répondre à un commentaire sur un post |
-| `follow-service` | Fx9 | Suivre ou être suivi par d’autres utilisateurs |
-| `search-service` | Fx13 | Recherche de posts via des tags |
-| `notification-service` | Fx14 | Notifications pour les mentions |
-| `notification-service` | Fx15 | Notifications pour les likes |
-| `notification-service` | Fx16 | Notifications pour les nouveaux followers |
-| `message-service` | Fx17 | Système de messages privés entre utilisateurs |
-| `moderation-service` | Fx20 | Signalement de contenu inapproprié |
-| `moderation-service` | Fx21 | Suspension ou bannissement des utilisateurs |
-| `frontend` | Fx22 | Interface multi-langues |
-| `frontend` | Fx23 | Thème personnalisé |
-
----
-
-## 3. Tâches détaillées par service
-
-### 3.1 `auth-service`
-
-Ce service gère l’identité, l’inscription, la connexion et la sécurité des utilisateurs.
+# Decoupage des fonctionnalites par services - Breezy
+
+Ce document decrit le decoupage fonctionnel actuel du projet Breezy. Il remplace l'ancien decoupage previsionnel qui listait des services separes comme `feed-service`, `search-service`, `message-service` et `moderation-service`.
+
+Documents lies:
+
+- [architecture.md](architecture.md)
+- [breezy_bdd_services.md](breezy_bdd_services.md)
+- [api-index.md](api-index.md)
+
+## 1. Vue globale
+
+| Brique | Role principal | Fonctionnalites couvertes |
+| --- | --- | --- |
+| `frontend` | Interface utilisateur Next.js | Navigation, auth UI, feed, profils, admin, notifications, chat, theme, i18n |
+| `api-gateway` | Point d'entree HTTP | Routage, auth, RBAC, aggregation, enrichissement |
+| `auth-service` | Identite et tokens | Inscription, connexion, refresh, logout, verification JWT |
+| `user-service` | Etat utilisateur et moderation | Roles, statuts, signalements |
+| `profile-service` | Profils publics | Username, nickname, bio, avatar, recherche profils |
+| `post-service` | Publications | Posts, tags, medias references, feed brut, soft delete |
+| `interaction-service` | Interactions | Likes, commentaires, reponses, compteurs |
+| `follow-service` | Graphe social | Follow, unfollow, followers, following |
+| `media-service` | Uploads | URL presignees MinIO, metadata, suppression de fichiers |
+| `notification-service` | Notifications | Mentions, likes, follows, lu/non lu |
+| `chat-service` | Temps reel | Presence, messages prives Socket.IO |
+| `nginx` | Entree publique | `/`, `/api`, `/chat/socket.io`, `/minio` |
+| `nginx-internal` | Routage interne | Dispatch gateway -> services |
+
+## 2. Fonctionnalites par domaine
+
+| Fonctionnalite | Etat actuel | Service principal | Services associes |
+| --- | --- | --- | --- |
+| Creation de compte | Implemente | `auth-service` | `api-gateway`, `profile-service`, `user-service` |
+| Connexion et session | Implemente | `auth-service` | `api-gateway`, `frontend` |
+| Verification JWT | Implemente | `auth-service` | `api-gateway`, `chat-service` |
+| Roles utilisateur | Implemente | `user-service` | `api-gateway` |
+| Suspension utilisateur | Implemente via `statuts` | `user-service` | `api-gateway` |
+| Profil public | Implemente | `profile-service` | `media-service` pour avatar |
+| Recherche de profils | Implemente | `profile-service` | `frontend` |
+| Creation de post | Implemente | `post-service` | `media-service`, `notification-service` pour mentions |
+| Liste des posts d'un profil | Implemente | `post-service` | `api-gateway`, `profile-service`, `interaction-service` |
+| Feed | Implemente sans service dedie | `api-gateway` | `follow-service`, `post-service`, `profile-service`, `interaction-service` |
+| Tags | Implemente | `post-service` | `api-gateway` |
+| Recherche par tag | Implemente | `post-service` | `frontend` |
+| Upload image/video | Implemente | `media-service` | MinIO, `post-service`, `profile-service` |
+| Likes de posts | Implemente | `interaction-service` | `notification-service` |
+| Likes de commentaires | Implemente | `interaction-service` | `notification-service` |
+| Commentaires | Implemente | `interaction-service` | `api-gateway`, `profile-service` |
+| Reponses | Implemente comme commentaires enfants | `interaction-service` | `api-gateway` |
+| Follow / unfollow | Implemente | `follow-service` | `notification-service` |
+| Notifications | Implemente | `notification-service` | `frontend` |
+| Signalements | Implemente | `user-service` | `api-gateway`, `frontend` admin |
+| Chat prive | Implemente temps reel non persistant | `chat-service` | `frontend`, `auth-service` |
+| Multi-langues | Implemente cote frontend | `frontend` | dictionnaires locaux |
+| Theme | Implemente cote frontend | `frontend` | UI locale |
+
+## 3. Detail par service
+
+### 3.1 frontend
+
+Dossier: `apps/frontend`
+
+Responsabilites:
+
+- pages de login/register;
+- shell applicatif et navigation;
+- feed, posts, commentaires;
+- profils publics et edition du profil;
+- admin users/reports;
+- notifications;
+- chat;
+- i18n cote interface;
+- theme cote interface;
+- appels API via `/api`.
+
+Le frontend ne contacte pas directement les microservices. Il passe par l'API gateway via `NEXT_PUBLIC_API_URL`, avec `/api` par defaut.
+
+### 3.2 api-gateway
+
+Dossier: `apps/api-gateway`
+
+Responsabilites:
+
+- exposer l'API publique;
+- verifier le token avec `auth-service`;
+- lire le role courant avec `user-service`;
+- appliquer les regles RBAC;
+- verifier l'ownership sur les routes sensibles;
+- forwarder vers les services;
+- agreger les donnees pour `/me`, les posts et les commentaires;
+- coordonner l'inscription complete.
+
+Routes principales:
+
+| Route publique | Domaine |
+| --- | --- |
+| `/auth/*` | Authentification |
+| `/me` | Utilisateur courant agrege |
+| `/users/*` | Etat utilisateur, signalements |
+| `/profiles/*` | Profils |
+| `/posts/*` | Posts, feed, tags |
+| `/posts/likes/*` | Likes de posts |
+| `/comments/*` | Commentaires |
+| `/comments/likes/*` | Likes de commentaires |
+| `/follows/*` | Follows |
+| `/media/*` | Medias |
+| `/notifications/*` | Notifications |
 
-**Fonctionnalités concernées :**
+### 3.3 auth-service
 
-- Fx1 : Création de comptes utilisateurs avec validation
-- Fx2 : Authentification sécurisée
+Dossier: `services/auth-service`
 
-**Tâches à développer :**
+Responsabilites:
 
-- Créer l’inscription utilisateur
-- Vérifier les champs obligatoires
-- Vérifier l’unicité de l’email ou du nom d’utilisateur
-- Hasher les mots de passe
-- Créer la connexion utilisateur
-- Générer un token JWT
-- Générer éventuellement un refresh token
-- Vérifier un token JWT
-- Créer la déconnexion utilisateur
-- Gérer éventuellement la réinitialisation du mot de passe
-
----
+- creer un utilisateur auth avec email et mot de passe hashe;
+- connecter un utilisateur;
+- generer access token et refresh token;
+- stocker les refresh tokens hashes;
+- verifier un access token;
+- rafraichir une session;
+- revoquer un refresh token;
+- changer un mot de passe.
 
-### 3.2 `user-service`
+Fonctionnalites couvertes:
 
-Ce service gère les profils utilisateurs, les informations publiques et les préférences.
+- inscription;
+- connexion;
+- securite de session;
+- verification d'identite pour la gateway et le chat.
 
-**Fonctionnalités concernées :**
+Ce service ne gere pas le profil public ni le role applicatif.
 
-- Fx10 : Profil utilisateur avec nom, biographie courte et photo de profil
-- Fx22 : Sauvegarde éventuelle de la langue préférée
-- Fx23 : Sauvegarde éventuelle du thème préféré
+### 3.4 user-service
 
-**Tâches à développer :**
+Dossier: `services/user-service`
 
-- Créer la récupération du profil utilisateur
-- Créer la modification du profil utilisateur
-- Gérer le pseudo ou le nom affiché
-- Gérer la biographie courte
-- Gérer la photo de profil
-- Afficher les informations publiques d’un utilisateur
-- Sauvegarder la langue préférée de l’utilisateur
-- Sauvegarder le thème préféré de l’utilisateur
-- Prévoir un statut utilisateur : actif, suspendu ou banni
-- Fournir les informations utilisateur aux autres services si nécessaire
+Responsabilites:
 
----
+- stocker `role` et `statuts` pour chaque utilisateur;
+- fournir le role courant a la gateway;
+- lister les utilisateurs par role;
+- mettre a jour role/statut;
+- stocker et exposer les signalements de contenu.
 
-### 3.3 `post-service`
+Fonctionnalites couvertes:
 
-Ce service gère les publications, les tags et les contenus médias.
+- moderation utilisateur;
+- suspension via `statuts = INACTIVE`;
+- signalement de posts, commentaires ou utilisateurs.
 
-**Fonctionnalités concernées :**
+Ce service ne gere pas le profil public complet. Cette responsabilite est portee par `profile-service`.
 
-- Fx3 : Publication de messages courts
-- Fx4 : Affichage des messages sur le profil
-- Fx11 : Liste des messages publiés par l’utilisateur
-- Fx12 : Ajout de tags aux messages
-- Fx18 : Ajout d’images aux messages
-- Fx19 : Ajout de vidéos aux messages
+### 3.5 profile-service
 
-**Tâches à développer :**
+Dossier: `services/profile-service`
 
-- Créer un post
-- Limiter le contenu du post à 280 caractères
-- Modifier un post
-- Supprimer un post
-- Afficher les posts d’un utilisateur
-- Trier les posts du plus récent au plus ancien
-- Ajouter des tags à un post
-- Supprimer des tags d’un post
-- Gérer l’ajout d’images
-- Gérer l’ajout de vidéos
-- Vérifier les formats autorisés
-- Vérifier la taille maximale des fichiers
+Responsabilites:
 
----
+- creer un profil public apres inscription;
+- lire un profil par `id_user`;
+- lire un profil par `username`;
+- rechercher des profils par username;
+- modifier username, nickname, bio, avatar;
+- supprimer un profil.
 
-### 3.4 `feed-service`
+Fonctionnalites couvertes:
 
-Ce service gère le fil d’actualité de l’utilisateur.
+- profil utilisateur;
+- recherche utilisateur;
+- affichage des auteurs dans le feed et les commentaires.
 
-**Fonctionnalité concernée :**
+### 3.6 post-service
 
-- Fx5 : Flux chronologique des messages des utilisateurs suivis
+Dossier: `services/post-service`
 
-**Tâches à développer :**
+Responsabilites:
 
-- Récupérer la liste des utilisateurs suivis depuis le `follow-service`
-- Récupérer les posts des utilisateurs suivis depuis le `post-service`
-- Trier les posts par date de publication
-- Afficher le fil d’actualité
-- Ajouter une pagination
-- Prévoir un endpoint de type `GET /feed`
+- creer un post;
+- valider un contenu de 280 caracteres maximum;
+- stocker les tags;
+- extraire/fusionner les hashtags;
+- stocker les references de medias;
+- lister les posts d'un auteur;
+- lister tous les posts;
+- lister les posts d'une liste d'auteurs pour le feed;
+- rechercher par tag;
+- lire un post par id;
+- modifier un post;
+- soft delete un post;
+- demander le nettoyage des interactions du post supprime.
 
----
+Fonctionnalites couvertes:
 
-### 3.5 `interaction-service`
+- publication;
+- posts de profil;
+- tags;
+- recherche par tag;
+- medias attaches aux posts;
+- base du feed.
 
-Ce service gère les interactions autour des posts.
+### 3.7 interaction-service
 
-**Fonctionnalités concernées :**
+Dossier: `services/interaction-service`
 
-- Fx6 : Liker un post, un commentaire ou une réponse
-- Fx7 : Répondre à un post sous forme de commentaire
-- Fx8 : Répondre à un commentaire sur un post
+Responsabilites:
 
-**Tâches à développer :**
+- ajouter/retirer un like sur un post;
+- compter les likes d'un post;
+- lister les derniers likers;
+- verifier le statut like d'un ou plusieurs posts;
+- ajouter/retirer un like sur un commentaire;
+- compter les likes d'un commentaire;
+- verifier le statut like d'un ou plusieurs commentaires;
+- creer un commentaire;
+- creer une reponse via `parentCommentId`;
+- lister les commentaires d'un post;
+- lister les commentaires d'un auteur;
+- lister les reponses d'un commentaire;
+- soft delete un commentaire;
+- nettoyer toutes les interactions d'un post.
 
-- Ajouter un like sur un post, un commentaire ou une réponse
-- Retirer un like sur un post, un commentaire ou une réponse
-- Compter le nombre de likes (post, commentaire, réponse)
-- Empêcher un utilisateur de liker deux fois la même cible
-- Créer un commentaire sur un post
-- Modifier un commentaire
-- Supprimer un commentaire
-- Créer une réponse à un commentaire
-- Afficher les commentaires d’un post
-- Afficher les réponses aux commentaires
+Fonctionnalites couvertes:
 
-> Les notifications de likes (Fx15) sont gérées par le `notification-service`, pas par l’`interaction-service`.
+- likes;
+- commentaires;
+- reponses;
+- compteurs d'interaction.
 
----
+Note: les routes `/replies/likes` sont declarees cote gateway mais ne disposent pas encore d'un handler specifique dans le service actuel. Les reponses sont traitees comme des commentaires enfants.
 
-### 3.6 `follow-service`
+### 3.8 follow-service
 
-Ce service gère les relations sociales entre utilisateurs.
+Dossier: `services/follow-service`
 
-**Fonctionnalité concernée :**
+Responsabilites:
 
-- Fx9 : Suivre ou être suivi par d’autres utilisateurs
+- suivre un utilisateur;
+- ne plus suivre un utilisateur;
+- lister les utilisateurs suivis;
+- lister les abonnes;
+- interdire le self-follow;
+- empecher les doublons;
+- declencher une notification de follow.
 
-**Tâches à développer :**
+Fonctionnalites couvertes:
 
-- Suivre un utilisateur
-- Ne plus suivre un utilisateur
-- Afficher la liste des abonnements
-- Afficher la liste des abonnés
-- Empêcher un utilisateur de se suivre lui-même
-- Vérifier éventuellement que l’utilisateur suivi existe via le `user-service`
-- Envoyer un événement vers le `notification-service` lorsqu’un utilisateur est suivi
+- graphe social;
+- source de donnees pour le feed.
 
----
+### 3.9 media-service
 
-### 3.7 `search-service`
+Dossier: `services/media-service`
 
-Ce service permet de rechercher des publications.
+Responsabilites:
 
-**Fonctionnalité concernée :**
+- valider les demandes d'upload;
+- generer des URL presignees MinIO;
+- stocker les metadonnees media;
+- retourner les metadonnees d'un objet;
+- supprimer le fichier MinIO et ses metadonnees.
 
-- Fx13 : Recherche de posts via des tags
+Fonctionnalites couvertes:
 
-**Tâches à développer :**
+- image de profil;
+- medias de posts;
+- medias de commentaires ou general, selon usage;
+- exposition des fichiers via MinIO.
 
-- Rechercher les posts par tag
-- Afficher les résultats de recherche
-- Prévoir un endpoint de type `GET /search/posts?tag=nom_du_tag`
-- Gérer le cas où aucun résultat n’est trouvé
+Flux:
 
-> Pour une première version simple, ce service peut être intégré au `post-service`.
+```txt
+frontend -> /api/media/presigned-url
+media-service -> MinIO + media_db
+frontend -> PUT direct uploadUrl
+frontend -> reference publicUrl dans profil/post
+```
 
----
+### 3.10 notification-service
 
-### 3.8 `notification-service`
+Dossier: `services/notification-service`
 
-Ce service gère les notifications envoyées aux utilisateurs.
+Responsabilites:
 
-**Fonctionnalités concernées :**
+- creer une notification `like`, `mention` ou `follow`;
+- lister les notifications par destinataire;
+- compter les notifications non lues;
+- marquer une notification comme lue;
+- marquer toutes les notifications d'un destinataire comme lues;
+- supprimer une notification.
 
-- Fx14 : Notifications pour les mentions
-- Fx15 : Notifications pour les likes
-- Fx16 : Notifications pour les nouveaux followers
+Fonctionnalites couvertes:
 
-**Tâches à développer :**
+- notifications de mentions;
+- notifications de likes;
+- notifications de nouveaux followers;
+- inbox notification cote frontend.
 
-- Créer une notification lorsqu’un utilisateur est mentionné
-- Créer une notification lorsqu’un post est liké
-- Créer une notification lorsqu’un utilisateur gagne un follower
-- Afficher les notifications d’un utilisateur
-- Marquer une notification comme lue
-- Supprimer une notification
+### 3.11 chat-service
 
----
+Dossier: `services/chat-service`
 
-### 3.9 `message-service`
+Responsabilites:
 
-Ce service gère les messages privés entre utilisateurs.
+- verifier la session Socket.IO avec `auth-service`;
+- maintenir la presence en memoire;
+- emettre `presence:online` et `presence:offline`;
+- envoyer des messages prives temps reel;
+- retourner un ack d'envoi avec `delivered`.
 
-**Fonctionnalité concernée :**
+Fonctionnalites couvertes:
 
-- Fx17 : Système de messages privés entre utilisateurs
+- messagerie privee temps reel;
+- statut en ligne.
 
-**Tâches à développer :**
+Limite actuelle: les messages ne sont pas persistants cote serveur.
 
-- Créer une conversation entre deux utilisateurs
-- Envoyer un message privé
-- Afficher les conversations de l’utilisateur
-- Afficher les messages d’une conversation
-- Marquer les messages comme lus
-- Sécuriser l’accès aux conversations
+## 4. Services non dedies dans l'etat actuel
 
----
+| Service prevu avant | Etat actuel | Raison |
+| --- | --- | --- |
+| `feed-service` | Remplace par l'aggregation gateway | Le feed combine follows, posts, profils et interactions sans stockage dedie. |
+| `search-service` | Integre aux services existants | Tags dans `post-service`, profils dans `profile-service`. |
+| `message-service` | Remplace par `chat-service` | Le chat est temps reel via Socket.IO, sans API REST message dediee. |
+| `moderation-service` | Regroupe dans `user-service` + gateway | Signalements dans `user-service`, droits dans `api-gateway`. |
 
-### 3.10 `moderation-service`
+## 5. Flux fonctionnels importants
 
-Ce service gère la sécurité communautaire de la plateforme.
+### 5.1 Inscription complete
 
-**Fonctionnalités concernées :**
+```txt
+POST /api/auth/register
+  -> api-gateway
+  -> auth-service cree le compte
+  -> profile-service cree le profil public
+  -> user-service cree role USER / statuts ACTIVE
+```
 
-- Fx20 : Signalement de contenu inapproprié
-- Fx21 : Suspension ou bannissement des utilisateurs
+### 5.2 Connexion
 
-**Tâches à développer :**
+```txt
+POST /api/auth/login
+  -> auth-service verifie email/password
+  -> api-gateway recupere l'etat utilisateur
+  -> si statuts INACTIVE: refus 403
+  -> sinon: tokens retournes au frontend
+```
 
-- Signaler un post
-- Signaler un commentaire
-- Lister les signalements côté modérateur
-- Marquer un signalement comme traité
-- Suspendre un utilisateur
-- Bannir un utilisateur
-- Empêcher un utilisateur suspendu ou banni de publier
-- Empêcher un utilisateur suspendu ou banni de liker ou commenter
+### 5.3 Feed
 
-> Le `moderation-service` peut communiquer avec le `user-service` pour modifier le statut d’un utilisateur : actif, suspendu ou banni.
+```txt
+GET /api/posts/feed
+  -> api-gateway lit userId courant
+  -> follow-service retourne followingIds
+  -> post-service retourne les posts de userId + followingIds
+  -> profile-service enrichit les auteurs
+  -> interaction-service ajoute likes/commentaires
+```
 
----
+### 5.4 Creation de post avec media
 
-### 3.11 `frontend`
+```txt
+POST /api/media/presigned-url
+  -> media-service cree objectKey + metadata
+  -> frontend upload directement vers MinIO
+POST /api/posts
+  -> post-service stocke content, tags et references media
+```
 
-Ce service correspond à l’interface React utilisée par les utilisateurs.
+### 5.5 Like et notification
 
-**Fonctionnalités concernées :**
+```txt
+POST /api/posts/likes
+  -> interaction-service cree le like
+  -> interaction-service appelle notification-service
+```
 
-- Fx22 : Interface multi-langues
-- Fx23 : Thème personnalisé
-- Toutes les fonctionnalités visibles côté utilisateur
+### 5.6 Follow et notification
 
-**Tâches à développer :**
+```txt
+POST /api/follows
+  -> follow-service cree la relation
+  -> follow-service appelle notification-service
+```
 
-- Créer les pages React
-- Créer la navigation entre les pages
-- Consommer les APIs des microservices
-- Gérer l’état de connexion côté client
-- Afficher les messages, profils, notifications, recherches et conversations
-- Ajouter le changement de langue
-- Ajouter le changement de thème
-- Sauvegarder les préférences localement ou via le `user-service`
+### 5.7 Chat
 
----
+```txt
+Socket.IO /chat/socket.io
+  -> chat-service verifie le token
+  -> presence en memoire
+  -> private-message envoye au destinataire s'il est connecte
+```
 
-## 4. Répartition possible entre les membres de l’équipe
+## 6. Priorites de maintenance
 
-| Membre | Service principal | Fonctionnalités |
-|---|---|---|
-| Membre 1 | Authentification et profils | Fx1, Fx2, Fx10 |
-| Membre 2 | Posts, tags et médias | Fx3, Fx4, Fx11, Fx12, Fx18, Fx19 |
-| Membre 3 | Feed et interactions | Fx5, Fx6, Fx7, Fx8 |
-| Membre 4 | Social, notifications et messagerie | Fx9, Fx14, Fx15, Fx16, Fx17 |
-| Membre 5 | Recherche, modération et interface | Fx13, Fx20, Fx21, Fx22, Fx23 |
+| Priorite | Sujet | Pourquoi |
+| --- | --- | --- |
+| 1 | Garder `api-*.md` alignes avec les routes | Eviter les contrats front/back faux |
+| 2 | Harmoniser les formats de reponse | Certains services retournent `status/data`, d'autres `{ error }` ou tableaux directs |
+| 3 | Nettoyer les restes historiques | Exemple: script racine `dev:feed` |
+| 4 | Renforcer l'ownership notifications | Eviter qu'un utilisateur lise les notifications d'un autre via `recipientId` |
+| 5 | Persister le chat si necessaire | Le chat actuel est temps reel mais non durable |
+| 6 | Ajouter Redis si chat replique | Presence Socket.IO en memoire incompatible avec plusieurs replicas |
 
----
+## 7. Repartition possible du travail
 
-## 5. Priorité de développement
+| Axe | Services concernes | Exemples de taches |
+| --- | --- | --- |
+| Auth et securite | `auth-service`, `api-gateway`, `user-service` | JWT, refresh, RBAC, statut compte |
+| Profils et utilisateurs | `profile-service`, `user-service`, `frontend` | Profil, recherche, admin users |
+| Contenu | `post-service`, `media-service`, `frontend` | Posts, tags, upload, detail post |
+| Social | `follow-service`, `interaction-service` | Follows, likes, commentaires |
+| Notifications | `notification-service`, services emetteurs | Mentions, likes, follows, inbox |
+| Chat | `chat-service`, `frontend` | Presence, messages, UX conversations |
+| Infra | Nginx, Docker, CI/CD | Routage, replicas, TLS, env |
 
-### Version obligatoire minimale
+## 8. Synthese
 
-| Priorité | Fonctionnalités | Service concerné |
-|---|---|---|
-| 1 | Fx1, Fx2 | `auth-service` |
-| 2 | Fx10 | `user-service` |
-| 3 | Fx3, Fx4, Fx11 | `post-service` |
-| 4 | Fx9 | `follow-service` |
-| 5 | Fx5 | `feed-service` |
-| 6 | Fx6, Fx7, Fx8 | `interaction-service` |
+Le decoupage actuel est plus concret que le decoupage initial:
 
-### Version optionnelle
-
-| Priorité | Fonctionnalités | Service concerné |
-|---|---|---|
-| 7 | Fx12, Fx13 | `post-service` / `search-service` |
-| 8 | Fx14, Fx15, Fx16 | `notification-service` |
-| 9 | Fx17 | `message-service` |
-| 10 | Fx18, Fx19 | `post-service` |
-| 11 | Fx20, Fx21 | `moderation-service` |
-| 12 | Fx22, Fx23 | `frontend` + éventuellement `user-service` pour sauvegarder les préférences |
-
----
-
-## 6. Recommandation pour le projet
-
-Pour un projet étudiant, il est conseillé de ne pas créer trop de microservices dès le début.  
-Une version réaliste peut regrouper les services ainsi :
-
-| Service simplifié | Contenu |
-|---|---|
-| `auth-service` | Inscription, connexion, tokens et sécurité |
-| `user-service` | Profils, préférences, statut utilisateur |
-| `post-service` | Posts, tags, images, vidéos et recherche simple |
-| `social-service` | Follow et fil d’actualité |
-| `interaction-service` | Likes, commentaires et réponses |
-| `notification-service` | Notifications |
-| `message-service` | Messages privés |
-| `moderation-service` | Signalements et sanctions |
-| `api-gateway` | Routage vers les services |
-| `frontend` | Interface React, thème et langue |
-
-Cette organisation permet de répartir clairement le travail dans l’équipe tout en gardant une architecture compréhensible.
+- `auth-service` gere l'identite;
+- `user-service` gere roles, statuts et signalements;
+- `profile-service` gere les profils publics;
+- `post-service` gere les posts et la recherche par tag;
+- `interaction-service` gere likes/commentaires/reponses;
+- `follow-service` gere le graphe social;
+- `media-service` gere MinIO;
+- `notification-service` gere les notifications;
+- `chat-service` gere la messagerie temps reel;
+- `api-gateway` assemble le feed, l'utilisateur courant et les vues enrichies.
 

@@ -6,25 +6,17 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  REGISTRY: ghcr.io
+  IMAGE_REPOSITORY: ghcr.io/riperpro03/projet-api-groupe4
 
 on:
   workflow_dispatch:
   push:
-    paths:
-      - "services/auth-service/**"
-      - "services/user-service/**"
-      - "services/profile-service/**"
-      - "services/follow-service/**"
-      - "services/interaction-service/**"
-      - "services/media-service/**"
-      - "services/notification-service/**"
-      - "services/chat-service/**"
-      - "services/post-service/**"
-      - "apps/api-gateway/**"
-      - ".github/workflows/github-CICD.yml"
-      - "pnpm-lock.yaml"
-      - "package.json"
-      - "pnpm-workspace.yaml"
+    branches:
+      - "**"
+    tags:
+      - "v*.*.*"
+      - "*.*.*"
   pull_request:
     paths:
       - "services/auth-service/**"
@@ -97,7 +89,7 @@ jobs:
   api-gateway:
     name: Stage 0 - API Gateway
     needs: changes
-    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.api_gateway == 'true' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') || needs.changes.outputs.shared == 'true' || needs.changes.outputs.api_gateway == 'true' }}
     runs-on: ubuntu-latest
     env:
       NODE_ENV: test
@@ -132,7 +124,7 @@ jobs:
   auth-service:
     name: Stage 1 - Auth Service
     needs: changes
-    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.auth == 'true' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') || needs.changes.outputs.shared == 'true' || needs.changes.outputs.auth == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -176,7 +168,7 @@ jobs:
   user-service:
     name: Stage 2 - User Service
     needs: changes
-    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.user == 'true' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') || needs.changes.outputs.shared == 'true' || needs.changes.outputs.user == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -217,7 +209,7 @@ jobs:
   profile-service:
     name: Stage 3 - Profile Service
     needs: changes
-    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.profile == 'true' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') || needs.changes.outputs.shared == 'true' || needs.changes.outputs.profile == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -255,7 +247,7 @@ jobs:
   follow-service:
     name: Stage 4 - Follow Service
     needs: changes
-    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.follow == 'true' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') || needs.changes.outputs.shared == 'true' || needs.changes.outputs.follow == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -296,7 +288,7 @@ jobs:
   interaction-service:
     name: Stage 5 - Interaction Service
     needs: changes
-    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.interaction == 'true' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') || needs.changes.outputs.shared == 'true' || needs.changes.outputs.interaction == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -334,7 +326,7 @@ jobs:
   media-service:
     name: Stage 6 - Media Service
     needs: changes
-    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.media == 'true' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') || needs.changes.outputs.shared == 'true' || needs.changes.outputs.media == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -379,7 +371,7 @@ jobs:
   notification-service:
     name: Stage 7 - Notification Service
     needs: changes
-    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.notification == 'true' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') || needs.changes.outputs.shared == 'true' || needs.changes.outputs.notification == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -417,7 +409,7 @@ jobs:
   post-service:
     name: Stage 9 - Post Service
     needs: changes
-    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.post == 'true' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') || needs.changes.outputs.shared == 'true' || needs.changes.outputs.post == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -457,7 +449,7 @@ jobs:
   chat-service:
     name: Stage 8 - Chat Service
     needs: changes
-    if: ${{ needs.changes.outputs.shared == 'true' || needs.changes.outputs.chat == 'true' }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') || needs.changes.outputs.shared == 'true' || needs.changes.outputs.chat == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -493,3 +485,101 @@ jobs:
 
       - name: Run Vitest with coverage
         run: pnpm test:coverage
+
+  publish-images:
+    name: Stage 10 - Publish Docker Packages
+    needs:
+      - api-gateway
+      - auth-service
+      - user-service
+      - profile-service
+      - follow-service
+      - interaction-service
+      - media-service
+      - notification-service
+      - post-service
+      - chat-service
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: api-gateway
+            context: apps/api-gateway
+          - image: frontend
+            context: apps/frontend
+          - image: auth-service
+            context: services/auth-service
+          - image: user-service
+            context: services/user-service
+          - image: follow-service
+            context: services/follow-service
+          - image: profile-service
+            context: services/profile-service
+          - image: post-service
+            context: services/post-service
+          - image: interaction-service
+            context: services/interaction-service
+          - image: notification-service
+            context: services/notification-service
+          - image: media-service
+            context: services/media-service
+          - image: chat-service
+            context: services/chat-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_REPOSITORY }}/${{ matrix.image }}
+          tags: |
+            type=ref,event=tag
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  create-release:
+    name: Stage 11 - Create GitHub Release
+    needs: publish-images
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists."
+          else
+            gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
+          fi

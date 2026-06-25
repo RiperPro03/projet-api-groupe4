@@ -32,6 +32,7 @@ type ContentCardProps = {
   repliesCount?: number;
   isReply?: boolean;
   isLiked?: boolean;
+  isLikePending?: boolean;
   onComment?: () => void;
   onLike?: () => void;
   onDelete?: () => void;
@@ -168,6 +169,7 @@ function ActionButton({
   label,
   count,
   onClick,
+  disabled = false,
   children,
   locale,
   coolModeOptions,
@@ -175,6 +177,7 @@ function ActionButton({
   label: string;
   count?: number;
   onClick?: () => void;
+  disabled?: boolean;
   children: ReactNode;
   locale: string;
   coolModeOptions?: CoolParticleOptions;
@@ -186,6 +189,7 @@ function ActionButton({
       color="gray"
       radius="xl"
       size="lg"
+      disabled={disabled}
       onClick={onClick}
     >
       {children}
@@ -196,7 +200,7 @@ function ActionButton({
     <Group gap={6} wrap="nowrap">
       <Tooltip label={label}>
         <span style={{ display: "inline-flex" }}>
-          {coolModeOptions ? (
+          {coolModeOptions && !disabled ? (
             <CoolMode options={coolModeOptions}>{button}</CoolMode>
           ) : (
             button
@@ -224,6 +228,7 @@ export default function ContentCard({
   repliesCount,
   isReply = false,
   isLiked = false,
+  isLikePending = false,
   onComment,
   onLike,
   onDelete,
@@ -294,20 +299,21 @@ export default function ContentCard({
           label={isLiked ? t("content.unlike") : t("content.like")}
           count={likesCount}
           onClick={onLike}
+          disabled={isLikePending}
           locale={dateLocale}
           coolModeOptions={
-            isLiked
+            isLiked || isLikePending
               ? undefined
               : {
                   particle: "💚",
                   particleColor: "var(--color-breezy-green)",
-                  animationSpeed: 0.35,
-                  gravity: 0.25,
-                  particleCount: 1,
-                  spinSpeed: 8,
-                  size: 7,
-                  speedHorz: 2,
-                  speedUp: 5,
+                  animationSpeed: 1.4,
+                  gravity: 0.7,
+                  particleCount: 1  ,
+                  spinSpeed: 12,
+                  size: 6,
+                  speedHorz: 2.5,
+                  speedUp: 8,
                 }
           }
         >
